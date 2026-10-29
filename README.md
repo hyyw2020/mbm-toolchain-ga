@@ -1,21 +1,28 @@
-# mbm-v1.0.36 工具链刷新（GA）
+# mbm-v1.0.37 工具链刷新（GA）
 
-fcitx5-android MBM 分支 v1.0.36，使用全最新 GA 工具链在 Debian 12 上构建的产物。
+fcitx5-android MBM 分支 v1.0.37，使用全最新 GA 工具链在 Debian 12 上构建的产物。
 
 私有仓库：仅仓库所有者登录后可访问和下载。
 
 ## 下载
 
-进入 Releases 页面下载 `v1.0.36-toolchain-ga` 的附件：
+进入 Releases 页面下载 `v1.0.37-toolchain-ga` 的附件：
 
 | 文件 | 大小 | 说明 |
 | --- | --- | --- |
-| `org.fcitx.fcitx5.android-v1.0.36-arm64-v8a-release-unsigned.apk` | 79 MB | ARM64 真机用，未签名 |
-| `org.fcitx.fcitx5.android-v1.0.36-x86_64-release-unsigned.apk` | 81 MB | x86_64 模拟器用，未签名 |
-| `mbm-v1.0.36-src.zip` | 316 MB | 源码快照，不加密，含 `docs/BUILDING_LINUX_FULL.md` |
-| `mbm-v1.0.36-src-toolchain-ga.tar.gz` | 238 MB | 同内容 tar.gz（旧格式，备查） |
-| 10 个插件 APK | 3-78 MB | arm64-v8a，先装主程序再装插件 |
+| `org.fcitx.fcitx5.android-v1.0.37-arm64-v8a-release-unsigned.apk` | 79 MB | ARM64 真机用，未签名 |
+| `org.fcitx.fcitx5.android.plugin.recall-v1.0.37-arm64-v8a-release-unsigned.apk` | 78 MB | Recall 屏幕记忆插件，arm64-v8a，先装主程序 |
+| `mbm-v1.0.37-src.zip` | 414 MB | 源码快照，不加密，含 `docs/BUILDING_LINUX_FULL.md` |
+| `mbm-v1.0.37-src-toolchain-ga.tar.gz` | 372 MB | 同内容 tar.gz（旧格式，备查） |
 | `SHA256SUMS.txt` / `SHA256SUMS-plugins-arm64-v8a.txt` | - | 校验和 |
+
+## 本期变更（v1.0.37）
+
+- 键盘视觉风格化重构（仿主流移动输入法）：圆角键面、加大键间距、蓝调强调回车与空格；
+  新增浅色 / 深色两套圆角内置主题（ModernLight / ModernDark）。
+- 交互与功能零改动，仅视觉层调整。
+- 合规清理：代码库内第三方输入法专有名词全部移除，仅保留 fcitx5 本体标识；
+  细胞词库（scel）导入类由专名重构为中性命名。
 
 ## 校验
 
@@ -41,24 +48,24 @@ APK 未签名，安装前需自行签名：
 
 ```bash
 apksigner sign --ks your.keystore \
-  --out signed.apk org.fcitx.fcitx5.android-v1.0.36-arm64-v8a-release-unsigned.apk
+  --out signed.apk org.fcitx.fcitx5.android-v1.0.37-arm64-v8a-release-unsigned.apk
 adb install signed.apk
 ```
 
 ## 构建方式
 
-源码包内含 `docs/BUILDING_LINUX_FULL.md`：从零到产物的完整手册，含 10 个插件与 Recall 屏幕记忆插件的构建说明、数据流向与排障表。
+源码包内含 `docs/BUILDING_LINUX_FULL.md`：从零到产物的完整手册。
 
 ```bash
-unzip mbm-v1.0.36-src.zip
-cd mbm-v1.0.36
+unzip mbm-v1.0.37-src.zip
+cd mbm-v1.0.37
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
 CMAKE_BUILD_PARALLEL_LEVEL=2 sh gradlew assembleRelease --no-daemon \
-  -PbuildABI=arm64-v8a -PbuildVersionName=v1.0.36 -x lint -x test
+  -PbuildABI=arm64-v8a -PbuildVersionName=v1.0.37 -x lint -x test
 ```
 
 ## 说明
 
-- versionCode：arm64-v8a 为 132，x86_64 为 134
+- versionCode：arm64-v8a 为 142
 - 两个 APK 均为单一 ABI，不包含 32 位库
 - 构建过程中未生成或保存任何 keystore
