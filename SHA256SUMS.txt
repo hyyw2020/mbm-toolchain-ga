@@ -1,3 +1,3 @@
-ced4f51bac5dd76fb5e564812e4871036b33a8b9f65ca603c787fa0b6665cd00  org.fcitx.fcitx5.android-v1.0.37-arm64-v8a-release-unsigned.apk
-05b3d5df025b7379e0b07f846a03e27cb4df1270d49fefe4177851b9ad0013bc  mbm-v1.0.37-src.zip
-c216f1c38e519ee39a54ab47b4d021bbe06aad02d79384712a1f561d7929fae1  mbm-v1.0.37-src-toolchain-ga.tar.gz
+925fdd5321a285ac8dd6af1f1a5b91dbc814530108e374da0c242039a0cadff9  org.fcitx.fcitx5.android-v1.0.37-arm64-v8a-release-unsigned.apk
+f3fc026a1d745c7c6c406fb5328249a2b2c15cfa73fbbd954e3b89aa3bf742e6  mbm-v1.0.37-src.zip
+45be15eafe329dde81af2687f04033e6dbf6843fc0d2bf0eafc4d6f9acbed14a  mbm-v1.0.37-src-toolchain-ga.tar.gz
