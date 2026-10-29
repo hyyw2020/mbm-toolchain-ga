@@ -1,0 +1,10 @@
+3fa1f0a67892aa49b1f755418c5086897d5ac7be2b8a5049a9d0c4f6a72e4665  org.fcitx.fcitx5.android.plugin.anthy-v1.0.36-arm64-v8a-release-unsigned.apk
+4a8b9110bfcb6784568821d5efa0ef82b7507bba2b396ee778a19e76158267d7  org.fcitx.fcitx5.android.plugin.chewing-v1.0.36-arm64-v8a-release-unsigned.apk
+4b2264bb54dd6b98b235d2749a5fda64313e6fbdfba89c6de7200c32f005412c  org.fcitx.fcitx5.android.plugin.clipboard_filter-v1.0.36-release-unsigned.apk
+dee2c980d6cd6bc730076ab090d98bd5d1101bdb85c49edae444ea204c36c1fe  org.fcitx.fcitx5.android.plugin.hangul-v1.0.36-arm64-v8a-release-unsigned.apk
+ce676f79510c0a7e70b154dc14c240c954b7e112b0a676f71d4c84f40fd26558  org.fcitx.fcitx5.android.plugin.jyutping-v1.0.36-arm64-v8a-release-unsigned.apk
+b95550522a08b26673847bf521f90e6d6bffafb5926791c58e6abfb0341d5c21  org.fcitx.fcitx5.android.plugin.recall-v1.0.36-arm64-v8a-release-unsigned.apk
+b498f1a645b1eb76d6c720385856b5325b78fa590e80f86478df8bcc19a32988  org.fcitx.fcitx5.android.plugin.rime-v1.0.36-arm64-v8a-release-unsigned.apk
+a1b009725b6530ad982d10e5fe8853cf5cfdfd7168d2b03c3ac93a3940c74491  org.fcitx.fcitx5.android.plugin.sayura-v1.0.36-arm64-v8a-release-unsigned.apk
+ecad15b4ed5719340a0563435e3301605878cf2b38344a1ef0ae1ecff047c777  org.fcitx.fcitx5.android.plugin.thai-v1.0.36-arm64-v8a-release-unsigned.apk
+86cfe01d7bdc50e710210169df09cb3469a25d354e56738bfe80874cd0098e13  org.fcitx.fcitx5.android.plugin.unikey-v1.0.36-arm64-v8a-release-unsigned.apk

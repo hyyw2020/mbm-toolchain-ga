@@ -12,13 +12,16 @@ fcitx5-android MBM 分支 v1.0.36，使用全最新 GA 工具链在 Debian 12 �
 | --- | --- | --- |
 | `org.fcitx.fcitx5.android-v1.0.36-arm64-v8a-release-unsigned.apk` | 79 MB | ARM64 真机用，未签名 |
 | `org.fcitx.fcitx5.android-v1.0.36-x86_64-release-unsigned.apk` | 81 MB | x86_64 模拟器用，未签名 |
-| `mbm-v1.0.36-src-toolchain-ga.tar.gz` | 228 MB | 源码快照，含预编译原生库与文档 |
-| `SHA256SUMS.txt` | - | 校验和 |
+| `mbm-v1.0.36-src.zip` | 316 MB | 源码快照，不加密，含 `docs/BUILDING_LINUX_FULL.md` |
+| `mbm-v1.0.36-src-toolchain-ga.tar.gz` | 238 MB | 同内容 tar.gz（旧格式，备查） |
+| 10 个插件 APK | 3-78 MB | arm64-v8a，先装主程序再装插件 |
+| `SHA256SUMS.txt` / `SHA256SUMS-plugins-arm64-v8a.txt` | - | 校验和 |
 
 ## 校验
 
 ```bash
 sha256sum -c SHA256SUMS.txt
+cd plugins && sha256sum -c SHA256SUMS-plugins-arm64-v8a.txt
 ```
 
 ## 工具链
@@ -44,10 +47,10 @@ adb install signed.apk
 
 ## 构建方式
 
-源码包内含 `docs/BUILD_ENV_LINUX.md`，覆盖 Linux 环境下上述全部版本组件的安装与配置。
+源码包内含 `docs/BUILDING_LINUX_FULL.md`：从零到产物的完整手册，含 10 个插件与 Recall 屏幕记忆插件的构建说明、数据流向与排障表。
 
 ```bash
-tar -xzf mbm-v1.0.36-src-toolchain-ga.tar.gz
+unzip mbm-v1.0.36-src.zip
 cd mbm-v1.0.36
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
 CMAKE_BUILD_PARALLEL_LEVEL=2 sh gradlew assembleRelease --no-daemon \
