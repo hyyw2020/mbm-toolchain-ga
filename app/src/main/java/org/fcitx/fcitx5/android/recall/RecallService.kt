@@ -47,7 +47,10 @@ import org.fcitx.fcitx5.android.recall.store.RecallReloader
 import org.fcitx.fcitx5.android.recall.store.RecallWordStore
 import org.fcitx.fcitx5.android.R
 import timber.log.Timber
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Executors.newSingleThreadExecutor
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class RecallService : AccessibilityService() {
@@ -77,6 +80,26 @@ class RecallService : AccessibilityService() {
 
     private val frameCache = RecallFrameCache()
     private val segmenter = RecallSegmenter()
+
+    /**
+     * 分词 / 写词库专用单线程执行器：与拾取线程物理隔离（冻结方案硬约束）。
+     * 队列有界（32）+ 满则丢最旧：新词发现（互信息/邻字熵）与词库合并是 CPU + IO 活，
+     * 旧实现把它们放在拾取 HandlerThread 上同步执行，直接拖慢定频采样。
+     */
+    private val segmentExecutor = ThreadPoolExecutor(
+        1, 1, 30L, TimeUnit.SECONDS,
+        ArrayBlockingQueue(32),
+        ThreadPoolExecutor.DiscardOldestPolicy()
+    )
+
+    /**
+     * 包名 → 应用名缓存（有界 LRU）。appLabelOf 走 PackageManager Binder IPC，
+     * 旧实现每次采样调用 2 次（captureNodeTree + ingest 各一次），高频下每秒数十次 IPC。
+     */
+    private val labelCache = object : LinkedHashMap<String, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>): Boolean =
+            size > 64
+    }
     // P2-5 修复：by lazy 惰性初始化，消除 lateinit 在「instance 已赋值、picker 未就绪」
     // 时序窗口内的 UninitializedPropertyAccessException（曾被外层 runCatching 静默吞掉）。
     private val picker: RecallPicker by lazy { RecallPicker { captureTick() } }
@@ -110,19 +133,26 @@ class RecallService : AccessibilityService() {
             instance = this
             return
         }
-        // 偏好开关（总 / OCR / 拾词 / 剪贴板）实时同步到内存字段，并立即读一次初值
-        scope.launch { RecallPreferences.enabledFlow().collect { enabled = it } }
+        // 偏好开关（总 / OCR / 拾词 / 剪贴板）实时同步到内存字段。
+        // 总开关额外驱动拾取线程启停：关闭即挂起（冻结方案：全局总开关，关闭即停止采集）。
+        scope.launch {
+            RecallPreferences.enabledFlow().collect { v ->
+                enabled = v
+                if (v && !blockedByApm) picker.start() else picker.stop()
+            }
+        }
         scope.launch { RecallPreferences.ocrEnabledFlow().collect { ocrEnabled = it } }
         scope.launch { RecallPreferences.autoAddPhraseFlow().collect { autoAddEnabled = it } }
         scope.launch { RecallPreferences.autoClipboardFlow().collect { autoClipboardEnabled = it } }
+        // 其余开关初值即时同步（不等 flow 首帧），避免连接窗口期内字段仍是默认值
         scope.launch {
-            enabled = RecallPreferences.isEnabled()
             ocrEnabled = RecallPreferences.isOcrEnabled()
             autoAddEnabled = RecallPreferences.isAutoAddPhrase()
             autoClipboardEnabled = RecallPreferences.isAutoClipboard()
         }
 
-        picker.start()
+        // picker 的启停完全由上面的总开关 flow 驱动（默认关闭 ⇒ 服务连接后不采集），
+        // 这里不再无条件 start()。
         instance = this
         Timber.i("MBM RecallService connected (in-process)")
     }
@@ -153,7 +183,8 @@ class RecallService : AccessibilityService() {
         val now = SystemClock.elapsedRealtime()
         if (now - lastApmCheckAt > 5000L) {
             lastApmCheckAt = now
-            if (!blockedByApm && AdvancedProtectionProbe.isAdvancedProtectionEnabled(this)) {
+            val apm = AdvancedProtectionProbe.isAdvancedProtectionEnabled(this)
+            if (!blockedByApm && apm) {
                 blockedByApm = true
                 enabled = false
                 runCatching { picker.stop() }
@@ -165,8 +196,26 @@ class RecallService : AccessibilityService() {
                 }
                 return
             }
+            // 双向恢复：旧实现只在「未 blocked 且命中」时停用，一旦 blockedByApm=true
+            // 就永不解除 —— 用户在运行中关闭高级保护模式后 Recall 仍停用，只能重启服务。
+            if (blockedByApm && !apm) {
+                blockedByApm = false
+                runCatching {
+                    RecallAuditLog.log(RecallAuditLog.ACTION_APM_BLOCK, "高级保护模式已关闭，Recall 恢复")
+                }
+                // 按当前偏好重新裁决启停（偏好读取需在协程内）
+                scope.launch {
+                    val v = RecallPreferences.isEnabled()
+                    enabled = v
+                    if (v) picker.start() else picker.stop()
+                }
+            }
         }
         if (blockedByApm) return
+        // 隐私硬门控：总开关关闭时绝不采集。旧实现 captureTick 完全不看 enabled
+        // （只有 onAccessibilityEvent 看），而定频 tick 不经过事件回调 ⇒ 关闭开关后
+        // 仍在定频抓屏并写时间线；enabled 默认 false ⇒ 用户未授权即已开始采集。
+        if (!enabled) return
         val pkg = lastPkg ?: return
         if (pkg == packageName) return // 不采集自己的界面
         runCatching { captureNodeTree(pkg) }
@@ -204,7 +253,7 @@ class RecallService : AccessibilityService() {
                 captureWithOcr(privateWindow)
             }
         } finally {
-            runCatching { root.recycle() }
+            root.recycleCompat()
         }
     }
 
@@ -213,16 +262,28 @@ class RecallService : AccessibilityService() {
      * 帧缓存去重在此之上，避免静止屏对同帧重复 ingest。
      */
     private fun ingest(text: String, source: String) {
+        if (!enabled || blockedByApm) return // 与 captureTick 一致的隐私门控
         val pkg = lastPkg ?: return
         if (!frameCache.shouldCapture(pkg, text, SystemClock.elapsedRealtime())) return
         // record 是 suspend（含 Room 写盘），在后台 IO 协程里异步落库，不让拾取线程阻塞；
         // 帧级去重已前置，DB 内去重仅作最终兜底，异步不影响正确性。
+        val label = appLabelOf(pkg)
         scope.launch(Dispatchers.IO) {
-            RecallRepository.record(this@RecallService, pkg, appLabelOf(pkg), text, source)
+            RecallRepository.record(this@RecallService, pkg, label, text, source)
         }
         if (autoAddEnabled) {
-            val candidates: List<RecallCandidate> = segmenter.segment(text.lineSequence())
-            if (candidates.isNotEmpty()) RecallWordStore.commit(candidates)
+            // 分词 + 词库合并移出拾取线程：投递到专用单线程执行器（有界队列，满则丢最旧）。
+            // 拾取线程只保留 O(1) 帧哈希去重与任务投递，采样节奏不再被分词拖慢。
+            val snapshot = text
+            runCatching {
+                segmentExecutor.execute {
+                    if (!enabled) return@execute
+                    runCatching {
+                        val candidates: List<RecallCandidate> = segmenter.segment(snapshot.lineSequence())
+                        if (candidates.isNotEmpty()) RecallWordStore.commit(candidates)
+                    }.onFailure { Timber.w(it, "MBM Recall: segment failed") }
+                }
+            }.onFailure { Timber.w(it, "MBM Recall: segment task rejected (queue bounded)") }
         }
         if (autoClipboardEnabled) RecallClipboardWriter.offer(text)
     }
@@ -256,15 +317,25 @@ class RecallService : AccessibilityService() {
         for (i in 0 until count) {
             val child = node.getChild(i) ?: continue
             walk(child, out, sawPassword, sawDataSensitive)
-            runCatching { child.recycle() }
+            child.recycleCompat()
         }
     }
 
     private fun recycleChildren(node: AccessibilityNodeInfo) {
         val count = node.childCount
         for (i in 0 until count) {
-            runCatching { node.getChild(i)?.recycle() }
+            node.getChild(i)?.recycleCompat()
         }
+    }
+
+    /**
+     * 兼容回收（审查报告 P2-1）：自 API 33 起 AccessibilityNodeInfo 改由 GC 管理，
+     * `recycle()` 已废弃且为空操作；本项目 minSdk=29，旧机型仍需显式回收。
+     * 条件化后既消除 33+ 的无意义调用与编译警告，又不为旧机型引入 native 泄漏。
+     */
+    @Suppress("DEPRECATION") // 仅在 <33 分支调用，旧机型必需
+    private fun AccessibilityNodeInfo.recycleCompat() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) runCatching { recycle() }
     }
 
     /** 无障碍自有截图 + 离线 OCR（区域 diff / 打字区裁剪在控制器内）。 */
@@ -305,16 +376,23 @@ class RecallService : AccessibilityService() {
         }
     }
 
-    private fun appLabelOf(pkg: String): String = runCatching {
-        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    /** 包名 → 应用名（带 LRU 缓存，避免高频采样下的重复 Binder IPC）。 */
+    private fun appLabelOf(pkg: String): String {
+        synchronized(labelCache) { labelCache[pkg]?.let { return it } }
+        val label = runCatching {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+        }.getOrDefault(pkg)
+        synchronized(labelCache) { labelCache[pkg] = label }
+        return label
+    }
 
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
         instance = null
         runCatching { RecallReloader.flushNow() } // 销毁前确保最新词条 reload 生效
-        runCatching { picker.stop() }
+        runCatching { picker.dispose() } // 彻底释放拾取线程（服务销毁，不再重启）
+        runCatching { segmentExecutor.shutdownNow() }
         runCatching { screenshotExecutor.shutdownNow() }
         scope.cancel()
         super.onDestroy()

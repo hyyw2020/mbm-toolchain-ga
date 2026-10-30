@@ -41,6 +41,9 @@ object RecallWordStore {
     /** 词条 → 最近一次出现时间戳（内存态，进程重启后从热态重新衰减，足够 P0）。 */
     private val seen = mutableMapOf<String, Long>()
 
+    /** seen 表软上限（内存护栏）：超过则按「最久未出现」清理，保证内存有界。 */
+    private const val SEEN_SOFT_CAP = RecallConfig.MANAGED_HARD_CAP * 2
+
     private val lock = ReentrantLock()
 
     private fun loadManaged(): MutableSet<String> =
@@ -63,12 +66,21 @@ object RecallWordStore {
             candidates.take(RecallConfig.CANDIDATE_BATCH_CAP) else candidates
         lock.withLock {
             val now = System.currentTimeMillis()
+            // 冷热分层修复：order 必须基于「本次出现之前」的 seen 计算。
+            // 旧实现先把 seen[p]=now 再算 order，于是 now-last 恒为 0，
+            // 所有词条都被打成 HOT_ORDER —— 冷热分层与「长期不用降权」完全失效。
+            val orders = HashMap<String, Int>(batch.size * 2)
+            batch.forEach { cand ->
+                if (!orders.containsKey(cand.phrase)) {
+                    orders[cand.phrase] = orderFor(cand, now)
+                }
+            }
             val freshPhrases = batch.map { it.phrase }.distinct()
             for (p in freshPhrases) seen[p] = now
 
             val freshEntries = batch.flatMap { cand ->
                 val keys = AppPhraseImporter.keysForName(cand.phrase)
-                val order = orderFor(cand, now)
+                val order = orders[cand.phrase] ?: RecallConfig.COLD_ORDER
                 keys.map { PinyinCustomPhrase(it, order, cand.phrase) }
             }
 
@@ -88,7 +100,13 @@ object RecallWordStore {
                     .toSet()
                 nextManaged -= coldest
                 merged = merged.filterNot { it.value in coldest }.toMutableList()
+                // 内存有界：被淘汰的词条同步移出 seen。旧实现只裁 managed 不裁 seen，
+                // seen 随历史词组只增不减（词库无上限 ⇒ 内存无上限），违背冻结方案内存护栏。
+                coldest.forEach { seen.remove(it) }
             }
+            // seen 兜底上限：即便走不到淘汰分支（如 MANAGED_HARD_CAP 调大），
+            // 也保证「最近出现时间」表不无限膨胀，超出按最久未出现清理。
+            trimSeenLocked()
             managed = nextManaged
 
             runCatching { CustomPhraseManager.saveCached(merged.toTypedArray()) }
@@ -98,12 +116,26 @@ object RecallWordStore {
         RecallReloader.scheduleReload()
     }
 
-    /** 顺序决策：敏感 → 冷；否则按最近活跃度（热 TTL 内为热，否则冷）。 */
+    /**
+     * 顺序决策：敏感 → 冷；否则按最近活跃度（热 TTL 内为热，否则冷）。
+     * 调用方必须在更新 seen **之前**调用，否则恒为热（见 commit 内注释）。
+     */
     private fun orderFor(cand: RecallCandidate, now: Long): Int {
         if (cand.sensitive) return RecallConfig.COLD_ORDER
         val last = seen[cand.phrase] ?: now
         return if (now - last <= RecallConfig.HOT_TTL_MS) RecallConfig.HOT_ORDER
         else RecallConfig.COLD_ORDER
+    }
+
+    /** seen 兜底裁剪（锁内调用）：超出软上限时清理最久未出现的条目。 */
+    private fun trimSeenLocked() {
+        val overflow = seen.size - SEEN_SOFT_CAP
+        if (overflow <= 0) return
+        seen.entries
+            .sortedBy { it.value }
+            .take(overflow)
+            .map { it.key }
+            .forEach { seen.remove(it) }
     }
 
     /** 已托管词条数（调试 / 验收用）。 */

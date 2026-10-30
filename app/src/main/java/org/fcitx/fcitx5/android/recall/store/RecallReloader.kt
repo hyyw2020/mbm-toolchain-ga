@@ -32,8 +32,16 @@ object RecallReloader {
     @Volatile
     var onAck: ((success: Boolean) -> Unit)? = null
 
+    /** fcitx 未就绪时的最大重试次数：超过即放弃本次排期，避免永久空转轮询耗电。 */
+    private const val MAX_RETRY = 10
+
+    @Volatile
+    private var retryCount = 0
+
     /** 去抖排期：多次写入合并为一次 reload。 */
     fun scheduleReload() {
+        // 有新的写入 ⇒ 值得重新尝试，重置重试计数
+        retryCount = 0
         handler.removeCallbacks(reloadTask)
         handler.postDelayed(reloadTask, RecallConfig.RELOAD_DEBOUNCE_MS)
     }
@@ -49,10 +57,18 @@ object RecallReloader {
         lastReloadAt = now
         val conn = FcitxDaemon.getFirstConnectionOrNull()
         if (conn == null) {
-            // fcitx 尚未就绪（输入法进程刚起 / 未连）：稍后重试，不丢词条
+            // fcitx 尚未就绪（输入法进程刚起 / 未连）：稍后重试，不丢词条。
+            // 但有上限——旧实现无上限重试，输入法未启用时会永久每 300ms 空转一次。
+            if (++retryCount > MAX_RETRY) {
+                Timber.w("MBM Recall: reload abandoned, fcitx unavailable after $MAX_RETRY retries")
+                retryCount = 0
+                onAck?.invoke(false)
+                return
+            }
             handler.postDelayed(reloadTask, RecallConfig.RELOAD_MIN_INTERVAL_MS)
             return
         }
+        retryCount = 0
         runCatching {
             conn.runIfReady { reloadPinyinCustomPhrase() }
         }.onSuccess {

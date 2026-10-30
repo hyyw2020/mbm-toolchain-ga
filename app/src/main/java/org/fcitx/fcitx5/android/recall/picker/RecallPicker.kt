@@ -47,10 +47,23 @@ class RecallPicker(private val sampler: () -> Unit) {
         Timber.d("MBM RecallPicker started")
     }
 
+    /**
+     * 暂停采样（**保留线程**，可再次 [start]）。
+     * 修复：旧实现在此直接 quitSafely 终止 HandlerThread，导致「总开关关闭后再开启」
+     * 时 start() 无效（线程已死，post 不执行），拾取永久失效。现在暂停只停回调，
+     * 线程寿命与 [RecallService] 一致，由 [dispose] 在服务销毁时释放。
+     */
     fun stop() {
-        active.set(false)
+        if (!active.compareAndSet(true, false)) return
         handler.removeCallbacks(tick)
+        Timber.d("MBM RecallPicker paused (thread kept)")
+    }
+
+    /** 彻底释放线程（仅服务销毁时调用一次，之后不可再 start）。 */
+    fun dispose() {
+        stop()
         thread.quitSafely()
+        Timber.d("MBM RecallPicker disposed")
     }
 
     /** 无障碍事件到达：刷新活跃时间并标记 dirty（不重排 tick，杜绝回调堆积）。 */

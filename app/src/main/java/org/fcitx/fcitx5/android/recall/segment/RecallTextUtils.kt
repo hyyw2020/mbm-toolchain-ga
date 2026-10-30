@@ -11,29 +11,25 @@ import kotlin.math.ln
 
 object RecallTextUtils {
 
-    /** 常用汉字区间（含扩展 A 之外的核心区）。 */
-    private val HAN = Regex("[\\u4e00-\\u9fff]")
-
     fun isHan(ch: Char): Boolean = ch in '\u4e00'..'\u9fff'
 
     fun isAllHan(s: String): Boolean = s.isNotEmpty() && s.all { isHan(it) }
 
-    /** 抽取文本中每段最长连续汉字段（长度 ≥ 2）。 */
-    fun hanRuns(text: String): List<String> =
-        HAN.findAll(text).flatMap { m ->
-            // Regex 匹配的是单字，需要把相邻汉字聚合成长字段
-            emptyList<String>()
-        }.toList().let {
-            // 上面不可行，改用逐字符聚合
-            val runs = mutableListOf<String>()
-            val sb = StringBuilder()
-            for (ch in text) {
-                if (isHan(ch)) sb.append(ch)
-                else if (sb.isNotEmpty()) { runs += sb.toString(); sb.setLength(0) }
-            }
-            if (sb.isNotEmpty()) runs += sb.toString()
-            runs.filter { it.length >= 2 }
+    /**
+     * 抽取文本中每段最长连续汉字段（长度 ≥ 2）。
+     * 旧实现先跑了一次 Regex.findAll 再把结果丢掉（死代码），等于对每次捕获文本
+     * 多做一遍无谓的全文正则扫描；这里直接逐字符聚合，零正则开销。
+     */
+    fun hanRuns(text: String): List<String> {
+        val runs = mutableListOf<String>()
+        val sb = StringBuilder()
+        for (ch in text) {
+            if (isHan(ch)) sb.append(ch)
+            else if (sb.isNotEmpty()) { runs += sb.toString(); sb.setLength(0) }
         }
+        if (sb.isNotEmpty()) runs += sb.toString()
+        return runs.filter { it.length >= 2 }
+    }
 
     /**
      * 新词发现（无监督）：在一段语料上用「互信息(PMI) × 最小邻字熵」给二元组打分，
