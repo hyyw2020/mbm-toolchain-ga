@@ -95,8 +95,12 @@
             android:launchMode="singleTask" />
         <!-- MBM 修复：RecallActivity 同进程内嵌后漏注册，导致「无法打开屏幕记忆界面」
              （startActivity 抛 ActivityNotFoundException 被入口捕获后误报「输入法未启用」）。 -->
+        <!-- MBM 修复：RecallActivity 必须使用 Material3 主题（Theme.MbmActivity），
+             否则 buildUi 中的 MaterialButton / SwitchMaterial 在 AppCompat 主题下
+             构造即抛 IllegalArgumentException，表现为「点击后直接闪退」。 -->
         <activity
             android:name=".ui.main.RecallActivity"
+            android:theme="@style/Theme.MbmActivity"
             android:configChanges="orientation|screenSize"
             android:exported="false"
             android:launchMode="singleTask" />
