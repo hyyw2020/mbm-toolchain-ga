@@ -41,8 +41,14 @@ data class RecallCandidate(
 
 class RecallSegmenter {
 
-    /** 有界滚动语料缓冲（新词发现语料），超过上限丢弃最旧部分。 */
-    private val corpus = StringBuilder()
+    /**
+     * 有界滚动语料缓冲（新词发现语料），超过上限丢弃最旧部分。
+     * P0-3 修复：feed 由拾取线程与 OCR 回调协程并发调用，StringBuilder 非线程安全
+     * （扩容时 count/value 不一致，读取方可看到半截字符甚至越界）。改为锁内短临界区
+     * 维护不可变 String 快照，分词重算在锁外对快照进行，锁竞争纳秒级，不违背线程隔离。
+     */
+    private val corpusLock = Any()
+    private var corpus: String = ""
 
     /** 喂入行计数：每 N 行重算一次新词集合，避免每次捕获都全量扫描。 */
     private var feedCount = 0
@@ -57,13 +63,15 @@ class RecallSegmenter {
      */
     fun feed(text: String) {
         if (text.isBlank()) return
-        corpus.append(text).append('\n')
-        if (corpus.length > RecallConfig.CORPUS_BUFFER_MAX) {
-            corpus.delete(0, corpus.length - RecallConfig.CORPUS_BUFFER_MAX)
+        val snapshot: String
+        synchronized(corpusLock) {
+            corpus = (corpus + text + '\n').takeLast(RecallConfig.CORPUS_BUFFER_MAX)
+            feedCount++
+            snapshot = corpus
         }
-        feedCount++
+        // 重算在锁外：互信息/邻字熵计算较重，不阻塞拾取线程
         if (feedCount % 8 == 0) {
-            newWords = RecallTextUtils.discoverNewWords(corpus.toString(), 60)
+            newWords = RecallTextUtils.discoverNewWords(snapshot, 60)
                 .map { it.first }
                 .toSet()
         }

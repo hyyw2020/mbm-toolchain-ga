@@ -524,9 +524,10 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
 
     fun commitText(text: String, cursor: Int = -1, record: Boolean = true) {
         // MBM 冻结方案：IME 打字时刻同步抓取 —— 通知已连接的 RecallService 紧跟一次采样，
-        // 实现「打字即更新词库」的无延迟体验。RecallService 同进程，调用被内部空判断与异常隔离包裹，
-        // 即使无障碍服务未开启（instance==null）也只是空操作，绝不拖慢或拖垮输入。
-        runCatching { RecallService.notifyTyping() }
+        // 实现「打字即更新词库」的无延迟体验。notifyTyping 全程空安全（instance 可空、
+        // picker 由 lazy 初始化无 lateinit 窗口期），P2-5 修复：删除外层 runCatching——
+        // 它把「服务未开启」的预期空操作当异常路径，还会静默吞掉真实异常掩盖问题。
+        RecallService.notifyTyping()
         // MBM v1.0.22：把用户提交的多字文本喂给「离线智能词库」本地统计，
         // 生成智能候选词。隐私模式（密码框等）下不统计，与 PrivacyController 约定一致。
         // 在独立 IO 协程里做文件读写，绝阻塞输入法主线程；异常被 imeExceptionHandler 吞掉，

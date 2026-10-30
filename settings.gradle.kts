@@ -40,4 +40,4 @@ include(":plugin:sayura")
 include(":plugin:jyutping")
 include(":plugin:thai")
 // MBM 冻结方案：Recall 不再作为独立插件构建，已内嵌 app 模块（与 IME 同进程）。
-// 旧 :plugin:recall 源码保留于 plugin/recall 目录以备回滚，但不再纳入构建。
+// P3-1 修复：旧 plugin/recall 源码目录已删除（git 历史保留可回滚），避免双份实现混淆。

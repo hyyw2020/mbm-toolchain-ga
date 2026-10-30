@@ -6,8 +6,6 @@ package org.fcitx.fcitx5.android.recall.data
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.utils.appContext
 
@@ -21,9 +19,11 @@ import org.fcitx.fcitx5.android.utils.appContext
  */
 object RecallRepository {
 
-    private const val MIN_TEXT_LENGTH = 2
-
-    private val writeMutex = Mutex()
+    /**
+     * P2-2 修复：由 2 降为 1。单字（「痒」「嗯」等）是合法正文内容，OCR 兜底尤其容易
+     * 只识别出单字；分词层维持 MIN_PHRASE_LEN=2（单字不成词），两者语义不同不共用。
+     */
+    private const val MIN_TEXT_LENGTH = 1
 
     private fun db(context: Context) = RecallDatabase.get(context)
 
@@ -37,45 +37,40 @@ object RecallRepository {
         val trimmed = text.trim()
         if (trimmed.length < MIN_TEXT_LENGTH) return false
         val dao = db(context).dao()
-        return writeMutex.withLock {
-            val bytes = trimmed.toByteArray()
-            val record = if (bytes.size <= RecallBlobStore.INLINE_THRESHOLD) {
-                RecallRecord(
-                    packageName = packageName,
-                    appLabel = appLabel,
-                    text = trimmed,
-                    source = source,
-                    timestamp = System.currentTimeMillis(),
-                    blobRef = null,
-                    byteLen = bytes.size.toLong(),
-                    sha256 = sha256(trimmed),
-                    codec = 0
-                )
-            } else {
-                // 大文本：外置 blob，text 列存 preview（列表 UI 零改动）
-                val handle = RecallBlobStore.write(trimmed.byteInputStream())
-                RecallRecord(
-                    packageName = packageName,
-                    appLabel = appLabel,
-                    text = handle.preview,
-                    source = source,
-                    timestamp = System.currentTimeMillis(),
-                    blobRef = handle.sha256,
-                    byteLen = handle.byteLen,
-                    sha256 = handle.sha256,
-                    codec = 1
-                )
-            }
-            // MBM: 同一应用的相同内容只记录一次（全历史去重，无时间窗）。
-            // 之前是 30 秒窗口，用户真机反馈同一屏内容隔几分钟又被重复记录。
-            val duplicated = if (record.isBlob) {
-                dao.duplicatesBySha(packageName, record.sha256, 0L)
-            } else {
-                dao.duplicates(packageName, trimmed, 0L)
-            }
-            if (duplicated > 0) return@withLock false
-            dao.insert(record)
-            true
+        val bytes = trimmed.toByteArray()
+        return if (bytes.size <= RecallBlobStore.INLINE_THRESHOLD) {
+            // P1-4 修复：查重 + 插入由 DAO 的 @Transaction insertIfAbsent 原子完成，
+            // 不再用粗粒度 writeMutex 包住整段文件 IO（那会把并发采样全部串行化）。
+            val record = RecallRecord(
+                packageName = packageName,
+                appLabel = appLabel,
+                text = trimmed,
+                source = source,
+                timestamp = System.currentTimeMillis(),
+                blobRef = null,
+                byteLen = bytes.size.toLong(),
+                sha256 = sha256(trimmed),
+                codec = 0
+            )
+            dao.insertIfAbsent(record) > 0
+        } else {
+            // 大文本：先写 blob（内容寻址、幂等），再事务插入 DB 行。
+            val handle = RecallBlobStore.write(trimmed.byteInputStream())
+            val record = RecallRecord(
+                packageName = packageName,
+                appLabel = appLabel,
+                text = handle.preview,
+                source = source,
+                timestamp = System.currentTimeMillis(),
+                blobRef = handle.sha256,
+                byteLen = handle.byteLen,
+                sha256 = handle.sha256,
+                codec = 1
+            )
+            val id = dao.insertIfAbsent(record)
+            // 重复时不删 blob 文件：同 sha 文件被既有行引用（内容寻址共享），
+            // write() 的去重已保证没有多余临时文件，孤儿由启动 gcBlobs 清理。
+            id > 0
         }
     }
 

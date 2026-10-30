@@ -31,7 +31,9 @@ class RecallOcrController(private val onText: (String) -> Unit) {
 
     /**
      * 处理一次截图（位图）。返回 true 表示发起了 OCR 并处理了文本。
-     * @param isPrivate 当前窗口是否整屏隐私（是则直接跳过 OCR 兜底）
+     * 位图所有权归本方法：返回 / 抛异常前统一回收裁剪产物（P0-1 修复：提前返回路径
+     * 也必须 recycle，否则静止屏每帧泄漏一块 native 位图，最终打掉 IME 进程）。
+     * @param isPrivate 当前窗口是否整屏隐私（是则直接跳过 OCR 兜底，P0-2 修复：不再硬编码 false）
      * @param ocrEnabled 用户 OCR 开关
      */
     suspend fun processBitmap(context: Context, bitmap: Bitmap, isPrivate: Boolean, ocrEnabled: Boolean): Boolean {
@@ -41,14 +43,18 @@ class RecallOcrController(private val onText: (String) -> Unit) {
         if (now - lastOcrAt < RecallConfig.OCR_MIN_INTERVAL_MS) return false
         if (!inFlight.compareAndSet(false, true)) return false
         lastOcrAt = now
+        // 裁剪产物（createBitmap/createScaledBitmap 均为新对象）由本块独占，
+        // 无论 return / 异常路径都在 finally 无条件回收，杜绝 native 堆泄漏。
+        val cropped = cropTypingArea(bitmap)
         try {
-            val cropped = cropTypingArea(bitmap)
             val regionHash = cheapHash(cropped)
-            if (regionHash == lastRegionHash) return false.also { Timber.d("MBM OCR: region unchanged, skip") }
+            if (regionHash == lastRegionHash) {
+                Timber.d("MBM OCR: region unchanged, skip")
+                return false
+            }
             lastRegionHash = regionHash
 
             val lines = OcrEngine.recognize(context, cropped, true)
-            if (cropped !== bitmap) cropped.recycle()
             val joined = lines.joinToString("\n") { it.text }.trim()
             if (joined.isBlank()) return false
             onText(joined)
@@ -57,6 +63,7 @@ class RecallOcrController(private val onText: (String) -> Unit) {
             Timber.w(t, "MBM OCR process failed")
             return false
         } finally {
+            if (cropped !== bitmap && !cropped.isRecycled) cropped.recycle()
             inFlight.set(false)
         }
     }

@@ -35,8 +35,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import org.fcitx.fcitx5.android.recall.data.RecallAuditLog
 import org.fcitx.fcitx5.android.recall.data.RecallPreferences
 import org.fcitx.fcitx5.android.recall.data.RecallRepository
@@ -77,11 +75,12 @@ class RecallService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val screenshotExecutor = newSingleThreadExecutor()
 
-    private lateinit var picker: RecallPicker
     private val frameCache = RecallFrameCache()
     private val segmenter = RecallSegmenter()
+    // P2-5 修复：by lazy 惰性初始化，消除 lateinit 在「instance 已赋值、picker 未就绪」
+    // 时序窗口内的 UninitializedPropertyAccessException（曾被外层 runCatching 静默吞掉）。
+    private val picker: RecallPicker by lazy { RecallPicker { captureTick() } }
     private val ocrController = RecallOcrController { text -> ingest(text, "OCR") }
-    private val captureMutex = ReentrantLock()
     private val ocrInFlight = AtomicBoolean(false)
 
     companion object {
@@ -97,7 +96,8 @@ class RecallService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        instance = this
+        // P2-5 修复：picker 惰性初始化（无 lateinit 窗口期），
+        // instance 必须最后赋值——保证外部看到 instance 时全部内部状态已就绪。
         if (AdvancedProtectionProbe.isAdvancedProtectionEnabled(this)) {
             blockedByApm = true
             enabled = false
@@ -107,6 +107,7 @@ class RecallService : AccessibilityService() {
             Handler(Looper.getMainLooper()).post {
                 Toast.makeText(this, R.string.recall_disclosure_apm_blocked, Toast.LENGTH_LONG).show()
             }
+            instance = this
             return
         }
         // 偏好开关（总 / OCR / 拾词 / 剪贴板）实时同步到内存字段，并立即读一次初值
@@ -121,8 +122,8 @@ class RecallService : AccessibilityService() {
             autoClipboardEnabled = RecallPreferences.isAutoClipboard()
         }
 
-        picker = RecallPicker { captureTick() }
         picker.start()
+        instance = this
         Timber.i("MBM RecallService connected (in-process)")
     }
 
@@ -142,8 +143,30 @@ class RecallService : AccessibilityService() {
         }
     }
 
+    /** APM 复检周期（ms）：运行中用户开启高级保护模式也能被及时感知（P2-4 修复）。 */
+    private var lastApmCheckAt = 0L
+
     /** 拾取层每次触发的采样：在 RecallPicker 的后台线程执行，主线程零逻辑。 */
     private fun captureTick() {
+        // P2-4 修复：APM 不只在 onServiceConnected 检查，采样入口周期复检（5s 一次，开销可忽略），
+        // 命中即停用拾取并提示，不静默继续采集。
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastApmCheckAt > 5000L) {
+            lastApmCheckAt = now
+            if (!blockedByApm && AdvancedProtectionProbe.isAdvancedProtectionEnabled(this)) {
+                blockedByApm = true
+                enabled = false
+                runCatching { picker.stop() }
+                runCatching {
+                    RecallAuditLog.log(RecallAuditLog.ACTION_APM_BLOCK, "运行中检测到高级保护模式，Recall 停用")
+                }
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(this, R.string.recall_disclosure_apm_blocked, Toast.LENGTH_LONG).show()
+                }
+                return
+            }
+        }
+        if (blockedByApm) return
         val pkg = lastPkg ?: return
         if (pkg == packageName) return // 不采集自己的界面
         runCatching { captureNodeTree(pkg) }
@@ -155,26 +178,30 @@ class RecallService : AccessibilityService() {
         val root = runCatching { rootInActiveWindow }.getOrNull() ?: return
         val appLabel = appLabelOf(pkg)
         try {
-            val (text, privateWindow) = captureMutex.withLock {
-                val collected = mutableListOf<String>()
-                val sawPassword = booleanArrayOf(false)
-                val sawDataSensitive = booleanArrayOf(false)
-                runCatching { walk(root, collected, sawPassword, sawDataSensitive) }
-                    .onFailure { Timber.w(it, "walk node tree failed") }
-                if (RecallPolicy.shouldDiscardWindow(pkg, sawPassword[0], sawDataSensitive[0])) {
-                    null to true
-                } else {
-                    collected.joinToString("\n").takeIf { it.isNotBlank() } to false
-                }
+            // P1-5 修复：删除 captureMutex —— collected/flags 均为本方法局部变量，
+            // walk 无共享状态，包整棵树遍历的锁是纯自我阻塞（拖慢 tick 数十毫秒）。
+            val collected = mutableListOf<String>()
+            val sawPassword = booleanArrayOf(false)
+            val sawDataSensitive = booleanArrayOf(false)
+            runCatching { walk(root, collected, sawPassword, sawDataSensitive) }
+                .onFailure { Timber.w(it, "walk node tree failed") }
+            val privateWindow =
+                RecallPolicy.shouldDiscardWindow(pkg, sawPassword[0], sawDataSensitive[0])
+            val text = if (privateWindow) {
+                null
+            } else {
+                collected.joinToString("\n").takeIf { it.isNotBlank() }
             }
             if (!text.isNullOrBlank()) {
                 ingest(text, "NODE")
             }
-            // OCR 兜底：非隐私屏且节点树取不到文字（Canvas / 游戏 / 图片）
+            // OCR 兜底：非隐私屏且节点树取不到文字（Canvas / 游戏 / 图片）。
+            // P2-3 修复：静止（无事件、无打字）时不再反复截图 OCR——内容没变，截图纯属耗电。
             if (!privateWindow && text.isNullOrBlank() && ocrEnabled &&
+                picker.hasRecentActivity() &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
             ) {
-                captureWithOcr()
+                captureWithOcr(privateWindow)
             }
         } finally {
             runCatching { root.recycle() }
@@ -241,25 +268,25 @@ class RecallService : AccessibilityService() {
     }
 
     /** 无障碍自有截图 + 离线 OCR（区域 diff / 打字区裁剪在控制器内）。 */
-    private fun captureWithOcr() {
+    private fun captureWithOcr(isPrivate: Boolean) {
         if (!ocrInFlight.compareAndSet(false, true)) return
         val callback = object : TakeScreenshotCallback {
             override fun onSuccess(screenshot: android.accessibilityservice.AccessibilityService.ScreenshotResult) {
                 scope.launch {
+                    // P0-1 修复：bitmap / hardwareBuffer 的释放在 finally 统一执行，
+                    // wrapHardwareBuffer 失败、processBitmap 抛异常等任何路径都不再泄漏。
+                    var bitmap: Bitmap? = null
                     try {
-                        val bitmap = Bitmap.wrapHardwareBuffer(
+                        bitmap = Bitmap.wrapHardwareBuffer(
                             screenshot.hardwareBuffer, screenshot.colorSpace
                         )
-                        if (bitmap == null) {
-                            screenshot.hardwareBuffer.close()
-                            return@launch
-                        }
-                        ocrController.processBitmap(this@RecallService, bitmap, false, ocrEnabled)
-                        bitmap.recycle()
-                        screenshot.hardwareBuffer.close()
+                        if (bitmap == null) return@launch
+                        ocrController.processBitmap(this@RecallService, bitmap, isPrivate, ocrEnabled)
                     } catch (t: Throwable) {
                         Timber.w(t, "ocr capture failed")
                     } finally {
+                        runCatching { bitmap?.takeIf { !it.isRecycled }?.recycle() }
+                        runCatching { screenshot.hardwareBuffer.close() }
                         ocrInFlight.set(false)
                     }
                 }

@@ -21,8 +21,12 @@ object RecallConfig {
 
     // ---- 拾取层（D1/D2/D3：10ms 定频 + 事件驱动 + 静止退避）----
 
-    /** 名义定频采样间隔（ms）。实际受 binder 排队影响为 20~50ms，不承诺严格 100Hz。 */
-    const val PICKER_INTERVAL_MS = 10L
+    /**
+     * 活跃期定频采样间隔（ms）。P1-1 修复：由 10 提至 50——binder 排队下 10ms 名义值
+     * 毫无收益（PICKER_MIN_FRAME_GAP_MS=120 已限流变化帧），纯耗电；50ms 已覆盖
+     * 「尽可能快的连续采样」的交付语义，事件风暴由 dirty 标记合并，不再击穿退避。
+     */
+    const val PICKER_INTERVAL_MS = 50L
 
     /** 事件静止超过此值（ms）则退避：停止定频轮询，仅由新事件重新触发，避免空转耗电。 */
     const val PICKER_IDLE_BACKOFF_MS = 2000L

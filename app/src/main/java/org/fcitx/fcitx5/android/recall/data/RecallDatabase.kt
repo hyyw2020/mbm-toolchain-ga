@@ -22,6 +22,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -86,6 +87,21 @@ interface RecallDao {
 
     @Insert
     suspend fun insert(record: RecallRecord): Long
+
+    /**
+     * P1-4 修复：查重 + 插入收进同一事务，消灭「两条并发 record 同时 duplicated==0
+     * 然后各插一行」的竞态（此前去重与插入之间无事务保护）。
+     * @return 新插入行的 id；重复时返回 -1。
+     */
+    @Transaction
+    suspend fun insertIfAbsent(record: RecallRecord): Long {
+        val dup = if (record.isBlob) {
+            duplicatesBySha(record.packageName, record.sha256, 0L)
+        } else {
+            duplicates(record.packageName, record.text, 0L)
+        }
+        return if (dup > 0) -1L else insert(record)
+    }
 
     // MBM v1.0.23：应用户要求记忆召回为无上限，移除 LIMIT 300；
     // UI 侧改为分块渲染（RecallActivity#render），数千条也不会 ANR。

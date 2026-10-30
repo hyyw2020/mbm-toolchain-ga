@@ -93,6 +93,13 @@
             android:name=".ui.setup.SetupActivity"
             android:exported="false"
             android:launchMode="singleTask" />
+        <!-- MBM 修复：RecallActivity 同进程内嵌后漏注册，导致「无法打开屏幕记忆界面」
+             （startActivity 抛 ActivityNotFoundException 被入口捕获后误报「输入法未启用」）。 -->
+        <activity
+            android:name=".ui.main.RecallActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:launchMode="singleTask" />
         <activity
             android:name=".ui.main.LogActivity"
             android:directBootAware="true"

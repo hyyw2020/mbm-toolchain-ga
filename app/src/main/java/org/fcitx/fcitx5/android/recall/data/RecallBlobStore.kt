@@ -96,15 +96,14 @@ object RecallBlobStore {
             }
             val sha = digest.digest().toHex()
             val target = File(dir, "$sha.bin")
-            val expectedEncLen = StreamingFileCipher.encodedLength(total)
-            when {
-                // 同内容密文已存在：内容寻址，丢弃本次临时文件
-                target.exists() && target.length() == expectedEncLen -> tmp.delete()
-                // 遗留明文同内容文件（或损坏的残 file）：惰性迁移/覆写为密文
-                else -> {
-                    if (target.exists()) target.delete()
-                    if (!tmp.renameTo(target)) throw IOException("rename blob tmp -> $sha failed")
-                }
+            // P3-2 修复：内容寻址下只按 sha 文件名判存在，不用密文长度做内容判据
+            // （encodedLength 与 EncryptingSink 实际写入若不一致会误判损坏并反复重写；
+            // 长度相同但内容损坏的文件则由 openDecrypted 的 GCM tag 校验兜底）。
+            if (target.exists()) {
+                // 同内容文件已存在：丢弃本次临时文件
+                tmp.delete()
+            } else {
+                if (!tmp.renameTo(target)) throw IOException("rename blob tmp -> $sha failed")
             }
             val preview = String(previewBuf, 0, previewLen, Charsets.UTF_8).take(PREVIEW_CHARS)
             return Handle(sha, total, preview)
