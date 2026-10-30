@@ -1,0 +1,363 @@
+================================================================================
+Mixed Bug Method (MBM) 构建说明书
+版本: v1.0（修订：2026-10-27 当前发布 v1.0.36，工具链例行升级：AGP 9.4.1 + Kotlin 2.4.21 + KSP 2.3.12 + build-tools 37.0.0，Gradle 分发包默认华为云镜像 gradle-9.8.2-all.zip；JDK 要求 17+（验证环境 25.0.2 LTS），详见 docs/PATCHES_v1.0.36.md；随包新增《Linux构建优化指导书.txt》（受限环境优化））
+适用: 任意宿主架构的 Linux（x86_64 / aarch64 / armhf / riscv64）与 Windows 10/11
+目标产物: Universal.apk（未签名、无混淆、无加固、全 ABI）
+================================================================================
+
+本说明书面向「人」和「大模型」两种读者：每一条命令都可原样复制执行，
+命令块同时给出 Linux/macOS（bash）与 Windows（PowerShell）两个版本。
+只要按顺序执行到「第 6 步」，就一定能得到 Universal.apk。
+
+> 关于「架构」的重要区分
+>   - 宿主架构（HOST）：你用来编译的电脑 CPU。本说明书覆盖 x86_64、aarch64
+>     (ARM64)、armhf(ARM32)、riscv64 的 Linux，以及 Windows 10/11(x86_64)。
+>   - 目标架构（TARGET）：最终 APK 里包含的 Android 设备 ABI，固定为 4 种：
+>     armeabi-v7a / arm64-v8a / x86 / x86_64。无论你在什么宿主上编译，
+>     产出的 APK 都包含这 4 种 ABI，可在任意 Android 10~17 设备上安装。
+>   简言之：宿主架构决定「你能不能在本地顺利编译」，目标架构由工程固定。
+
+--------------------------------------------------------------------------------
+第 0 步 · 你需要知道的三件事
+--------------------------------------------------------------------------------
+1) 本工程是 fcitx5-android 的 MBM 分支：包含 C++ 原生部分（Fcitx5 核心、
+   libime、fcitx5-chinese-addons、librime 插件）与 Kotlin 部分。
+2) 原生部分由 NDK + CMake 构建，需要系统装 extra-cmake-modules（ECM）
+   与 gettext（含 ITS 规则）。这两个组件缺失是最常见的构建失败原因。
+3) 全量构建耗时参考（x86_64 宿主 32 核 / 32GB 内存）：约 25~45 分钟（首次）。
+   绝大部分时间花在 4 个 ABI 的原生编译上。若只想快速验证，可先只构建
+   一个 ABI（见第 5.2 节）。非 x86_64 宿主（如 aarch64）会因工具链转译而更慢，
+   详见「附录 D」。
+
+--------------------------------------------------------------------------------
+第 1 步 · 安装 JDK 17（必须，AGP 要求 JDK 17 及以上）
+--------------------------------------------------------------------------------
+【Linux / Ubuntu 24.04 或 22.04（x86_64 与 aarch64 均适用）】
+    sudo apt update
+    sudo apt install -y openjdk-17-jdk-headless
+    java -version          # 期望输出 openjdk version "17.x"
+
+【Linux / 其他发行版等价命令】
+    # Fedora / RHEL:   sudo dnf install -y java-17-openjdk-devel
+    # Arch / Manjaro:  sudo pacman -S jdk17-openjdk
+    # openSUSE:        sudo zypper install java-17-openjdk-devel
+    # 无包管理器时:    从 https://adoptium.net 下载 Temurin 17（选对应架构：
+    #                  x64 = x86_64，AArch64 = aarch64，ARM = armhf）并解压，
+    #                  再把 <解压目录>/bin 加入 PATH，并导出 JAVA_HOME。
+
+【Windows / PowerShell（管理员）】
+    winget install --id EclipseAdoptium.Temurin.17.JDK -e
+    # 或手动安装 https://adoptium.net 的 Temurin 17 MSI（x64）。
+    java -version          # 期望输出 openjdk version "17.x"
+    # 自动定位 JAVA_HOME（避免手写版本号路径）：
+    $env:JAVA_HOME = (Get-ItemProperty "HKLM:\SOFTWARE\Eclipse Adoptium\JDK\17*" -ErrorAction SilentlyContinue).Path
+    if (-not $env:JAVA_HOME) { $env:JAVA_HOME = (Get-ChildItem "C:\Program Files\Eclipse Adoptium\jdk-17*" -Directory | Select-Object -First 1).FullName }
+    echo $env:JAVA_HOME
+
+--------------------------------------------------------------------------------
+第 2 步 · 安装 Android SDK（命令行工具方式，无需 Android Studio）
+--------------------------------------------------------------------------------
+先约定目录（后续命令都以它为准）。注意 Windows 下 NDK 路径极深，请把 SDK
+装在**短路径**以避免 260 字符限制：
+    【Linux】   export ANDROID_HOME=/opt/android-sdk
+    【Windows】 setx ANDROID_HOME C:\android\sdk      （重开 PowerShell 生效）
+
+2.1 下载并解压 cmdline-tools 最新版：
+    【Linux】
+        mkdir -p $ANDROID_HOME/cmdline-tools
+        cd /tmp
+        curl -sL -o cmdtools.zip \
+          https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip
+        unzip -q -o cmdtools.zip -d $ANDROID_HOME/cmdline-tools
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+        # 注：cmdline-tools 的 sdkmanager 是 Java 脚本，x86_64 与 aarch64
+        #     宿主均可原生运行；链接失效时到 developer.android.com 取最新
+        #     commandlinetools-linux 链接即可。
+    【Windows / PowerShell】
+        $zip = "$env:TEMP\cmdtools.zip"
+        Invoke-WebRequest -Uri `
+          "https://dl.google.com/android/repository/commandlinetools-win-16111833_latest.zip" `
+          -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath "$env:ANDROID_HOME\cmdline-tools" -Force
+        Rename-Item "$env:ANDROID_HOME\cmdline-tools\cmdline-tools" latest
+
+2.2 安装 SDK 组件（固定版本，勿随意升级）：
+    【Linux】
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          "platform-tools" "platforms;android-37" "build-tools;37.0.0" \
+          "cmake;3.31.6" "ndk;28.0.13004108"
+    【Windows / PowerShell】
+        & "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" --licenses
+        & "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat" `
+          "platform-tools" "platforms;android-37" "build-tools;37.0.0" `
+          "cmake;3.31.6" "ndk;28.0.13004108"
+
+    说明：platforms;android-37 即 Android 17，本工程用它作为 compileSdk /
+    targetSdk，以满足「完整支持 Android 17」的要求；minSdk 为 29（Android 10）。
+    NDK 在 Linux 下官方只提供 x86_64 宿主包（android-ndk-r28-linux.zip），
+    aarch64 等宿主需按「附录 D」做转译，Windows 下为 x86_64 包（原生）。
+
+--------------------------------------------------------------------------------
+第 3 步 · 安装原生构建依赖（ECM / gettext / iso-codes）
+--------------------------------------------------------------------------------
+【Linux / Ubuntu（x86_64 与 aarch64 同源包）】
+    sudo apt update
+    sudo apt install -y extra-cmake-modules gettext iso-codes ninja-build \
+                        cmake python3 git unzip zip
+    msgfmt --version | head -1        # 期望 0.20 及以上
+    ls /usr/share/gettext/its/ | head # 必须存在 ITS 规则文件（*.its）
+    # 若发行版 ECM 版本过低（低于 5.100），请从源码安装：
+    #   wget https://invent.kde.org/frameworks/extra-cmake-modules/-/archive/v5.115.0/extra-cmake-modules-v5.115.0.tar.gz
+    #   tar xzf extra-cmake-modules-v5.115.0.tar.gz && cd extra-cmake-modules-v5.115.0
+    #   cmake -G Ninja -B build -DBUILD_TESTING=OFF && sudo cmake --install build
+
+【Windows】 安装 MSYS2（https://www.msys2.org）后在 UCRT64 终端执行：
+    pacman -S mingw-w64-ucrt-x86_64-extra-cmake-modules \
+              mingw-w64-ucrt-x86_64-gettext \
+              mingw-w64-ucrt-x86_64-ninja
+    # 然后把 C:\msys64\ucrt64\bin 加入 PATH（PowerShell 中：$env:PATH += ";C:\msys64\ucrt64\bin"）
+    # 注意：MSYS2 的 gettext 包不含 ITS 规则，需从 gettext 源码复制
+    #   gettext-tools/its/*.its 与 *.loc 到 C:\msys64\ucrt64\share\its\
+
+--------------------------------------------------------------------------------
+第 4 步 · 获取源码（含 19 个子模块）
+--------------------------------------------------------------------------------
+4.1 常规方式（github.com 直连可用时）：
+    git clone --recurse-submodules https://github.com/fcitx5-android/fcitx5-android.git mbm
+    cd mbm
+    # 或切到本工程仓库：https://gitee.com/nlxxai/mixed-bug-method
+
+4.2 网络受限时的镜像方式（git 协议被阻断、但 HTTP 可用），两步：
+    a) 下载主仓库快照（codeload）：
+       curl -sL -o mbm.tar.gz \
+         https://codeload.github.com/fcitx5-android/fcitx5-android/tar.gz/refs/heads/master
+       mkdir mbm && tar xzf mbm.tar.gz -C mbm --strip-components=1
+    b) 按「附录 A · 子模块固定提交表」逐个下载子模块快照并解压到对应目录，例如：
+       curl -sL -o sub.tar.gz \
+         https://ghfast.top/https://github.com/fcitx/fcitx5/archive/<SHA>.tar.gz
+       mkdir -p lib/fcitx5/src/main/cpp/fcitx5
+       tar xzf sub.tar.gz -C lib/fcitx5/src/main/cpp/fcitx5 --strip-components=1
+       （ghfast.top 为 GitHub 加速镜像；也可直接用 codeload.github.com）
+       注意：子模块必须使用表中固定的 SHA，用最新 master 可能与主仓库不兼容。
+
+4.3 写入 SDK 路径：
+    echo "sdk.dir=$ANDROID_HOME" > local.properties
+    【Windows】 "sdk.dir=C:\\android\\sdk" | Out-File -Encoding ASCII local.properties
+
+--------------------------------------------------------------------------------
+第 5 步 · 构建
+--------------------------------------------------------------------------------
+5.1 构建 Universal APK（全 ABI，默认目标）：
+    【Linux】
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64   # aarch64 上为 .../java-17-openjdk-arm64
+        export ANDROID_HOME=/opt/android-sdk
+        ./gradlew :app:assembleRelease -PbuildVersionName=v1.0.36 -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g" -Dorg.gradle.workers.max=3
+    【Windows / PowerShell】
+        $env:JAVA_HOME = (Get-ChildItem "C:\Program Files\Eclipse Adoptium\jdk-17*" -Directory | Select-Object -First 1).FullName
+        .\gradlew.bat :app:assembleRelease -PbuildVersionName=v1.0.36 "-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g" "-Dorg.gradle.workers.max=3"
+
+    注意：-Dorg.gradle.jvmargs=-Xmx6144m 必须保留（缺省 1.5g 会在 packageRelease 阶段 OOM 失败）；
+    -PbuildVersionName 决定 apk 文件名里的版本号（如 v1.0.20）。升版本时同步把本项目
+    build-logic/convention/.../Versions.kt 的 baseVersionCode +1（仅改它即可，不触发全量原生重编），
+    并把本参数改为对应版本号。
+
+5.2 只构建单个 ABI（快速验证用，约 6~10 分钟）：
+    ./gradlew -PbuildAbiOverride=arm64-v8a :app:assembleRelease
+
+5.3 构建 Rime 引擎插件 APK（需要 Rime 方案时）：
+    ./gradlew :plugin:rime:assembleRelease
+
+5.4 产物路径（构建成功后）：
+    主包   app/build/outputs/apk/release/app-universal-release.apk   ← 这就是 Universal.apk
+    分包   app/build/outputs/apk/release/app-<abi>-release.apk
+    插件   plugin/rime/build/outputs/apk/release/*.apk
+
+    若 release 变体配置了签名环境变量（SIGN_KEY / SIGN_KEY_PWD / SIGN_KEY_ALIAS），
+    产物会被签名；**不设置这些变量即为未签名产物**，正是本工程要求的形态。
+
+5.5 关于「无混淆、无加固」：
+    本工程已在 build-logic 中将 release 变体的
+    isMinifyEnabled / isShrinkResources 置为 false，因此不会经过 R8 / ProGuard
+    资源压缩。请勿在命令行附加 --enable-minify 之类的参数。
+
+--------------------------------------------------------------------------------
+第 6 步 · 取出 Universal.apk 并校验
+--------------------------------------------------------------------------------
+【Linux】
+    cp app/build/outputs/apk/release/app-universal-release.apk ./Universal.apk
+    $ANDROID_HOME/build-tools/37.0.0/aapt dump badging ./Universal.apk | head -5
+    unzip -l ./Universal.apk | grep -E "lib/(arm64-v8a|armeabi-v7a|x86|x86_64)/" | head
+【Windows / PowerShell】
+    Copy-Item app\build\outputs\apk\release\app-universal-release.apk Universal.apk
+    & "$env:ANDROID_HOME\build-tools\37.0.0\aapt.exe" dump badging Universal.apk
+
+校验标准：
+  - 输出中应看到 4 种 ABI 的 .so（armeabi-v7a / arm64-v8a / x86 / x86_64）；
+  - 应看到 android:minSdkVersion 29 与 targetSdk 37；
+  - 未签名 APK 中不存在 META-INF/*.RSA、META-INF/*.SF 签名块。
+
+--------------------------------------------------------------------------------
+第 7 步 · 安装与启用
+--------------------------------------------------------------------------------
+    adb install -r Universal.apk            # 未签名包需设备允许「未知来源」
+    # 然后在设备上：设置 → 系统 → 语言和输入法 → 屏幕键盘 → 启用 Mixed Bug Method
+    # Recall 功能：设置 → 无障碍 → 已下载的服务 → Mixed Bug Method Recall → 打开
+
+--------------------------------------------------------------------------------
+第 8 步 · 常见问题与修复（按出现频率排序）
+--------------------------------------------------------------------------------
+Q1  CMake 报错 "Could not find ECM" / "FindECM.cmake"
+    → 未安装 extra-cmake-modules 或版本过低，回到第 3 步。
+
+Q2  msgfmt 报 "cannot locate ITS rules"
+    → gettext 未带 ITS 规则；Linux 用 apt 包即可，Windows 需按第 3 步复制
+      gettext 源码 gettext-tools/its/ 下的 *.its 与 *.loc。
+
+Q3  Gradle 报错 "Gradle build daemon disappeared unexpectedly"
+    → 守护进程堆内存不足。修改 gradle.properties：
+        org.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8
+      内存较小的机器可改成 -Xmx4g，并加 --max-workers=8。
+
+Q4  git clone 子模块超时 / 失败
+    → 改用第 4.2 节的镜像方式逐个下载固定提交快照。
+
+Q5  下载 Gradle 发行包很慢
+    → v1.0.36 起 wrapper 已默认指向华为云镜像 -all 分发包
+      （https://mirrors.huaweicloud.com/gradle/gradle-9.8.2-all.zip），
+      正常无需处理；仍慢时手动下载该包，
+      解压后直接调用 <解压目录>/bin/gradle 替代 ./gradlew。
+
+Q6  报 "SDK location not found"
+    → 未写 local.properties（第 4.3 节），或 ANDROID_HOME 与实际路径不一致。
+
+Q7  安装时提示「解析软件包失败 / 未签名」
+    → 这是预期行为：本工程交付未签名包。安装时允许未知来源，
+      或自行签名：
+        apksigner sign --ks my.keystore --out Signed.apk Universal.apk
+
+Q8  APK 体积很大（约 200MB）
+    → 正常：Universal 包含 4 个 ABI 的全部原生库，以及 PP-OCRv4 离线 OCR 模型
+      （约 16MB，位于 assets/ocr/）。若只要单 ABI，用第 5.2 节。
+
+Q9  aarch64 宿主报 "cannot execute binary file" / NDK clang 跑不起来
+    → NDK 官方 Linux 包是 x86_64 宿主二进制，aarch64 需装 box64 转译，
+      见「附录 D · aarch64 Linux」一节。
+
+Q10 Windows 报 "path too long" 或 NDK 解压失败
+    → SDK 必须装短路径（如 C:\android\sdk），并在组策略/注册表开启长路径支持，
+      见「附录 D · Windows 10/11」一节。
+
+--------------------------------------------------------------------------------
+附录 A · 子模块固定提交表（主仓库 master 快照时使用）
+--------------------------------------------------------------------------------
+路径                                                        仓库                             SHA
+lib/fcitx5/src/main/cpp/fcitx5                              fcitx/fcitx5                     1e00551899f9d0fa5418d899f468b6e421401adf
+lib/fcitx5/src/main/cpp/prebuilt                            fcitx5-android/prebuilt          92ab7d6291a1fa426f199be917857ebb6054d08c
+lib/fcitx5-lua/src/main/cpp/fcitx5-lua                      fcitx/fcitx5-lua                 9bf8d3dd2c6240d8e3e194d09547acbfa6a81204
+lib/libime/src/main/cpp/libime                              fcitx/libime                     ecd23795ff7ea63a55a1b88fc4767946b999e102
+lib/fcitx5-chinese-addons/src/main/cpp/fcitx5-chinese-addons fcitx/fcitx5-chinese-addons     19f06898581419d3e4d37492f33a14e841e2680e
+plugin/rime/src/main/cpp/fcitx5-rime                        fcitx/fcitx5-rime                00be19a18ea5b5d1748f9fe6f6bad50f42f96781
+plugin/rime/src/main/cpp/rime-prelude                       rime/rime-prelude                082425ea0684bca36474415d4a0e8db9b016487e
+plugin/rime/src/main/cpp/rime-essay                        rime/rime-essay                  054920de4f54c9e5994276a96a4fc2a35cb51aa3
+plugin/rime/src/main/cpp/rime-luna-pinyin                  rime/rime-luna-pinyin            56b934b099dfbeab842320f13aa8b461a6ab3e42
+plugin/rime/src/main/cpp/rime-stroke                       rime/rime-stroke                 1e8fff9b9494ddec23b0cbc526bcfd8171a6fd48
+plugin/anthy/src/main/cpp/anthy-cmake                       fcitx5-android/anthy-cmake       2fe8bfe88c034f75abc01c86ac874ae9f8be15e6
+plugin/anthy/src/main/cpp/fcitx5-anthy                      fcitx/fcitx5-anthy               9a7fd5142d3367ed28813eb60f8a2251294823b9
+plugin/chewing/src/main/cpp/fcitx5-chewing                  fcitx/fcitx5-chewing             60096e8ef49df21de6c155d7a0785a58fcccb955
+plugin/hangul/src/main/cpp/fcitx5-hangul                    fcitx/fcitx5-hangul              ede437b2d38bcc37abf382d9136f3ccbf8e16c08
+plugin/jyutping/src/main/cpp/libime-jyutping                fcitx/libime-jyutping            6943567083f7e261ea14c470d316acacd64c7b6f
+plugin/sayura/src/main/cpp/fcitx5-sayura                    fcitx/fcitx5-sayura              a69985130b6e6d69cae461c4e400d3847879a9d9
+plugin/thai/src/main/cpp/fcitx5-libthai                     fcitx/fcitx5-libthai             fd10ea0a8b9f980892bd61384c5f5a56f0b8bc52
+plugin/unikey/src/main/cpp/fcitx5-unikey                    fcitx/fcitx5-unikey              ed9170c35c1a6275d105e03d7f9bc4f674c1469c
+plugin/clipboard-filter/ClearURLsRules                      ClearURLs/Rules                  11086f40512774dcadef54079f1ba023bfacf940
+
+--------------------------------------------------------------------------------
+附录 B · 关键版本清单（与工程保持一致，勿混用其他版本）
+--------------------------------------------------------------------------------
+JDK 17+（验证环境 25.0.2 LTS）· Gradle 9.8.2（华为镜像 -all）· AGP 9.4.1 · Kotlin 2.4.21 · KSP 2.3.12
+compileSdk 37 · minSdk 29    · targetSdk 37 · build-tools 37.0.0
+NDK r28 (28.0.13004108)      · CMake 3.31.6 · ECM >= 5.100 · gettext >= 0.20
+离线 OCR：ONNX Runtime Android 1.31.0 + PaddleOCR PP-OCRv4（assets/ocr/）
+本地加密：SQLCipher Android 4.19.1
+
+--------------------------------------------------------------------------------
+附录 C · 发布令牌（安全约定）
+--------------------------------------------------------------------------------
+令牌属敏感凭据，**禁止**写入源码、文档或仓库历史。Gitee 发布请通过环境变量注入：
+    GITEE_TOKEN=xxxx python3 make_release.py <tag> <name>
+    【Windows / PowerShell】
+        $env:GITEE_TOKEN = "xxxx"
+        python3 make_release.py <tag> <name>
+未设置 GITEE_TOKEN 时脚本会直接报错退出，不会静默失败。
+若令牌曾泄露（例如误提交到公开仓库），仅删除仓库内容**不足以止损**，
+必须立即到 Gitee「设置 → 私人令牌」吊销并重新生成。
+
+--------------------------------------------------------------------------------
+附录 D · 不同宿主 CPU 架构与操作系统的构建注意事项（任意 Linux 架构 / Win10-11）
+--------------------------------------------------------------------------------
+本附录解决「我在 xx 架构的电脑上能不能顺利构建」的问题。目标 APK 的 4 种
+ABI 由工程固定，与宿主无关；下面只谈宿主侧的可行性与坑。
+
+【D.1  x86_64 / amd64 Linux（最顺，推荐）】
+  JDK17、Android SDK(cmdline-tools/sdkmanager 是 Java，原生)、Gradle、CMake、
+  NDK 全部有原生 x86_64 构建。按正文第 1~6 步直接跑即可，无需任何转译。
+  典型发行版：Ubuntu/Debian/Fedora/Arch/openSUSE 的 x86_64 版。
+
+【D.2  aarch64 / ARM64 Linux（树莓派 5、ARM 云主机、Apple Silicon 上的 Asahi Linux）】
+  可行，社区常用。要点：
+  - JDK17、cmdline-tools、Gradle、CMake 都是 JVM 或脚本，**原生运行**，无需转译。
+  - NDK 官方 Linux 包（android-ndk-r28-linux.zip）的宿主工具链 clang/ld 是
+    **x86_64 二进制**，aarch64 上不能直接执行，需用 box64 做用户态转译。
+  安装 box64（二选一）：
+    a) 发行版已打包时：
+         sudo apt install -y box64            # Debian/Raspberry Pi OS 等
+    b) 源码编译（通用）：
+         sudo apt install -y git cmake gcc g++ make
+         git clone https://github.com/ptitSeb/box64 && cd box64
+         mkdir build && cd build
+         cmake -DARM64=1 -DCMAKE_BUILD_TYPE=Release .. && make -j$(nproc)
+         sudo make install && sudo ldconfig
+  验证转译可用：
+         file $ANDROID_HOME/ndk/28.0.13004108/toolchains/llvm/prebuilt/linux-x86_64/bin/clang
+         # 应为 ELF 64-bit LSB executable, x86-64；box64 安装后 ./gradlew 能直接调起它
+  之后按正文第 1~6 步构建即可，box64 会在运行时自动拦截 x86_64 的 NDK 二进制。
+  注意：
+    - 转译有性能损耗，原生编译会比 x86_64 慢约 2~4 倍；时间参考改为 1~3 小时。
+    - 内存建议 >= 8GB，否则并行编译易 OOM（调小 --max-workers）。
+    - 替代方案：用 Docker 拉取 x86_64 镜像 + QEMU 用户态模拟（buildx），但更重。
+
+【D.3  armhf / ARM32 Linux（树莓派 3/4 的 32 位系统，不推荐）】
+  - 需安装 32 位 JDK17（如 openjdk-17-jdk-headless:armhf）与 32 位 box86 转译 NDK。
+  - 内存通常有限（1~4GB），4 ABI 全量编译极易 OOM，建议只构建单 ABI（第 5.2 节）。
+  - 总体不推荐；若真要在 ARM 上构建，优先用 64 位系统（见 D.2）。
+
+【D.4  riscv64 Linux（实验性，极不推荐）】
+  - Google 不为 NDK 提供 riscv64 宿主工具链；只能用 QEMU 完整模拟 x86_64 来跑
+    整个 NDK + Gradle，速度极慢且易出错。仅作技术验证，不建议用于实际产出。
+
+【D.5  Windows 10 / 11（x86_64，原生）】
+  - JDK17、Android SDK、Gradle（gradlew.bat）、CMake、NDK(x86_64 包) 全部原生。
+  - 两个高频坑：
+    (1) 路径过长：NDK 解压后路径极深，易触发 Windows 260 字符限制。务必把
+        SDK 装在短路径（如 C:\android\sdk），并在
+        「组策略 → 计算机配置 → 管理模板 → 系统 → 文件系统 →
+        启用 Win32 长路径」开启；或直接按第 2 步用 C:\android\sdk。
+    (2) MSYS2 原生依赖：第 3 步的 ECM/gettext 需在 MSYS2 UCRT64 终端装好并把
+        C:\msys64\ucrt64\bin 加入 PATH；PowerShell 里跑 gradlew.bat 时会调用到。
+  - Windows on ARM 设备：NDK 为 x86_64 包，Windows 11 内置 x86_64 模拟可运行，
+    但速度慢；如需更好体验请在 x86_64 主机上构建。
+
+【D.6  通用提示】
+  - 无论哪种宿主，首次构建都会下载 Gradle 发行包、Maven 依赖、NDK 与 SDK 组件，
+    请保证网络通畅；受限网络见第 4.2 / Q5 节的镜像与手动下载方式。
+  - 低内存 cgroup（如 3.11 GiB）/ Firecracker microVM / 磁盘紧张的受限 Linux：
+    内存压档参数、磁盘红线与镜像预置见《Linux构建优化指导书.txt》（随源码包）。
+  - 构建产物与宿主架构无关：在 aarch64 Linux 上编出的 Universal.apk 与在
+    x86_64 Windows 上编出的完全一致（同 4 ABI、同未签名形态）。
+
+================================================================================
+按本说明书执行完毕后，你会得到：
+  Universal.apk —— 未签名 / 无混淆 / 无加固 / 全 ABI / 支持 Android 10~17
+（宿主可以是 x86_64 / aarch64 Linux 或 Windows 10/11；目标设备架构固定为 4 ABI）
+================================================================================

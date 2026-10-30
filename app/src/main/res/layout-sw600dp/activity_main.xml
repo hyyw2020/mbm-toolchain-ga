@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MBM v1.0.26 / P1-6（Android 17）：sw≥600dp 的设置页重排。
+
+  androidx WindowSizeClass 的语义是：
+    COMPACT  < 600dp（手机竖屏）
+    MEDIUM   600dp ~ 839dp（手机横屏 / 小平板 / 折叠屏展开单屏）
+    EXPANDED >= 840dp（平板 / 折叠屏完全展开）
+
+  「设置页重排」= 当可用宽度进入 MEDIUM 及以上时，偏好列表不能把整屏拉满：
+  超宽单列在平板上行高被拉到 1000dp+，一屏只剩两三条设置，拇指够不着，
+  也看不出分组结构。这里的做法是主从面板宽度封顶 + 水平居中（Material 的
+  "canonical layout"），而不是引入双窗格（双窗格要求 navigation 适配
+  list-detail 场景，改动面远大于收益，且与现有 NavHost 架构冲突）。
+
+  资源限定符 sw600dp 与 WindowWidthSizeClass.MEDIUM 的阈值一致，
+  由系统按当前窗口最小宽度选版，无需在代码里判断屏幕尺寸。
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.main.MainActivity">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/colorPrimary"
+        android:elevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_max="@dimen/settings_pane_max_width" />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/nav_host_fragment"
+        android:name="androidx.navigation.fragment.NavHostFragment"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:defaultNavHost="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintWidth_max="@dimen/settings_pane_max_width" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

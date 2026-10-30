@@ -1,0 +1,182 @@
+Mixed Bug Method (MBM) — 多引擎融合输入法
+Copyright (C) 2026 Mixed Bug Method Contributors
+
+当前版本：v1.0.35（versionCode = baseVersionCode(1) * 10 + ABI；未签名/无混淆/无加固）。
+本轮加固（v1.0.35）的完整改动清单见 docs/PATCHES_v1.0.35.md；上一轮（v1.0.34）见 docs/PATCHES_v1.0.34.md。
+历史加固记录见 docs/PATCHES_v1.0.33.md、docs/PATCHES_v1.0.32.md、docs/PATCHES_v1.0.26.md。
+变更、崩溃修复与加固方法论长期记忆见 docs/pitfalls.md（第 1 ~ 77 条）。
+
+隐私政策（PRIVACY.txt）随本产品各 APK 分发，可在主输入法「关于 → 隐私政策」
+与「屏幕记忆」Recall 界面内离线查看。
+
+重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。逐文件
+SPDX 头的实测分布为 LGPL-2.1-or-later × 360（继承上游的文件头）+
+AGPL-3.0-or-later × 91（MBM 新写/新改），组合分发依据见第五节。
+逐文件许可台账由 docs/license_audit.py 生成为 docs/sbom/license_ledger.txt
+（CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
+
+本文件（NOTICE）列出随本产品分发的第三方组件及其许可。
+
+================================================================================
+一、本产品自有代码（MBM 新写/新改部分，SPDX 头均为 AGPL-3.0-or-later）
+================================================================================
+模块/目录                                                                      许可
+app/src/main/java/org/fcitx/fcitx5/android/data/rules/      统一规则/词库导入    AGPL-3.0-or-later
+app/src/main/java/org/fcitx/fcitx5/android/data/smartdict/  离线智能词库        AGPL-3.0-or-later
+app/src/main/java/org/fcitx/fcitx5/android/data/password/   密码字段检测/填充/   AGPL-3.0-or-later
+                                                                               本地随机生成器（纯内存
+                                                                               运算，不持久化、不联网）
+app/src/main/java/org/fcitx/fcitx5/android/data/crypto/     Keystore 密钥信封 +   AGPL-3.0-or-later
+  StreamingFileCipher.kt / AppKeyManager.kt                 分块流式 AES-256-GCM
+                                                                               （blob 静态加密）
+app/src/main/java/org/fcitx/fcitx5/android/core/data/       插件信任链          AGPL-3.0-or-later
+  PluginTrustChain.kt                                       证书指纹白名单+ .so SHA-256
+app/src/main/java/org/fcitx/fcitx5/android/ui/main/         新增界面            AGPL-3.0-or-later
+app/src/main/java/org/fcitx/fcitx5/android/input/handwriting/ 键盘内离线手写面板 AGPL-3.0-or-later
+app/src/main/java/org/fcitx/fcitx5/android/input/           FcitxInputMethodService 的
+  FcitxInputMethodService.kt                                Android 17 适配      AGPL-3.0-or-later
+app/src/main/java/org/fcitx/fcitx5/android/utils/           崩溃日志脱敏        AGPL-3.0-or-later
+  CrashLogSanitizer.kt / AppSignatureVerifier.kt /
+  ProcessExitAttributor.kt
+lib/handwritten/src/main/java/.../HandwrittenRecognizer.kt  手写识别 Kotlin 封装 AGPL-3.0-or-later
+lib/handwritten/src/main/java/com/shiyu/handwritten/        HCCR 预处理运行时   AGPL-3.0-or-later
+lib/handwritten/src/main/cpp/preprocess.{c,h}               训练/推理同源预处理  AGPL-3.0-or-later
+build-logic/convention/src/main/kotlin/                     构建约定插件        AGPL-3.0-or-later
+                                                             （含 16KB 页对齐链接标志）
+plugin/recall/                                               Recall 独立可选 APK AGPL-3.0-or-later
+  （v1.0.26 起从主输入法拆出；主输入法不再声明任何 AccessibilityService）
+
+继承上游 fcitx5-android 文件头的其余部分（约 360 个文件）为 LGPL-2.1-or-later，
+即上游原样保留的代码，其许可不因本产品的修改而改变（见第五节）。
+
+================================================================================
+二、上游输入框架（以 vendored / submodule 方式引入，保留原许可）
+================================================================================
+下表许可以 docs/license_audit.py 对工作区实际文件的逐文件统计为准
+（2026-10 快照）；「未检出」指本发布仓未包含该 submodule 内容，
+完整检出后重跑 license_audit.py 得到的结果优先。
+
+组件                               路径                                  许可
+fcitx5-android                    （工程主体）                          LGPL-2.1-or-later
+fcitx5（核心）                    lib/fcitx5/src/main/cpp/fcitx5         LGPL-2.1-or-later（未检出）
+libime（拼音引擎）                lib/libime/src/main/cpp/libime         LGPL-2.1-or-later（未检出）
+fcitx5-chinese-addons             lib/fcitx5-chinese-addons/...          GPL-3.0-or-later（未检出）
+fcitx5-lua                        lib/fcitx5-lua/...                     LGPL-2.1-or-later（未检出）
+librime（预编译静态库）           lib/fcitx5/src/main/cpp/prebuilt        GPL-3.0-or-later（未检出）
+fcitx5-rime（插件）               plugin/rime/src/main/cpp/fcitx5-rime   LGPL-2.1-or-later ×10 +
+                                                                        GPL-2.0-or-later ×4 +
+                                                                        无 SPDX 头 ×2（上游原样）
+rime-prelude / rime-essay /      plugin/rime/src/main/cpp/...           上游声明许可
+rime-luna-pinyin / rime-stroke
+anthy-unicode（anthy-cmake）      plugin/anthy/src/main/cpp/anthy-cmake  上游 anthy 源码，无 SPDX 头
+                                                                ×104（其 COPYING 为 GPL-2.0-or-later）
+fcitx5-anthy                      plugin/anthy/...                       GPL-2.0-or-later
+fcitx5-unikey                     plugin/unikey/...                      GPL-2.0-or-later ×32 +
+                                                                        LGPL-2.0-or-later ×9 +
+                                                                        无 SPDX 头 ×1（上游原样）
+fcitx5-hangul                     plugin/hangul/...                      LGPL-2.1-or-later ×3 +
+                                                                        GPL-2.0-or-later ×1
+fcitx5-chewing                    plugin/chewing/...                     LGPL-2.1-or-later ×2 +
+                                                                        GPL-2.0-or-later ×1
+fcitx5-sayura                     plugin/sayura/...                      GPL-2.0-or-later
+fcitx5-libthai                    plugin/thai/...                        GPL-2.0-or-later ×6 +
+                                                                        LGPL-2.1-or-later ×1
+libime-jyutping                   plugin/jyutping/...                    LGPL-2.1-or-later
+ClearURLs Rules                   plugin/clipboard-filter/               LGPL-3.0-or-later
+
+以上 GPL-2.0-or-later / LGPL-2.0-or-later / LGPL-2.1-or-later 均为「或更高
+版本」许可，依其升级条款可随组合作品以 GPL-3.0 / LGPL-3.0 适用（见第五节）。
+未发现任何 -only 结尾、无升级出路的不兼容许可。
+
+================================================================================
+三、新增第三方依赖
+================================================================================
+组件                                     用途                           许可
+ONNX Runtime Android (Microsoft)          离线 OCR 推理引擎              MIT License
+PaddleOCR PP-OCRv6(small) 模型             离线 OCR 模型（assets/ocr/） Apache-2.0
+  - ch_PP-OCRv6_det_small.onnx（det 9.9MB）
+  - ch_PP-OCRv6_rec_small.onnx（rec 21.2MB）
+  - ch_ppocr_mobile_v2.0_cls_infer.onnx（cls 方向分类，沿用 v4 资产）
+  - ppocrv6_dict.txt（rec 字典，18708 词，50 语言）
+  - 模型来源：RapidAI/RapidOCR v3.10.0（ModelScope 分发，SHA256 已核验）
+SQLCipher Android (Zetetic)               本地加密数据库                 BSD-3-Clause（社区版）
+  - Recall 独立 APK 与主输入法剪贴板数据库均以 raw key（32B 随机）直传
+    SupportOpenHelperFactory，绕过 PBKDF2 KDF；raw key 由 Keystore
+    AES-256-GCM（StrongBox 优先）信封加密后落盘，安全链路见
+    plugin/recall/src/main/java/.../data/RecallDatabase.kt 与
+    app/src/main/java/.../data/crypto/AppKeyManager.kt
+  - v1.0.34 起大文本外置文件（blob）另有一层分块流式 AES-256-GCM
+    静态加密（StreamingFileCipher，两侧模块同构镜像），详见
+    docs/PATCHES_v1.0.34.md
+androidx.security:security-crypto         加密偏好（EncryptedSharedPrefs）Apache-2.0
+androidx.biometric                        「查看与填充」生物识别门      Apache-2.0
+androidx.datastore:datastore-preferences  Recall 本地偏好               Apache-2.0
+androidx.room                             Recall 本地数据库             Apache-2.0
+Ismantic/Handwritten 运行时代码            离线手写识别（lib/handwritten）Apache-2.0
+Ismantic/Handwritten 模型                  离线手写模型（assets/）      Apache-2.0
+  - model.ncnn.param / model.ncnn.bin（MobileNetV2 INT8，GB2312 一级 3755 字）
+  - charset.json（字表）
+ncnn（Tencent）                            离线手写推理引擎（静态库）    BSD-3-Clause
+  - 预编译版本 ncnn-20250503-android，随源码提供于
+    lib/handwritten/src/main/cpp/ncnn/<abi>/
+AndroidX / Material Components            界面与架构组件                Apache-2.0
+Kotlin / kotlinx                           开发语言与协程                Apache-2.0
+
+RapidOCR 的 Python 实现（Apache-2.0）仅作为离线 OCR 流水线（预处理、DB 后处理、
+CTC 解码）的算法参考，本产品未包含其代码，OCR 部分为 Android 原生 Kotlin 实现。
+
+================================================================================
+四、仅作功能/格式对照、未包含代码的项目
+================================================================================
+项目                          说明
+第三方 Rime 系输入法项目 A（gurecn）  基于 Rime 定制开发；本产品仅兼容其 Rime 规则/词库格式，
+                              不包含其任何代码，也不反编译其 APK
+第三方 Rime 系输入法项目 B              基于 Rime 构建；同上，仅作规则格式对照
+HeliBoard / 问墨 Wenmo /      隐私与离线能力的做法参考（密码字段不学习、无网络权限），
+FUTO Keyboard / FlorisBoard / 不包含其代码
+AnySoftKeyboard / Urik
+
+================================================================================
+五、许可兼容性说明（混合许可衍生作品的事实陈述）
+================================================================================
+1. MBM 的文件头呈两种许可：继承上游 fcitx5-android 的文件为
+   LGPL-2.1-or-later，MBM 新写/新改的文件为 AGPL-3.0-or-later。
+   衍生作品的再分发以各文件头为准，不整体宣称单一许可。
+
+2. 组合发布的依据：依据 GNU GPL 第 13 条（Use with the GNU Affero
+   General Public License），GPL-3.0 作品可以与 AGPL-3.0 作品链接或组合
+   并作为整体发布。LGPL-2.1+ / GPL-2.0+ 组件（Fcitx5 核心、fcitx5-anthy、
+   fcitx5-unikey 等）依其「或更高版本」升级条款随组合作品以 GPL-3.0 适用，
+   再经 GPL-3.0 §13 与 AGPL-3.0 部分组合；该 LGPL/GPL 部分仍按其原许可
+   条款适用（含替换库的权限保留），AGPL 第 13 条网络交互义务适用于整体
+   分发的派生部分。
+
+3. 台账与 SBOM：docs/license_audit.py（纯本地解析，不联网）统计
+   - 第一方逐文件 SPDX 覆盖率（要求 100%）与许可分布（白名单：
+     AGPL-3.0-or-later / LGPL-2.1-or-later / GPL-3.0-or-later）；
+   - vendored 组件逐文件许可，检出 -only 结尾的不兼容许可即报错，
+     检出 -or-later 许可提示升级路径。
+   复现：python3 docs/license_audit.py --check（退出码 0 = 合规通过）。
+
+================================================================================
+六、Recall 独立可选 APK 的特别说明（v1.0.26 起）
+================================================================================
+Recall（屏幕内容捕获/记忆）自 v1.0.26 起从主输入法拆为**独立可选 APK**
+（org.fcitx.fcitx5.android.recall，许可 AGPL-3.0-or-later）：
+- 主输入法（org.fcitx.fcitx5.android）**不声明任何 AccessibilityService**，
+  屏幕捕获能力只存在于独立安装并显式开启无障碍的 Recall APK；
+- Recall 服务在探测到第三方 APM（AccessibilityService Monitor）后按
+  RecallPolicy 显式禁用自身，并对 password / accessibilityDataSensitive
+  节点跳过或仅记事件不存内容；
+- Recall 的本地数据库为 SQLCipher 加密，密钥经 Keystore 信封加密，
+  「查看与填充」界面有生物识别门；主输入法不持有 Recall 数据库的任何密钥。
+- Recall 与主输入法的大文本外置文件（blob）自 v1.0.34 起为 AES-256-GCM
+  分块静态加密；v1.0.33 及以前的遗留明文文件自动识别、照常可读。
+未安装 Recall 的用户得到与上游 fcitx5-android 等价的功能面。
+
+================================================================================
+七、合规红线
+================================================================================
+本产品不反编译、不并入任何闭源 APK 的代码。
+构建产物不含任何签名/混淆/加固；上架轨（AAB）如需签名，指纹自校验见
+app/src/main/java/org/fcitx/fcitx5/android/utils/AppSignatureVerifier.kt。

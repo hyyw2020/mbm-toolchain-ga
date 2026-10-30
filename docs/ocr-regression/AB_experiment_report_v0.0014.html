@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBM OCR 模块 A/B 实验与审计交付报告（v0.001.3 后）</title>
+<style>
+  :root { --bg:#0f1220; --card:#1a1f33; --ink:#e8ecf5; --mut:#9aa4c0;
+    --red:#ff5d6c; --grn:#39d98a; --amber:#ffb547; --blue:#5aa9ff; --line:#2a3350; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:26px; margin:0 0 4px; }
+  h2 { font-size:19px; margin:34px 0 12px; padding-left:10px; border-left:4px solid var(--blue); }
+  h3 { font-size:16px; margin:20px 0 8px; color:var(--blue); }
+  .sub { color:var(--mut); margin:0 0 8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; margin:14px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; text-align:center; }
+  .kpi .v { font-size:28px; font-weight:700; }
+  .kpi .l { color:var(--mut); font-size:13px; margin-top:4px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; }
+  th { background:#161b2e; color:var(--mut); font-weight:600; }
+  tr:nth-child(even) td { background:#161a2c; }
+  .ok { color:var(--grn); font-weight:700; }
+  .warn { color:var(--amber); font-weight:700; }
+  .bad { color:var(--red); font-weight:700; }
+  code { background:#11162a; padding:2px 6px; border-radius:6px; color:#cfe0ff; font-size:13px; }
+  .tag { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+  .t-a { background:rgba(90,169,255,.15); color:var(--blue); }
+  .t-b { background:rgba(57,217,138,.15); color:var(--grn); }
+  .t-c { background:rgba(255,181,71,.15); color:var(--amber); }
+  .note { border-left:3px solid var(--amber); background:#20283f; padding:10px 14px; border-radius:8px; margin:10px 0; }
+  .note.blue { border-color:var(--blue); background:#16203a; }
+  ul { margin:8px 0 8px 2px; padding-left:20px; }
+  li { margin:4px 0; }
+  .mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
+  footer { color:var(--mut); font-size:12px; margin-top:40px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MBM OCR 模块 · A/B 实验与审计交付报告</h1>
+  <p class="sub">基于四步协议（只读审计 → 方案 → 改 → 交付）· 版本上下文：v0.001.3（commit <code>e5f5438</code>）之后</p>
+
+  <div class="card">
+    <strong>结论速览（TL;DR）</strong>
+    <ul>
+      <li><b>Fix-A</b>：30 场景 A/B 实验显示，两种 det→NMS 顺序 pass 均为 <span class="ok">22/8</span>，NMS 总抑制框数均为 <span class="bad">0</span>。
+        按用户判据采纳 <b>候选2（仅改注释，Kotlin 一行不动）</b>，候选1 重排顺序无收益、不采纳。</li>
+      <li><b>Fix-B</b>：删除 Python 镜像死代码 + 修正过期注释 + 补 2 条 score&lt;0.4 用例，<code>test_round3.py</code> <span class="ok">全绿（10 条）</span>。</li>
+      <li><b>Fix-C</b>：仅把 Python 镜像 warpCrop 取模改 clamp 对齐 Kotlin，<b>未动 Kotlin</b>，文档记录差异。</li>
+      <li><b>Release 口径</b>：本轮 release 包不含 Fix-A/Fix-C 任何 Kotlin 行为改动；与 debug 行为一致，30 场景验收 = 22/8。</li>
+      <li><b>专项回答</b>：现状 NMS 对「DB 重叠重复框」<b>完全不起作用（抑制 0 框）</b>；且该 30 场景合成套件里根本没有可抑制的重叠框。</li>
+    </ul>
+  </div>
+
+  <h2>1. 改动清单（改了哪）</h2>
+  <table>
+    <thead><tr><th>项</th><th>文件</th><th>改动</th><th>类别</th></tr></thead>
+    <tbody>
+      <tr><td>Fix-B</td><td><code>docs/ocr-regression/fix_pipeline.py</code></td>
+        <td>删除 :139 死代码 <code>recognize_crop_vertical</code>（第一版无 robust）；修正 :230 过期注释（「≥0.7 直接采用」短路 → 「无高置信短路」）</td><td><span class="tag t-b">Python</span></td></tr>
+      <tr><td>Fix-B</td><td><code>docs/ocr-regression/test_round3.py</code></td>
+        <td>新增 2 条用例：<code>("战双帕弥件",0.30)</code>、<code>("明曰方舟",0.25)</code> 覆盖 score&lt;0.4 不校正</td><td><span class="tag t-b">Python</span></td></tr>
+      <tr><td>Fix-A 候选2</td><td><code>plugin/recall/.../OcrEngine.kt</code></td>
+        <td>仅改 :203-205 注释（「先 NMS 后合并」→「先合并后 NMS」+ NMS 用途说明），代码一行不动</td><td><span class="tag t-a">Kotlin 注释</span></td></tr>
+      <tr><td>Fix-C</td><td><code>docs/ocr-regression/ppocr_pipeline.py</code></td>
+        <td>:267 <code>% src.width</code> 取模 → <code>clamp(0, src.width-1)</code> 对齐 Kotlin <code>coerceIn</code></td><td><span class="tag t-c">Python</span></td></tr>
+      <tr><td>实验</td><td><code>docs/ocr-regression/ab_order_test.py</code> + <code>ab_order_result.json</code></td>
+        <td>新增 A/B 实验脚本与结果（可复跑）</td><td><span class="tag t-a">新增</span></td></tr>
+      <tr><td>记录</td><td><code>docs/pitfalls.md</code></td>
+        <td>新增 #66 条目记录本次 A/B 实验与 Fix-C 对齐</td><td><span class="tag t-a">文档</span></td></tr>
+    </tbody>
+  </table>
+  <div class="note blue">死代码删除前已 <code>grep -rn "recognize_crop_vertical"</code> 全仓确认：仅 <code>fix_pipeline.py:250</code> 定义 + <code>:346</code> 调用（活函数，含 robust+竖排），无 Kotlin / 跨文件调用者。</div>
+
+  <h2>2. 证据（A/B 实验实测）</h2>
+  <p class="sub">Kotlin 一行不动；Python 镜像加 <code>OCR_ORDER</code> 开关，真实 PP-OCRv6 模型跑 30 场景各一遍。</p>
+  <div class="grid">
+    <div class="kpi"><div class="v ok">22 / 8</div><div class="l">(a) merge_nms 现状 pass/fail</div></div>
+    <div class="kpi"><div class="v ok">22 / 8</div><div class="l">(b) nms_merge 候选1 pass/fail</div></div>
+    <div class="kpi"><div class="v bad">0</div><div class="l">(a) NMS 总抑制框数</div></div>
+    <div class="kpi"><div class="v bad">0</div><div class="l">(b) NMS 总抑制框数</div></div>
+  </div>
+
+  <h3>逐场景 NMS 抑制框数（总计 + 抽样）</h3>
+  <table>
+    <thead><tr><th>顺序</th><th>总场景</th><th>pass</th><th>fail</th><th>NMS 总抑制</th><th>pass 差值(b−a)</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag t-a">a merge_nms</span></td><td>30</td><td class="ok">22</td><td>8</td><td class="bad">0</td><td rowspan="2">+0</td><td rowspan="2">条件1✓ 条件2✗<br>→ 采纳候选2</td></tr>
+      <tr><td><span class="tag t-b">b nms_merge</span></td><td>30</td><td class="ok">22</td><td>8</td><td class="bad">0</td></tr>
+    </tbody>
+  </table>
+  <div class="note">逐场景明细：两顺序 <code>pass/fail</code> 完全一致（<code>diffs=[]</code>），且<b>每一场景 NMS 抑制框数均为 0</b>。8 个 fail 全为已知模型形近字极限（「文字→文学」「小字→小学」「露西亚→露西业」等），与 v0.001.3 复核结论一致。</div>
+
+  <h3>判据（用户 Step 1 反馈）</h3>
+  <ul>
+    <li>条件1：<code>(b)pass(22) ≥ (a)pass(22)</code> → <span class="ok">满足</span></li>
+    <li>条件2：<code>(a)NMS 抑制数(0) &gt; 0</code> → <span class="bad">不满足</span></li>
+    <li>结论：<b>采纳候选2（只改注释，Kotlin 顺序不动）</b>；候选1（nms→merge 重排）在此数据下无可抑制对象、无收益，不采纳。</li>
+  </ul>
+
+  <h3>专项回答：现状 NMS 是否完全不起作用？</h3>
+  <div class="note"><b>是。</b> 现状顺序下 NMS 抑制 <span class="bad">0</span> 个框，对「DB 重叠重复框」完全不起作用；且候选顺序 (b) 下 NMS 同样抑制 0 框——
+    即这 30 个合成场景里<b>根本没有 DB 重叠重复框可抑制</b>。<br>
+    <b>推论</b>：v1.0.30 引入 NMS 的立论前提（DB 密集处输出重叠框）未被本 30 场景合成套件复现；NMS 的 IoU 逻辑有单测覆盖、正确，只是<b>未被端到端触发</b>。
+    真实密集游戏截图是否会触发 = <b>不确定，需真机验证</b>。</div>
+
+  <h2>3. 顺手验了什么</h2>
+  <ul>
+    <li><b>红队「score 是 logit」被证伪</b>：真实模型实测输出 shape <code>(1,18,18710)</code>、每时间步各类概率和 = 1.0000、最大 = 1.0 → 图已含 Softmax，score 确为 [0,1] 概率，非 logit；0.4 门槛有效。</li>
+    <li><b>Fix-B 顺序真相</b>：<code>OcrEngine.kt:206</code> 是 <code>nmsBoxes(mergeSameRowBoxes(detect(src)))</code> = 先合并后 NMS，与文件头旧注释「先 NMS 后合并」相反——本轮已把注释对齐真实代码。</li>
+    <li><b>多旋转门控无高置信短路</b>：<code>OcrEngine.kt:752-779</code> 四向 <code>cands.maxByOrNull { it.second }</code>，无阈值早退（用户最担心风险未发生）。</li>
+    <li><b>NMS 无面积/高度过滤</b>：<code>OcrEngine.kt:546-559</code> 仅 IoU 比较，本轮未加任何过滤（符合硬约束）。</li>
+    <li><b>Release 构建配置无静默失效</b>：确认 <code>isMinifyEnabled=false</code>、<code>isShrinkResources=false</code>、ABI 仅 arm64-v8a + universal、签名 <code>fromProjectEnv</code> → release 与 debug 行为一致。</li>
+    <li><b>全部 Python 改动 <code>py_compile</code> 通过</b>，<code>test_round3.py</code> 全绿（10 条，含 2 条 score&lt;0.4）。</li>
+  </ul>
+
+  <h2>4. 需真机验证什么</h2>
+  <ul>
+    <li><b>真实密集游戏截图是否会触发 DB 重叠框</b>：决定 NMS 是否有意义、以及是否要重排顺序。本合成套件（30 场景）未复现，结论待真机。</li>
+    <li><b>镜像 ↔ Kotlin 的 warpCrop 边缘差异</b>：Python 镜像 <code>warp_crop_fixed</code> 与 Kotlin <code>OcrEngine.kt:957-960</code> 在边缘 1px 钳制上口径一致，但落地真机后仍需复验视觉对齐。</li>
+    <li><b>拆 APK 确认 <code>assets/ocr/</code> 仍在</b>：构建配置类（签名/R8/ABI/资源压缩）改动常静默失效，建议每轮 release 人工 diff + 拆包核对。</li>
+  </ul>
+
+  <h2>5. 不确定点</h2>
+  <ul>
+    <li><b>NMS 在真实场景的必要性</b>：本轮数据无法证明、也无法否定。若真机复现 DB 重叠框，候选1 重排顺序可能才有意义（届时需重跑 A/B）。</li>
+    <li><b>Fix-C 行为影响</b>：Python 镜像 clamp 改动被 <code>warp_crop_fixed</code> 遮蔽，对 30 场景零行为影响；其价值仅在「直接调用 <code>ppocr_pipeline.warp_crop</code> 且框越界」时体现，目前无此类入口。</li>
+    <li><b>8 个 fail 是模型极限</b>，非回归：属 PP-OCRv6 形近字固有误差，需更强模型或更大词典，本轮不修。</li>
+  </ul>
+
+  <h2>6. Release 口径</h2>
+  <div class="card">
+    <ul>
+      <li>本轮 release 包 <b>不含 Fix-A/Fix-C 任何 Kotlin 行为改动</b>（<code>OcrEngine.kt</code> 仅一行注释，零行为影响）。</li>
+      <li>release 与 debug 行为一致，30 场景验收 = <span class="ok">22/8</span>，与 v0.001.3 完全一致。</li>
+      <li>如需出包，建议仅核对构建配置（无 R8 / 无资源裁剪 / ABI 正确 / 签名到位），并拆 APK 确认 <code>assets/ocr/</code> 仍在。</li>
+    </ul>
+  </div>
+
+  <footer>MBM OCR 模块 A/B 实验交付报告 · 生成于 v0.001.3 之后审计 · 数据来源 <code>ab_order_result.json</code> / <code>scan_results.json</code></footer>
+</div>
+</body>
+</html>

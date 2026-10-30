@@ -1,0 +1,53 @@
+MBM 许可台账 / License Ledger
+生成者：docs/license_audit.py（纯本地解析，不联网）
+
+第一方代码：451 个文件带 SPDX 头，0 个缺失
+
+第一方许可分布（LGPL-2.1-or-later = 继承上游 fcitx5-android 的文件头，
+AGPL-3.0-or-later = MBM 新写/新改；组合分发依据见 NOTICE 第六节）：
+    LGPL-2.1-or-later: 360 个文件
+    AGPL-3.0-or-later: 91 个文件
+
+引入组件逐文件许可统计（submodule 未检出时该项为空）：
+  anthy:
+      <no-spdx-header>: 104 个文件
+  fcitx5:
+      LGPL-2.1-or-later: 436 个文件
+      <no-spdx-header>: 151 个文件
+  fcitx5-android/prebuilt:
+      <no-spdx-header>: 14204 个文件
+      MIT: 46 个文件
+  fcitx5-anthy:
+      GPL-2.0-or-later: 32 个文件
+  fcitx5-chewing:
+      LGPL-2.1-or-later: 2 个文件
+      GPL-2.0-or-later: 1 个文件
+  fcitx5-chinese-addons:
+      LGPL-2.1-or-later: 88 个文件
+      <no-spdx-header>: 5 个文件
+  fcitx5-hangul:
+      LGPL-2.1-or-later: 3 个文件
+      GPL-2.0-or-later: 1 个文件
+  fcitx5-libthai:
+      GPL-2.0-or-later: 6 个文件
+      LGPL-2.1-or-later: 1 个文件
+  fcitx5-lua:
+      LGPL-2.1-or-later: 13 个文件
+      <no-spdx-header>: 2 个文件
+  fcitx5-rime:
+      LGPL-2.1-or-later: 10 个文件
+      GPL-2.0-or-later: 4 个文件
+      <no-spdx-header>: 2 个文件
+  fcitx5-sayura:
+      GPL-2.0-or-later: 2 个文件
+  fcitx5-unikey:
+      GPL-2.0-or-later: 32 个文件
+      LGPL-2.0-or-later: 9 个文件
+      <no-spdx-header>: 1 个文件
+  libime:
+      LGPL-2.1-or-later: 101 个文件
+      <no-spdx-header>: 17 个文件
+  libime-jyutping:
+      LGPL-2.1-or-later: 26 个文件
+  ncnn (Tencent):
+      <no-spdx-header>: 116 个文件

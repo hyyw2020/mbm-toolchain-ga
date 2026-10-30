@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recall 插件：禁止一切备份/迁移（API 30- 老路径） -->
+<full-backup-content>
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="file" path="recall_audit.log" />
+    <exclude domain="file" path="datastore" />
+</full-backup-content>

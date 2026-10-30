@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MBM v1.0.26：allowBackup=false 为主，这里是 API 30- 的旧路径双保险。
+  用户词库 / 自定义词组 / 短语锁一律排除禁止备份；Recall 数据已迁往独立 APK。
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="file" path="datastore" />
+    <exclude domain="file" path="usr" />
+    <exclude domain="file" path="descriptor.json" />
+    <exclude domain="file" path="licenses.json" />
+    <exclude domain="file" path="README.md" />
+</full-backup-content>

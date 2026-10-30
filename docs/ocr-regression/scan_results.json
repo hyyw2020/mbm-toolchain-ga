@@ -1,0 +1,571 @@
+[
+ {
+  "cat": "A",
+  "name": "紧凑双行-间隙0.2x字高",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文学内容"
+  ],
+  "scores": [
+   0.93,
+   0.93
+  ],
+  "boxes": 2,
+  "ok": false,
+  "note": "行中心距=57px",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "紧凑双行-间隙0.35x字高",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "scores": [
+   0.96,
+   0.95
+  ],
+  "boxes": 2,
+  "ok": true,
+  "note": "行中心距=64px",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "紧凑双行-间隙0.5x字高",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "scores": [
+   0.96,
+   0.95
+  ],
+  "boxes": 2,
+  "ok": true,
+  "note": "行中心距=72px",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "紧凑双行-间隙0.8x字高",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文学内容"
+  ],
+  "scores": [
+   0.92,
+   0.93
+  ],
+  "boxes": 2,
+  "ok": false,
+  "note": "行中心距=86px",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "倾斜8度紧凑双行",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "scores": [
+   0.94,
+   0.96
+  ],
+  "boxes": 2,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "倾斜12度紧凑双行",
+  "expect": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "got": [
+   "第一行文字内容",
+   "第二行文字内容"
+  ],
+  "scores": [
+   0.95,
+   0.96
+  ],
+  "boxes": 2,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "回归-云战双宽间隙60px",
+  "expect": [
+   "云·战双帕弥什"
+  ],
+  "got": [
+   "云·战双帕弥什"
+  ],
+  "scores": [
+   0.99
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "回归-云战双宽间隙80px",
+  "expect": [
+   "云·战双帕弥什"
+  ],
+  "got": [
+   "云·战双帕弥什"
+  ],
+  "scores": [
+   0.99
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "双行不同字号(64/28)",
+  "expect": [
+   "大标题文字",
+   "小字副标题说明"
+  ],
+  "got": [
+   "大标题文字",
+   "小学副标题说明"
+  ],
+  "scores": [
+   0.97,
+   0.93
+  ],
+  "boxes": 2,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "竖排四字",
+  "expect": [
+   "以弥止争"
+  ],
+  "got": [
+   "以弥止争"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "超长词-32字",
+  "expect": [
+   "露西亚深红之渊武装构造体编号九三零四一七号机体已确认损毁请立即前往维修站进行整备"
+  ],
+  "got": [
+   "露西业深红之渊武装构造体编号九-零四一七号机体已确认损毁请立即前往维修站"
+  ],
+  "scores": [
+   0.96
+  ],
+  "boxes": 1,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "A",
+  "name": "三行菜单",
+  "expect": [
+   "账号与安全",
+   "消息通知设置",
+   "隐私与权限"
+  ],
+  "got": [
+   "账号与安全",
+   "消息通知设置",
+   "隐私与权限"
+  ],
+  "scores": [
+   0.96,
+   1.0,
+   0.98
+  ],
+  "boxes": 3,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "小字号-14px",
+  "expect": [
+   "战双帕弥什云游戏"
+  ],
+  "got": [
+   "战双帕弥什云游戏"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "小字号-18px",
+  "expect": [
+   "战双帕弥什云游戏"
+  ],
+  "got": [
+   "战双帕弥什云游戏"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "小字号-24px",
+  "expect": [
+   "战双帕弥什云游戏"
+  ],
+  "got": [
+   "战双帕弥什云游戏"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "小字号-32px",
+  "expect": [
+   "战双帕弥什云游戏"
+  ],
+  "got": [
+   "战双帕弥什云游戏"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "低对比度-灰度差30",
+  "expect": [
+   "低对比度文字测试"
+  ],
+  "got": [
+   "低对比度文字测试"
+  ],
+  "scores": [
+   0.95
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "低对比度-灰度差60",
+  "expect": [
+   "低对比度文字测试"
+  ],
+  "got": [
+   "低对比度文学测试"
+  ],
+  "scores": [
+   0.97
+  ],
+  "boxes": 1,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "低对比度-灰度差100",
+  "expect": [
+   "低对比度文字测试"
+  ],
+  "got": [
+   "低对比度文学测试"
+  ],
+  "scores": [
+   0.97
+  ],
+  "boxes": 1,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "低对比度-灰度差150",
+  "expect": [
+   "低对比度文字测试"
+  ],
+  "got": [
+   "低对比度文学测试"
+  ],
+  "scores": [
+   0.96
+  ],
+  "boxes": 1,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "半透明浮层-alpha160",
+  "expect": [
+   "半透明浮层文字"
+  ],
+  "got": [
+   "半透明浮层文学"
+  ],
+  "scores": [
+   0.94
+  ],
+  "boxes": 1,
+  "ok": false,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "反白字-亮底暗字",
+  "expect": [
+   "反白文字测试"
+  ],
+  "got": [
+   "反白文字测试"
+  ],
+  "scores": [
+   0.95
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "斜体-shear0.25",
+  "expect": [
+   "斜体文字识别测试"
+  ],
+  "got": [
+   "斜体文字识别测试"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "B",
+  "name": "中英数字混排",
+  "expect": [
+   "帕弥什",
+   "PM-2024",
+   "机体"
+  ],
+  "got": [
+   "帕弥什 PM-2024 机体"
+  ],
+  "scores": [
+   0.93
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜8度+24px小字",
+  "expect": [
+   "倾斜小字测试内容"
+  ],
+  "got": [
+   "倾斜小字测试内容"
+  ],
+  "scores": [
+   1.0
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜12度+24px小字",
+  "expect": [
+   "倾斜小字测试内容"
+  ],
+  "got": [
+   "倾斜小字测试内容"
+  ],
+  "scores": [
+   0.98
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜8度+低对比度",
+  "expect": [
+   "倾斜低对比度文字"
+  ],
+  "got": [
+   "倾斜低对比度文字"
+  ],
+  "scores": [
+   0.94
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜12度+低对比度",
+  "expect": [
+   "倾斜低对比度文字"
+  ],
+  "got": [
+   "倾斜低对比度文字"
+  ],
+  "scores": [
+   0.94
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜10度+描边艺术字",
+  "expect": [
+   "云·战双帕弥什"
+  ],
+  "got": [
+   "云·战双帕弥什"
+  ],
+  "scores": [
+   0.9
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ },
+ {
+  "cat": "C",
+  "name": "倾斜15度+描边艺术字",
+  "expect": [
+   "云·战双帕弥什"
+  ],
+  "got": [
+   "云·战双帕弥什"
+  ],
+  "scores": [
+   0.9
+  ],
+  "boxes": 1,
+  "ok": true,
+  "note": "",
+  "order": "nms_merge",
+  "nms_suppressed": 0
+ }
+]

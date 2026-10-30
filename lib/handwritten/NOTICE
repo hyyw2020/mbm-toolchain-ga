@@ -1,0 +1,23 @@
+lib/handwritten —— 离线手写识别模块
+====================================
+
+本模块集成了 Ismantic/Handwritten 的离线中文手写识别能力，用于 MBM 输入法的手写输入。
+
+上游项目：
+  - 仓库：https://github.com/Ismantic/Handwritten
+  - 模型：MobileNetV2 INT8 量化，GB2312 一级 3755 字，top1≈95.47% / top10≈99.58%
+  - 许可：Apache-2.0
+
+本模块包含的上游代码：
+  - src/main/cpp/hccr_jni.cc        (JNI 推理，Apache-2.0；MBM 改为用满核心，
+                                     并新增 13 路 TTA 集成推理以追求超高精度)
+  - src/main/cpp/preprocess.{h,c}   (灰度图→64×64 归一化，Apache-2.0)
+  - src/main/java/com/shiyu/handwritten/runtime/HCCRRecognizer.java (Apache-2.0)
+  - src/main/assets/model.ncnn.{param,bin} + charset.json (模型权重与字表)
+
+ncnn 推理框架：
+  - Tencent/ncnn (BSD-3-Clause)，预编译静态库 ncnn-20250503-android，随模块提供于 src/main/cpp/ncnn/<abi>/。
+
+MBM 自有代码（本仓库 AGPL-3.0）：
+  - src/main/java/org/fcitx/fcitx5/android/lib/handwritten/HandwrittenRecognizer.kt
+  - 手写输入 UI 与键盘集成代码

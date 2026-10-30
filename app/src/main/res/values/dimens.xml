@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  默认（sw < 600dp，即 COMPACT）：设置面板占满窗口。
+  MBM v1.0.26 / P1-6。0dp 在 ConstraintLayout 的
+  app:layout_constraintWidth_max 上表示「不封顶」。
+-->
+<resources>
+    <dimen name="settings_pane_max_width">0dp</dimen>
+</resources>

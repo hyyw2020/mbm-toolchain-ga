@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MBM v1.0.26 加固（P0-2 Recall 独立化）：
+   - android:isAccessibilityTool="false"：Google 明确只有四类合法「无障碍工具」
+     （屏幕阅读器 / 开关输入 / 语音输入 / 盲文显示）。伪装成无障碍工具去做通用屏幕
+     捕获会被 Play Protect 拦截；如实申明为普通无障碍服务。
+   - android:accessibilityDataSensitive="auto"：该标志自 API 34(Android 14) 起可用，
+     用于在应用把窗口标注为「敏感数据」时规避采集（auto=交由系统判断）。
+     tools:targetApi="34" 仅用于 lint 提示。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:accessibilityDataSensitive="auto"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewScrolled|typeViewTextChanged|typeViewTextSelectionChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+    android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
+    android:description="@string/recall_service_description"
+    android:isAccessibilityTool="false"
+    android:notificationTimeout="80"
+    android:summary="@string/recall_service_summary"
+    tools:targetApi="34" />

@@ -1,0 +1,6602 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "Mixed Bug Method (MBM)",
+      "version": "see gradle/libs.versions.toml + git describe",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        },
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    "tools": [
+      {
+        "name": "docs/license_audit.py",
+        "vendor": "MBM"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "file",
+      "name": "app/src/androidTest/java/org/fcitx/fcitx5/android/FcitxTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidaddonloader/androidaddonloader.cpp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidaddonloader/androidaddonloader.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidfrontend/androidfrontend.cpp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidfrontend/androidfrontend.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidfrontend/androidfrontend_public.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidfrontend/inputcontextcache.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidkeyboard/androidkeyboard.cpp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidkeyboard/androidkeyboard.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidnotification/androidnotification.cpp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/androidnotification/androidnotification.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/helper-types.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/jni-utils.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/native-lib.cpp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/nativestreambuf.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/cpp/object-conversion.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/FcitxApplication.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/FcitxRemoteService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/AddonSubconfig.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/CandidateWord.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/CapabilityFlag.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/Fcitx.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxAPI.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxDispatcher.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxEvent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxLifecycle.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxPluginServices.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FcitxUtils.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/FormattedText.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/Key.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/KeyState.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/KeySym.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/SubtypeManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/Types.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/DataDescriptor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/DataHierarchy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/DataManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/FileAction.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/FileSource.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/PluginDescriptor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/PluginLoadFailed.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/data/PluginTrustChain.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/daemon/FcitxConnection.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/daemon/FcitxDaemon.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/daemon/Functions.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/InputFeedbacks.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/RecentlyUsed.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/UserDataManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardBlobStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardPasteChunker.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/db/ClipboardDao.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/db/ClipboardDatabase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/db/ClipboardEntry.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/crypto/AppKeyManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipher.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/password/PasswordFieldDetector.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/password/PasswordFillBridge.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/password/PasswordGenerator.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/password/PasswordGeneratorActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/password/PrivacyController.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/CustomPhraseManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/PinyinDictManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/AppPhraseImporter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PhraseLockStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PinyinCustomPhrase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/BuiltinDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/LibIMEDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/PinyinDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/CellDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/TextDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/AppPrefs.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceCategory.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceEnum.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceInternal.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceProvider.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/prefs/ManagedPreferenceVisibilityEvaluator.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/punctuation/PunctuationManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/punctuation/PunctuationMapEntry.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/BuiltinQuickPhrase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/CustomQuickPhrase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/QuickPhrase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/QuickPhraseData.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/QuickPhraseEntry.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/QuickPhraseManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/quickphrase/QuickPhraseSerializer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/rules/RuleFormat.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/rules/RuleImporter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/smartdict/SmartDictManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/table/TableBasedInputMethod.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/table/TableManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/table/dict/Dictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/table/dict/LibIMEDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/table/dict/TextDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/CustomThemeSerializer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ManagedThemePreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ManagedThemePreferenceUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/Theme.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ThemeFilesManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ThemeManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ThemeMonet.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ThemePrefs.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/theme/ThemePreset.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/AutoScaleTextView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/BaseInputView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/CandidatesView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/FcitxInputMethodService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/InputDeviceManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/InputView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/LifecycleInputMethodService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/NavigationBarManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/PackageNameCache.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/StatusIconMapping.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/TouchEventReceiverWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ExpandButtonStateMachine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/KawaiiBarComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/KawaiiBarStateMachine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/CandidateUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/IdleUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/TitleUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/ToolButton.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/idle/ButtonsBarUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/idle/ClipboardSuggestionUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/idle/InlineSuggestionsUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/bar/ui/idle/NumberRow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/broadcast/InputBroadcastReceiver.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/broadcast/InputBroadcaster.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/broadcast/PreeditEmptyStateComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/broadcast/PunctuationComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/broadcast/ReturnKeyDrawableComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/CandidateItemUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/CandidateViewHolder.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/CandidateTabActionsAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/CandidatesPagingSource.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/ExpandedCandidateLayout.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/ExpandedCandidateStyle.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/GridPagingCandidateViewAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/PagingCandidateViewAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/SpanHelper.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/decoration/FlexboxHorizontalDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/decoration/FlexboxVerticalDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/decoration/GridDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/window/BaseExpandedCandidateWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/window/FlexboxExpandedCandidateWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/expanded/window/GridExpandedCandidateWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/floating/FloatingCandidatesMode.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/floating/FloatingCandidatesOrientation.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/floating/LabeledCandidateItemUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/floating/PagedCandidatesUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/floating/PaginationUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/horizontal/HorizontalCandidateComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/horizontal/HorizontalCandidateMode.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/horizontal/HorizontalCandidateViewAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardInstructionUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardStateMachine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/ClipboardWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/SpacesItemDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/cursor/CursorRange.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/cursor/CursorTracker.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dependency/Functions.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dependency/UniqueViewComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dialog/InputMethodData.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dialog/InputMethodEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dialog/InputMethodListAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dialog/InputMethodPickerWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/dialog/SingleDividerDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editing/TextEditingButton.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editing/TextEditingUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editing/TextEditingWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editorinfo/EditorInfoParser.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editorinfo/EditorInfoUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/editorinfo/EditorInfoWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/handwriting/HandwritingWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/BaseKeyboard.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/CommonKeyActionListener.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/CustomGestureView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyAction.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyActionListener.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyDef.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyDefPreset.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyDrawable.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyboardHeightPercentBase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/KeyboardWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/LangSwitchBehavior.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/NumberKeyboard.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/SpaceLongPressBehavior.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/SwipeSymbolDirection.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/TextKeyboard.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/menu/ImeMenuPopup.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerData.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerLayout.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerPageUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerPagesAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerPaginationUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerTabsUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/picker/PickerWindowPreset.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/EmojiModifier.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupAction.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupActionListener.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupContainerUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupKeyboardUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupMenuUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/popup/PopupPreset.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/preedit/PreeditUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaEntry.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/status/StatusAreaWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/wm/EssentialWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/wm/InputWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/wm/InputWindowManager.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/provider/FcitxDataProvider.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/BaseDynamicListUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/DynamicListAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/DynamicListEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/DynamicListPreset.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/DynamicListTouchCallback.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/OnItemChangedListener.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/PaddingPreferenceFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/ProgressBarDialogIndeterminate.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/ThemeSelectPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/AboutFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/ClipboardEditActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/ClipboardImportActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/CropImageActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/DeveloperFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/EditDeleteMenuProvider.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/HandwritingActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/HandwritingView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/LicenseTextActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/LicensesFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/LogActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/MainActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/MainFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/MainViewModel.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/MbmActivityUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/PluginFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/RuleImportActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/SmartDictActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/log/LogAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/log/LogView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/modified/Functions.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/modified/MyEditTextPreferenceDialogFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/modified/MyListPreferenceDialogFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/modified/MyPreferenceFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/modified/MySwitchPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/DialogSeekBarPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/EditTextIntPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/FcitxKeyPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/FcitxPreferenceFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/FcitxRawConfigStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/KeyPreferenceUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/ListFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/PinyinCustomPhraseFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/PinyinDictionaryFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/PreferenceScreenFactory.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/ProgressFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/PunctuationEditorFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/QuickPhraseEditFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/QuickPhraseListFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/SettingsRoute.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/TableFilesSelectionUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/TableInputMethodFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/TwinSeekBarPreference.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/addon/AddonConfigFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/addon/AddonListFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/AdvancedSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/CandidatesSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/ClipboardSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/KeyboardSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/behavior/SymbolSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/global/GlobalConfigFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/im/InputMethodConfigFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/im/InputMethodListFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/CustomThemeActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/KeyboardPreviewUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/NewThemeEntryUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ResponsiveThemeListView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/SimpleThemeListAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeListAdapter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeListFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeListItemDecoration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeSettingsFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/settings/theme/ThemeThumbnailUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/setup/SetupActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/setup/SetupFragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/setup/SetupPage.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/AlertDialog.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/AppContext.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/AppSignatureVerifier.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/AppUtil.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Array.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Bundle.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ClipData.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ClipboardEntryTransformer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ColorFilter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Configuration.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Const.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ContentResolver.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/CrashLogSanitizer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/DateTime.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/DeviceInfo.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/DeviceUtil.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Drawable.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/EditText.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/EditorInfo.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ErrorDialog.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/EventStateMachine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Exception.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/FileUtil.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Fragment.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ImeSafe.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ImmutableGraph.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Ini.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/InputConnection.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/InputMethodInfo.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/InputMethodService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/InputMethodUtil.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Intent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/IsJavaIdentifier.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Locales.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Logcat.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Menu.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/NaiveDustman.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/NavController.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/NavigationBarHeight.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/NostalgicSerializer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/PackageInfo.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/PinyinUtils.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/PreferenceScreen.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Primitive.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ProcessExitAttributor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/RectSerializer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/RecyclerView.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ScrollbarDrawable.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/SeekBar.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Settings.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Splitties.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/StartActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/SystemProperty.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/SystemService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/TempDir.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/TextinputLayout.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Timber.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Toast.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/WeakHashSet.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/ZipStream.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/config/ConfigDescriptor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/config/ConfigParser.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/config/ConfigType.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/CrashLogSanitizerTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/StringEscapeTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/ThemeSerializationTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardBlobStoreTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardPasteChunkerTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipherTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/utils/AppSignatureVerifierTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/AndroidAppConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/AndroidBaseConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/AndroidLibConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/AndroidPluginAppConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/BuildMetadataPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/DataDescriptorPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/FcitxComponentPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/FcitxHeadersPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/NativeAppConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/NativeBaseConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/NativeBuildTasks.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/NativeLibConventionPlugin.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/ProjectExtensions.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/Utils.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/convention/src/main/kotlin/Versions.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build-logic/settings.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/common/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/common/src/main/java/org/fcitx/fcitx5/android/common/FcitxPluginService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/common/src/main/java/org/fcitx/fcitx5/android/common/ipc/FcitxRemoteConnection.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/Fcitx5AndroidInstallDirs.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/Fcitx5UtilsConfig.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/Fcitx5UtilsConfigVersion.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindECM.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindFcitx5Config.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindFcitx5Core.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindFcitx5Module.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindFcitx5Utils.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindPkgConfig.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/FindZLIB.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5/src/main/cpp/cmake/HookAddCustomCommand.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5-chinese-addons/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5-chinese-addons/src/main/cpp/cmake/FindFcitx5ModulePunctuation.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5-lua/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/fcitx5-lua/src/main/cpp/cmake/FindFcitx5ModuleLuaAddonLoader.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/src/main/cpp/preprocess.c",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/src/main/cpp/preprocess.h",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/src/main/java/com/shiyu/handwritten/runtime/HCCRRecognizer.java",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/src/main/java/org/fcitx/fcitx5/android/lib/handwritten/HandwritingLexicon.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/handwritten/src/main/java/org/fcitx/fcitx5/android/lib/handwritten/HandwrittenRecognizer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/libime/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/libime/src/main/cpp/cmake/FindLibIMECore.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/libime/src/main/cpp/cmake/FindLibIMEPinyin.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/libime/src/main/cpp/cmake/FindLibIMETable.cmake",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/plugin-base/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "lib/plugin-base/src/main/java/org/fcitx/fcitx5/android/lib/plugin_base/AboutActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/anthy/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/chewing/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/clipboard-filter/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/clipboard-filter/src/main/java/org/fcitx/fcitx5/android/plugin/clipboard_filter/ClearURLs.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/clipboard-filter/src/main/java/org/fcitx/fcitx5/android/plugin/clipboard_filter/MainService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/clipboard-filter/src/main/java/org/fcitx/fcitx5/android/plugin/clipboard_filter/RegexSerializer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/hangul/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/jyutping/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/plugin/recall/RecallApplication.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/AdvancedProtectionProbe.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/PhraseAutoWriter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallClipboardWriter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallAuditLog.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallBlobStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallDatabase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallPreferences.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallRepository.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/StreamingFileCipher.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/ocr/OcrEngine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/ui/main/MbmActivityUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/ui/main/RecallActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/utils/AppContext.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/test/java/org/fcitx/fcitx5/android/recall/RecallPolicyTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/recall/src/test/java/org/fcitx/fcitx5/android/recall/data/RecallBlobStoreTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/rime/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/sayura/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/thai/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "plugin/unikey/build.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "settings.gradle.kts",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-chinese-addons",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "88"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-chinese-addons",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "5"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-lua",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "13"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-lua",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "436"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "151"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-android/prebuilt",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "14204"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-android/prebuilt",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "46"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "ncnn (Tencent)",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "116"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "libime",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "101"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "libime",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "17"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "anthy",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "104"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-anthy",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "32"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-chewing",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-chewing",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-hangul",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-hangul",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "libime-jyutping",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "26"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-rime",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "10"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-rime",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-rime",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-sayura",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-libthai",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "6"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-libthai",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-unikey",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "32"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-unikey",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.0-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "9"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-unikey",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.android.tools.build:gradle",
+      "version": "androidGradlePlugin",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.android.tools:desugar_jdk_libs",
+      "version": "2.1.5",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "org.jetbrains.kotlin:kotlin-gradle-plugin",
+      "version": "kotlin",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
+      "version": "1.11.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "org.jetbrains.kotlinx:kotlinx-serialization-json",
+      "version": "1.11.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.activity:activity-ktx",
+      "version": "1.13.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.appcompat:appcompat",
+      "version": "1.7.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.autofill:autofill",
+      "version": "1.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.constraintlayout:constraintlayout",
+      "version": "2.2.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.coordinatorlayout:coordinatorlayout",
+      "version": "1.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.core:core-ktx",
+      "version": "1.18.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-viewmodel-ktx",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-livedata-ktx",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-runtime-ktx",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-common-java8",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-service",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.navigation:navigation-fragment-ktx",
+      "version": "navigation",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.navigation:navigation-ui-ktx",
+      "version": "navigation",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.paging:paging-runtime-ktx",
+      "version": "3.5.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.preference:preference-ktx",
+      "version": "1.2.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.recyclerview:recyclerview",
+      "version": "1.4.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.datastore:datastore-preferences",
+      "version": "datastore",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.microsoft.onnxruntime:onnxruntime-android",
+      "version": "onnxruntime",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "net.zetetic:sqlcipher-android",
+      "version": "sqlcipher",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.security:security-crypto",
+      "version": "securityCrypto",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.biometric:biometric",
+      "version": "biometric",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.room:room-compiler",
+      "version": "room",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.room:room-runtime",
+      "version": "room",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.room:room-ktx",
+      "version": "room",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.room:room-paging",
+      "version": "room",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.startup:startup-runtime",
+      "version": "1.2.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.viewpager2:viewpager2",
+      "version": "1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.google.android.material:material",
+      "version": "1.14.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "io.arrow-kt:arrow-core",
+      "version": "arrow",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "io.arrow-kt:arrow-functions",
+      "version": "arrow",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.vanniktech:android-image-cropper",
+      "version": "4.7.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.google.android.flexbox:flexbox",
+      "version": "3.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "org.mechdancer:dependency",
+      "version": "0.1.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.jakewharton.timber:timber",
+      "version": "5.0.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-bitflags",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-dimensions",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-resources",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-dsl",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-dsl-appcompat",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-dsl-constraintlayout",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-dsl-coordinatorlayout",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-dsl-recyclerview",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.louiscad.splitties:splitties-views-recyclerview",
+      "version": "splitties",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.mikepenz:aboutlibraries-core",
+      "version": "aboutlibraries",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.mikepenz.aboutlibraries.plugin:aboutlibraries-plugin",
+      "version": "aboutlibraries",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "junit:junit",
+      "version": "4.13.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.test:runner",
+      "version": "test",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.test:rules",
+      "version": "test",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "androidx.lifecycle:lifecycle-runtime-testing",
+      "version": "lifecycle",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.squareup:kotlinpoet-ksp",
+      "version": "2.3.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "com.google.devtools.ksp:symbol-processing-api",
+      "version": "ksp",
+      "licenses": [
+        {
+          "license": {
+            "id": "LicenseRef-gradle-version-catalog"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+================================================================================
+Mixed Bug Method (MBM) · Linux 受限环境优化构建指导书
+版本: v1.0（编制：2026-10-27，适用 v1.0.36 源码包）
+适用: 低内存 cgroup / Firecracker microVM / 磁盘紧张 / 官方源直连慢 的 Linux 构建机
+配套: 构建说明书.txt（完整通用步骤）。本篇只讲受限环境下的「避坑 + 参数 + 提速」，
+      与构建说明书冲突时，以「能稳定构建成功」为准，可随时回退默认参数。
+================================================================================
+
+--------------------------------------------------------------------------------
+第 0 章 · 目标环境实测画像（两类典型）
+--------------------------------------------------------------------------------
+【A. Firecracker microVM（Debian 12）—— 与 v1.0.34/v1.0.35 历史构建机同型 】
+  · 架构：x86_64（AMD64 ABI，64-bit；getconf WORD_BIT=32 为 x86_64 正常值）
+  · CPU：Intel Xeon，2 vCPU；/proc/cpuinfo 暴露 AVX-512F / AVX2 / SSE4.2 / SSSE3 /
+    AES-NI / PCLMULQDQ。
+    注意：本工程是交叉编译（目标为 Android ARM/ARM64），宿主指令集对产物代码
+    无直接影响，无需任何特殊 CFLAGS；AES-NI 等只对宿主侧工具自身有意义。
+  · 内存：8 GiB 物理内存，但 cgroup 上限 3.11 GiB —— 这才是真正的构建预算；
+    系统可用（available）可能只剩几百 MiB，见 3.4 判断真假内存压力。
+  · 磁盘：/dev/root 20 GiB，余约 14 GiB；/tmp 与根分区同设备。
+  · 内核：Linux 6.6.116 x86_64，SMP PREEMPT_DYNAMIC（6.6 LTS 分支）。
+  · 用户态：Debian GNU/Linux 12 (bookworm)，glibc 2.36。
+  · 隔离层：/proc/1/comm = firecracker-ini，即 Firecracker microVM（不是 Docker）：
+      - 无 systemd、无 init 系统（PID 1 是 Firecracker agent）
+      - DMI 不可读（product_name 空）——宿主硬件信息被虚拟层遮挡，属正常；
+        判断 CPU 能力只看 /proc/cpuinfo 的 flags
+      - cgroup v2 统一层级（0::/）强制生效；seccomp 过滤器数为 0
+        （安全边界在 virtio 设备层与 microVM 层，不靠 seccomp，与构建无关）
+      - 根 cgroup 的 cpu.max / memory.max 为空 = 资源上限由外部按终端 cgroup 下发
+        （构建进程实际受 background terminal 的 memory.max 约束，自查见 3.3）
+
+【B. Ubuntu 24.04.3 LTS 基础环境 —— 「工具链外壳齐备、缺 Android SDK」型 】
+  | 项 | 状态 |
+  |---|---|
+  | OS | Ubuntu 24.04.3 LTS (x86_64) |
+  | Java | OpenJDK 20 (Zulu)，经 SDKMAN，路径可用 → 直接可用，见 2.1 |
+  | Gradle | 9.3.0 已装 → wrapper 不用它，可无视，见 2.1 |
+  | Flutter | /opt/flutter 已装 → 与本工程无关（MBM 不是 Flutter 项目） |
+  | Node/npm | v22.13.1 / 11.9.0 → 与本工程无关 |
+  | Python | 3.11.1 → 需要（codegen 模块用 python3），已满足 |
+  | 安卓构建能力 | ❌ 不可用：ANDROID_HOME/ANDROID_SDK_ROOT 未设置，无 SDK 目录、
+                  platforms、build-tools、NDK → 按第 2 章补齐即可构建 |
+  结论：工具链外壳齐备，只缺 Android SDK 本体；补 cmdline-tools + 固定版本组件
+  并配置 ANDROID_HOME 后即可编译 APK。
+
+--------------------------------------------------------------------------------
+第 1 章 · 总原则（受限环境三铁律）
+--------------------------------------------------------------------------------
+1) 内存是第一瓶颈。cgroup 3.11 GiB 下，Gradle 进程(-Xmx) + Kotlin 编译守护进程 +
+   ninja 并行编译/链接三者叠加是最常见的 OOM 根因。原则：宁可慢、不要炸。
+   任何参数改动前先看预算：cat /sys/fs/cgroup/memory.max，
+   再把各 -Xmx 之和控制在预算的 70% 以内。
+2) 磁盘是第二瓶颈。14 GiB 余量的分配（粗算）：
+     Android SDK ≈ 4.5 GiB（NDK r28 ≈ 2.5 + platforms/build-tools ≈ 1 + CMake ≈ 0.3）
+     Gradle -all 发行包解压后 ≈ 1.2 GiB
+     ~/.gradle（wrapper dists + Maven 依赖缓存）≈ 1.5~2 GiB
+     单 ABI 构建中间产物 + 产物 ≈ 3 GiB
+   → 首次单 ABI 全流程约需 10 GiB；全 ABI（4 个 ABI 原生全编）会爆盘，
+     受限环境一律从单 ABI（arm64-v8a）起步。
+3) /tmp 与根分区同设备。SDK、Gradle 大包不要在 /tmp 解压（与根分区同设备，
+   等于双倍占用），一律直接解压到 /opt；构建期 df -h / 与 df -h /tmp 双监控。
+
+--------------------------------------------------------------------------------
+第 2 章 · 环境补齐（从零到可构建，Ubuntu/Debian 通用）
+--------------------------------------------------------------------------------
+2.1 JDK 与 Gradle：
+    - 已有 OpenJDK 20（Zulu/SDKMAN）直接用：AGP 9.4.1 要求 JDK 17+，Gradle 9.8.2
+      官方支持 17~27；v1.0.35 就是在 Zulu 20 上构建的，无需降级 17、也无需换 25。
+        sdk current java      # 期望显示 zulu-20.x
+    - 系统已装的 Gradle 9.3.0 与本工程无关：wrapper 固定 9.8.2，./gradlew 只用
+      wrapper 下载的发行包，系统 Gradle 装没装、什么版本都不影响，无需升级。
+    - 如确需换 JDK：sdk install java 17.0.xx-zulu（或 25.0.x-zulu）后
+      sdk default java <id>；无 SDKMAN 的机器解压 tar.gz + export 即可。
+2.2 Android SDK（版本固定，勿混用；与构建说明书 2.2 步一致）：
+        export ANDROID_HOME=/opt/android-sdk      # 同时写入 ~/.bashrc 持久化
+        mkdir -p $ANDROID_HOME/cmdline-tools
+        # cmdline-tools：dl.google.com 直连一般可达；慢可试腾讯镜像
+        # mirrors.cloud.tencent.com/AndroidSDK/ 下同名文件
+        cd /tmp
+        curl -sL -o cmdtools.zip \
+          https://dl.google.com/android/repository/commandlinetools-linux-16111833_latest.zip
+        unzip -q -o cmdtools.zip -d $ANDROID_HOME/cmdline-tools
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+          "platform-tools" "platforms;android-37" "build-tools;37.0.0" \
+          "cmake;3.31.6" "ndk;28.0.13004108"
+2.3 原生构建依赖（对应构建说明书第 3 步；Debian/Ubuntu 同源包）：
+        sudo apt update
+        sudo apt install -y extra-cmake-modules gettext iso-codes ninja-build \
+                            cmake python3 git unzip zip
+        msgfmt --version | head -1        # 期望 >= 0.20
+        ls /usr/share/gettext/its/ | head # 必须存在 ITS 规则文件（*.its）
+2.4 SDK 路径写入工程（对应构建说明书 4.3 步）：
+        cd <源码目录>
+        echo "sdk.dir=/opt/android-sdk" > local.properties
+2.5 无 systemd 环境（microVM）注意：一切 systemctl/service 做法都不可用；
+    环境变量全部走 ~/.bashrc + export，工具一律「解压即用」。
+
+--------------------------------------------------------------------------------
+第 3 章 · 内存受限（cgroup 3.11 GiB）构建参数
+--------------------------------------------------------------------------------
+3.1 受限环境标准姿势（在工程默认 -Xmx3g/workers=3 基础上整体压一档）：
+        ./gradlew :app:assembleRelease -PbuildVersionName=v1.0.36 \
+          "-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m -XX:+UseParallelGC" \
+          -Dorg.gradle.workers.max=2 \
+          "-Pkotlin.daemon.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m"
+    预算核算：Gradle 1.5g + Kotlin daemon 1g + ninja/clang 峰值 ≈ 0.4g ≈ 2.9g，
+    留 ~0.2g 给 page cache 与系统；Kotlin 编译期与原生链接期基本错峰，可过。
+    注意：默认轨已是单 ABI（gradle.properties 的 buildABI=arm64-v8a），
+    覆盖 99%+ 真机；全 ABI 需改 buildABI（见其注释），受限环境不建议。
+3.2 daemon 策略：工程已默认 org.gradle.daemon=false（构建结束进程退出，
+    不常驻占内存）——保持即可，勿改回 true。无 tmux 时后台跑：
+        nohup ./gradlew :app:assembleRelease -PbuildVersionName=v1.0.36 \
+          "-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m" \
+          -Dorg.gradle.workers.max=2 > build.log 2>&1 &
+        tail -f build.log
+3.3 cgroup v2 自查与监控：
+        cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.current
+        cat /proc/self/cgroup        # 确认自己所在 cgroup 层（microVM 里上限
+                                     # 可能由父级/终端 cgroup 下发，不在根层）
+        watch -n5 'cat /sys/fs/cgroup/memory.current'   # 逼近 max 前先动手降档
+3.4 OOM 急救（按序执行）：
+    a. dmesg | grep -i -E 'oom|killed'   定位被杀者（多半是 clang/ld 或 Kotlin daemon）
+    b. pkill -f KotlinCompileDaemon      立刻回收 ~1g
+    c. 降并行重跑：-Dorg.gradle.workers.max=1
+    d. available 只剩几百 MiB 时先别慌：free -h 看 page cache（可回收，不算真耗尽）；
+       首次构建「下载 + 解压」本身要几百 MiB，可先 ./gradlew help 预热一遍缓存，
+       再正式 assembleRelease，把内存峰值拆到两次进程中。
+3.5 swap：cgroup v2 下 swap 是否可用取决于 memory.swap.max：
+        cat /sys/fs/cgroup/memory.swap.max
+    为 0 时加 swapfile 也无效（cgroup 不允许换出），别浪费磁盘；非 0 时可加
+    2 GiB swapfile 作链接期保险（fallocate -l 2G / mkswap / swapon；无 systemd
+    需手动 swapon 并写 fstab）。
+3.6 不要额外开的开关：配置缓存（工程明确暂不启用，原因见 docs/pitfalls.md #77）、
+    --parallel 之外的实验特性。org.gradle.parallel=true 工程已默认开启，
+    并发实际受 org.gradle.workers.max 约束。
+
+--------------------------------------------------------------------------------
+第 4 章 · 磁盘受限（余 14 GiB）策略
+--------------------------------------------------------------------------------
+4.1 分配红线见第 1 章铁律 2，全程 df -h / 监控。
+4.2 构建完成后可回收（下次构建前执行）：
+        ./gradlew clean
+        rm -rf app/build build-logic/convention/build plugin/*/build
+    .cxx 目录是原生编译缓存，删除后重构建会全量重编，仅在磁盘告急时删。
+4.3 全 ABI 构建（4 个 ABI 原生全编，中间产物约 8~10 GiB）在 14 GiB 余量下不可行；
+    确需全 ABI，先清理一切缓存或换大磁盘机器。
+4.4 /tmp 与根同设备：SDK、Gradle、NDK 大包一律解压到 /opt，勿放 /tmp 中转。
+
+--------------------------------------------------------------------------------
+第 5 章 · 网络受限（官方源直连实测 ~20KB/s）镜像方案
+--------------------------------------------------------------------------------
+5.1 Gradle 发行包：v1.0.36 起 wrapper 已默认华为云镜像 -all 包，无需改源：
+        https://mirrors.huaweicloud.com/gradle/gradle-9.8.2-all.zip
+    连镜像都慢/断时，手动预置 wrapper 缓存（免 wrapper 联网）：
+        curl -L -o /tmp/g982all.zip \
+          https://mirrors.huaweicloud.com/gradle/gradle-9.8.2-all.zip
+        D=~/.gradle/wrapper/dists/gradle-9.8.2-all/7w5rb2ehgct03spyae4f04zap
+        mkdir -p $D && cp /tmp/g982all.zip $D/
+        (cd $D && unzip -q -o gradle-9.8.2-all.zip && touch gradle-9.8.2-all.zip.ok)
+    注意：目录名是 distributionUrl 的 MD5 base36 指纹（7w5rb2ehgct03spyae4f04zap
+    对应当前华为云 URL），由 wrapper URL 决定，勿手改；改了 wrapper URL 需重算。
+5.2 Maven 依赖（google()/mavenCentral() 直连慢时），两种方式任选：
+    方式一（机器侧，不改源码）：~/.gradle/init.d/mirror.gradle
+        beforeSettings { settings ->
+            settings.pluginManagement.repositories {
+                maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+                maven { url 'https://maven.aliyun.com/repository/google' }
+                maven { url 'https://maven.aliyun.com/repository/public' }
+                gradlePluginPortal(); google(); mavenCentral()
+            }
+            settings.dependencyResolutionManagement.repositories {
+                maven { url 'https://maven.aliyun.com/repository/google' }
+                maven { url 'https://maven.aliyun.com/repository/public' }
+                google(); mavenCentral()
+            }
+        }
+    （init 脚本对主工程与 build-logic 的 settings 同时生效；镜像放前面、
+      官方源保底，只加速、不改解析结果。）
+    方式二（本地改源码，勿提交）：直接在 settings.gradle.kts 的
+    pluginManagement/dependencyResolutionManagement 两个 repositories 块的最前面
+    加同样的 maven { url '...' } 行。
+5.3 SDK 组件：dl.google.com 两类环境实测均可直连（sdkmanager 自动下载）；
+    不通时从腾讯镜像 https://mirrors.cloud.tencent.com/AndroidSDK/ 手动下载
+    对应包，再按 2.2 的目录结构解压（ndk/28.0.13004108、cmake/3.31.6、
+    build-tools/37.0.0、platforms/android-37）。
+
+--------------------------------------------------------------------------------
+第 6 章 · Firecracker microVM 专项注意
+--------------------------------------------------------------------------------
+  · 无 systemd：一切服务化做法失效；JDK/SDK/Gradle 全部「解压 + export」。
+  · 长构建防断线：优先 tmux（apt install -y tmux），没有就 nohup（见 3.2）。
+    PID 1 是 Firecracker agent，会话断开不会像 sshd 那样回收子进程，
+    但 stdout 管道断裂可能令进程收 SIGPIPE —— 重定向到文件是硬要求。
+  · 宿主信息判断：DMI 被 virtio 层挡住（product_name 空）属正常，
+    判断 CPU 能力只看 /proc/cpuinfo 的 flags。
+  · cgroup 上限归属：根 cgroup（0::/）的 cpu.max/memory.max 为空 = 未在此层
+    限制，实际上限由父级/终端 cgroup 下发；构建预算以 cat /proc/self/cgroup
+    指向那一层的 memory.max 为准。
+  · 2 vCPU 时长预期：单 ABI arm64 首次全量约 45~120 分钟（核少纯粹是慢，
+    x86_64 原生执行无转译损耗；32 核参考值 25~45 分钟的 1/10~1/16 量级）。
+    期间 CPU 100% 属正常，勿中断；中断后重跑会复用已完成的增量产物。
+  · seccomp 过滤器数 0 与构建无关（安全边界在 microVM/virtio 层），无需绕过。
+
+--------------------------------------------------------------------------------
+第 7 章 · 命令速查（复制即用）
+--------------------------------------------------------------------------------
+# 环境自检
+java -version; df -h /; free -h
+cat /sys/fs/cgroup/memory.max /sys/fs/cgroup/memory.current 2>/dev/null
+cat /proc/self/cgroup
+
+# 补齐 SDK（仅首次，见第 2 章）后，写入 SDK 路径
+echo "sdk.dir=/opt/android-sdk" > local.properties
+
+# 受限环境标准构建（单 ABI arm64，内存压档）
+export ANDROID_HOME=/opt/android-sdk
+./gradlew :app:assembleRelease -PbuildVersionName=v1.0.36 \
+  "-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m -XX:+UseParallelGC" \
+  -Dorg.gradle.workers.max=2 \
+  "-Pkotlin.daemon.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m"
+
+# 内存告急最保守姿势
+pkill -f KotlinCompileDaemon
+./gradlew :app:assembleRelease -PbuildVersionName=v1.0.36 \
+  "-Dorg.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=384m" \
+  -Dorg.gradle.workers.max=1
+
+# 产物与校验：同 构建说明书.txt 第 6 步（aapt 路径 build-tools/37.0.0）
+
+================================================================================
+关系声明：构建说明书.txt = 完整通用步骤（全平台）；本篇 = 受限 Linux 优化层。
+          两篇可独立使用；参数冲突时以「实际构建成功」为准。
+================================================================================

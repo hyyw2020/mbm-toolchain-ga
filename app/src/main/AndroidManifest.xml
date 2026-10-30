@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- remove unused permission from AppCompat -->
+    <permission
+        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
+
+    <uses-permission
+        android:name="${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        tools:node="remove" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- MBM: 全离线应用，移除 onnxruntime-android 等依赖注入的网络权限 -->
+    <uses-permission
+        android:name="android.permission.INTERNET"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+
+    <!-- remove intent queries merged from library manifest (namely Android-Image-Cropper) -->
+    <queries tools:node="removeAll" />
+
+    <queries>
+        <!--
+          MBM 冻结方案（Recall 同进程内嵌）：原 <package android:name="${recallPluginPackage}"/>
+          用于跨包可见性查询独立插件，现 Recall 已成主输入法 APK 内的一部分、同进程运行，
+          不再有「主程序查插件包」的需求，故移除该占位符声明（构建也不再注入占位符）。
+        -->
+        <intent>
+            <action android:name="${applicationId}.plugin.MANIFEST" />
+        </intent>
+        <intent>
+            <action android:name="android.view.InputMethod" />
+        </intent>
+        <!--
+          MBM v0.0.05：应用名即时候选——枚举本机有启动器图标的应用
+          （queryIntentActivities(MAIN/LAUNCHER)）需要声明对应 intent，
+          API 30+ 未声明的查询一律返回空（包可见性过滤，见 pitfalls #51）。
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <!--
+      MBM v0.0.06：应用名即时候选的包可见性兜底。
+      仅靠 <queries><intent>MAIN/LAUNCHER</intent></queries> 在华为 / HarmonyOS 上仍可能
+      返回空列表（v0.0.05「qmqz 完全不出全民枪战」的根因之一）。输入法需要知道设备上的
+      应用名才能提供「应用名快捷输入」，属于该权限的合理使用场景；本应用不经 Google Play
+      分发（用户自签名安装），不受 Play 的 QUERY_ALL_PACKAGES 政策限制。
+      即便该权限被系统拒绝，代码仍有 queryIntentActivities → getInstalledApplications
+      两级回退与「空结果不锁死」保护，最坏情况只是功能不生效，不会崩溃。
+    -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <permission
+        android:name="${applicationId}.permission.IPC"
+        android:protectionLevel="signature" />
+
+    <permission
+        android:name="${applicationId}.permission.PLUGIN"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="${applicationId}.permission.PLUGIN" />
+
+    <!--
+      MBM 冻结方案（Recall 同进程内嵌）：
+      屏幕记忆的 RecallService 作为独立 AccessibilityService 直接注册在主输入法 APK 内，
+      与 IME 同进程运行，彻底消灭跨进程 IPC。它只在用户于系统「无障碍」设置里手动开启后
+      由系统拉起；开启前不占用任何后台资源。敏感捕获（密码框 / 系统敏感节点 / 高级保护模式）
+      仍按 RecallPolicy 硬规则拦截，详见 recall/RecallPolicy.kt。
+    -->
+
+        <application
+            android:name=".FcitxApplication"
+            android:allowBackup="false"
+            android:dataExtractionRules="@xml/data_extraction_rules"
+            android:fullBackupContent="@xml/full_backup_content"
+            android:icon="@mipmap/app_icon"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/app_icon_round"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.FcitxAppTheme"
+            tools:targetApi="33">
+        <activity
+            android:name=".ui.setup.SetupActivity"
+            android:exported="false"
+            android:launchMode="singleTask" />
+        <activity
+            android:name=".ui.main.LogActivity"
+            android:directBootAware="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:parentActivityName=".ui.main.MainActivity" />
+        <activity
+            android:name=".ui.main.settings.theme.CustomThemeActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="false"
+            android:label="@string/edit_theme" />
+        <activity
+            android:name=".ui.main.CropImageActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.main.LicenseTextActivity"
+            android:exported="false"
+            android:label="@string/licenses_of_third_party_libraries" />
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="*/*" />
+                <data android:host="*" />
+                <!--
+                  there has to be so many segments:
+                  https://stackoverflow.com/questions/3400072/pathpattern-to-match-file-extension/8599921#8599921
+                -->
+                <data android:pathPattern=".*\\.dict" />
+                <data android:pathPattern=".*\\..*\\.dict" />
+                <data android:pathPattern=".*\\..*\\..*\\.dict" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.dict" />
+                <data android:pathPattern=".*\\.scel" />
+                <data android:pathPattern=".*\\..*\\.scel" />
+                <data android:pathPattern=".*\\..*\\..*\\.scel" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.scel" />
+                <data android:pathPattern=".*\\.txt" />
+                <data android:pathPattern=".*\\..*\\.txt" />
+                <data android:pathPattern=".*\\..*\\..*\\.txt" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.txt" />
+                <!-- pathSuffix works on API 31+ -->
+                <data android:pathSuffix=".dict" />
+                <data android:pathSuffix=".scel" />
+                <data android:pathSuffix=".txt" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.main.ClipboardEditActivity"
+            android:autoRemoveFromRecents="true"
+            android:directBootAware="true"
+            android:excludeFromRecents="true"
+            android:label="@string/edit_clipboard"
+            android:launchMode="singleInstance"
+            android:taskAffinity=".ui.main.ClipboardEditActivity"
+            android:theme="@style/Theme.DialogTheme"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustPan" />
+
+        <!-- MBM v1.0.31：大文本导入（剪贴板历史无上限的输入通道） -->
+        <activity
+            android:name=".ui.main.ClipboardImportActivity"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/clipboard_import" />
+
+        <!-- MBM v1.0.31：大文本剪贴板条目分享（FileProvider，仅 cache/share） -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <service
+            android:name=".input.FcitxInputMethodService"
+            android:directBootAware="true"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/input_method" />
+        </service>
+
+        <service
+            android:name=".FcitxRemoteService"
+            android:exported="true"
+            android:permission="${applicationId}.permission.IPC"
+            tools:ignore="SystemPermissionTypo">
+            <intent-filter>
+                <action android:name="${applicationId}.IPC" />
+            </intent-filter>
+        </service>
+
+        <!--
+          MBM 冻结方案：Recall 屏幕记忆无障碍服务，内嵌主输入法 APK、与 IME 同进程。
+          isAccessibilityTool=false：它不是辅助功能工具，而是屏幕记忆拾取器，
+          不应出现在「无障碍工具」筛选里。canTakeScreenshot=true 仅在 API 34+ 启用 OCR 兜底；
+          accessibilityDataSensitive=auto 让系统按节点 dataSensitive 标记行为处理敏感内容。
+        -->
+        <service
+            android:name=".recall.RecallService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/recall"
+            android:description="@string/recall_service_description"
+            tools:ignore="DeviceConfigAccessible">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/recall_accessibility_service_config" />
+        </service>
+
+        <provider
+            android:name=".provider.FcitxDataProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
+        <!-- remove unneeded components from com.canhub.cropper -->
+        <!--suppress DeprecatedClassUsageInspection -->
+        <activity
+            android:name="com.canhub.cropper.CropImageActivity"
+            tools:node="remove" />
+
+        <provider
+            android:name="com.canhub.cropper.CropFileProvider"
+            android:authorities="${applicationId}.cropper.fileprovider"
+            tools:node="remove" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:directBootAware="true"
+            android:exported="false"
+            tools:node="merge">
+            <!-- do not inject splitties AppCompat -->
+            <meta-data
+                android:name="splitties.views.dsl.appcompat.experimental.AppCompatViewInstantiatorInjecter"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+    
+        <!-- MBM: 统一规则 / 词库导入 -->
+        <activity
+            android:name=".ui.main.RuleImportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/rule_import" />
+
+        <!-- MBM: 离线智能词库 -->
+        <activity
+            android:name=".ui.main.SmartDictActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/smart_dict" />
+
+        <!--
+          MBM: 高强度密码生成器
+          MBM v1.0.26 / P1-6（Android 17「旋转后恢复默认 IME 可见性」）：
+          本页含多个 TextInputEditText（长度/数量/符号集等），旋转后系统不再自动恢复
+          软键盘可见性。视图树是代码构建的线性表单、无状态依赖重建，因此直接让
+          Activity 承接配置变化；不要改用「onConfigurationChanged 里
+          requestShowSelf()」的方案——那会和系统自身的 IME show 请求叠加，
+          表现为键盘闪现、双弹或输入焦点丢失（issue 486945365 一类的 insets 竞态）。
+        -->
+        <activity
+            android:name=".data.password.PasswordGeneratorActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/privacy_and_password" />
+
+        <!-- MBM: 离线手写 -->
+        <activity
+            android:name=".ui.main.HandwritingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/handwriting" />
+</application>
+
+</manifest>

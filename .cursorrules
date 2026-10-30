@@ -1,0 +1,87 @@
+# Mixed Bug Method (MBM) — Cursor 规则（.cursorrules）
+
+> 每次改动 UI / Activity / 主题相关代码前，先读本文件与 `docs/pitfalls.md`，
+> 复述将遵守的 UI 约束再动手。
+
+## 崩溃处理铁律（最高优先级，所有改动前先遵守）
+> 本工程已多次被「没有崩溃栈就猜根因」的 AI 分析带偏，故立此铁律。
+1. **没有真实崩溃栈，禁止提出任何修复方案。** 猜测性结论一律标注 `[未证实]`，
+   不得写入本文件与 `docs/pitfalls.md`，更不得据此改代码。
+2. **结论被新证据证伪时，必须主动删除或标注 `[已证伪-勿采用]`，禁止继续沿用。**
+3. 已带真实崩溃栈、且经反编译/源码核对的结论，标注 `[已证实]` 后可沉淀为规则；
+   但同一 Activity 的不同崩溃若栈不同，属**不同根因**，不得互相覆盖或合并。
+4. 修复涉及公共 UI 基类（如 `MbmActivityUi`）时，必须在基类一次改完，禁止逐 Activity 打补丁。
+
+## 主线程 / ANR 铁律（违反会卡死输入法进程，已踩过坑，[已证实]）
+> 输入法是系统常驻进程，主线程被阻塞 >5s 即弹「小企鹅输入法无响应」，比闪退更隐蔽。
+1. `AccessibilityService.onAccessibilityEvent()` 在主线程，绝不可在其内遍历节点树或做 binder IPC。
+   旧实现在回调里直接 `rootInActiveWindow` + 递归 `walk()`，每次 `getChild` 都是跨进程 IPC → ANR（#6）。
+   正确做法：回调只做廉价节流/包名判断，遍历与入库用 `CoroutineScope(Dispatchers.Default).launch { ... }`。
+2. Service 回调与 `onDestroy` 里禁止 `runBlocking` 同步等待协程；改 `cancel()` 异步取消即可。
+3. 主线程禁止文件 IO / 数据库同步读取（审计日志读取放 `Dispatchers.IO`）。
+4. 遍历 `AccessibilityNodeInfo` 树必须成对 `recycle()`：`walk()` 递归返回后立即 `child.recycle()`，
+   `rootInActiveWindow` 返回的 root 在 `finally` 中 `root.recycle()`；未回收节点（含 binder 引用）会
+   堆积导致内存泄漏、进程被系统回收（#8）。捕获应串行（`Mutex`），同一时刻只持一个 root。
+5. 列表 UI 禁止在主线程高频全量重建：Room Flow 的 DAO 查询必须 `LIMIT`（如 `LIMIT 300`），
+   `render()` 须做内容签名去重（records + 选区未变则跳过重建）；否则后台高频 INSERT 反复发射全表引发 ANR（#8）。
+   协程收集用单一 `flatMapLatest` 切换查询，禁止每次输入都新开 `launch` 泄漏。
+
+## Android UI 硬性约束（违反会直接崩溃，已踩过坑）
+1. 任何使用 Material 控件的 Activity，其 theme 必须是 `Theme.Material3.*` 或
+   `Theme.MaterialComponents.*` 的后代。全局主题 `Theme.FcitxAppTheme`
+   （parent=`Theme.AppCompat.Light.NoActionBar`）刻意保持 AppCompat 不变（输入视图依赖它）；
+   所有 MBM 设置类 Activity 必须显式绑定 `Theme.MbmActivity`（Material3 后代）。
+   不得把全局主题改成 Material。
+2. 新增/修改 Activity：AndroidManifest 中不得使用 `@android:style/...`、
+   `Theme.NoDisplay`、`Theme.Translucent` 等平台主题；需透明/无标题/对话框效果时，
+   新建 style 且 parent 指向应用主主题或 `Theme.MbmActivity`，只覆盖
+   windowIsTranslucent / windowBackground / windowNoTitle 等 window 级 item。
+3. 不得使用 `com.google.android.material.*` 组件（MaterialButton / MaterialTextView /
+   MaterialCardView / SwitchMaterial / TextInputLayout / MaterialToolbar …），
+   除非已确认该 Activity 主题链继承自 Material 主主题。优先复用 `ui/common` 封装或
+   `androidx.appcompat` 控件。
+4. 动态创建 View 时传入的 `Context` 必须是该 `Activity`，禁止传 `applicationContext`。
+5. 提交前自检：Activity theme 继承自 Material 主主题；未引入 Material 专属控件或主题链已确认；
+   该 Activity 能冷启动打开且不崩。
+
+## WindowInsets / 系统栏适配（本工程已踩坑，[已证实]）
+> 对应 `docs/pitfalls.md` #5。根因：`WindowInsetsControllerCompat` 构造即解引用
+> `PhoneWindow.mDecor`（DecorView），而 DecorView 在 `setContentView` 之后才存在。
+1. **`WindowInsetsControllerCompat` 必须在 DecorView 就绪后获取**：`setContentView` 之后 /
+   `onAttachedToWindow` / `View.addOnAttachStateChangeListener`（本工程 `MbmActivityUi.fitInsets`
+   用 `isAttachedToWindow` + `addOnAttachStateChangeListener` 兜底）均可。**禁止**在 `onCreate` 中、
+   `setContentView` 之前构造它。
+2. 仅为「避开系统栏」时，优先用 `ViewCompat.setOnApplyWindowInsetsListener` 处理 padding，
+   **不**直接操作 `WindowInsetsController`。`WindowInsetsController` 仅用于设置系统栏图标深浅
+   （`isAppearanceLightStatusBars` 等），且同样须在 DecorView 就绪后进行。
+3. **AndroidX 在 API 35+ 走 `WindowInsetsControllerCompat$Impl35` 分支**（Impl35→Impl31→Impl30
+   链式调用 `PhoneWindow.getInsetsController()`），任何 `WindowInsets` 相关改动**必须在 API 35+
+   真机/模拟器上验证**，不能只测低版本。
+4. 涉及公共 UI 基类（如 `MbmActivityUi.fitInsets`）的修复，必须在基类一次改完，禁止逐 Activity 打补丁。
+
+## 数据库 / 原生库硬性约束（违反会直接崩溃，已排查并加固）
+> 本工程 Recall 功能使用 SQLCipher 加密数据库（`net.zetetic:sqlcipher-android:4.19.1`
+> + Room + `SupportOpenHelperFactory`）。相关代码：`recall/data/RecallDatabase.kt`、
+> `recall/data/RecallRepository.kt`、`recall/RecallService.kt`、`ui/main/RecallActivity.kt`。
+1. 任何依赖原生库（`.so`）的组件，必须在 `Application.onCreate` 最前面显式加载，早于任何
+   数据库访问。本工程已在 `FcitxApplication.onCreate` 开头调用
+   `System.loadLibrary("sqlcipher")`。**注意**：SQLCipher 4.x 已移除 `loadLibs(context)`，
+   不要调用（编译失败）；4.x 靠 ART 自动加载，提前加载只是保险。
+2. 改数据库代码前确认：加载逻辑存在 → 早于首次访问 → APK 含对应 ABI 的 `.so`
+   （`unzip -l app-release.apk | grep libsqlcipher`）。
+3. 不得改 `abiFilters` / `splits` / `extractNativeLibs` / `zipalign`，除非说明 ABI 影响。
+4. 遇 `UnsatisfiedLinkError` / `dlopen failed` / `No implementation found`：先定位
+   "没加载/没打包/ABI 不匹配"再动手；禁止降级明文 SQLite 或 try-catch 吞异常。
+5. 数据库改动必须在 release 构建、清数据冷启动验证；`app/proguard-rules.pro` 已保留
+   `net.zetetic.database.**`。
+6. 每次修崩溃后把「现象 / 根因 / 修复 / 验证方式」四行追加进 `docs/pitfalls.md`。
+
+## 改动前工作流
+- 先读 `.cursorrules` 与 `docs/pitfalls.md`，复述约束再动手。
+- 若修复了崩溃：把「现象 / 根因 / 修复」三行追加进 `docs/pitfalls.md` 并贴崩溃栈。
+
+## 数据流向硬性约束（用户隐私）
+- 被动收集的数据必须有显式消费入口（导入/导出/使用），不得只存不告知。
+- 导入/导出/删除/清空/同步必须写本地审计日志（recall/data/RecallAuditLog.kt，记元信息不含明文），并 UI 展示。
+- 所有数据处理本机完成：不新增网络权限、不联网、不第三方共享；APK 仅允许 VIBRATE/POST_NOTIFICATIONS/PLUGIN。
+- edge-to-edge（targetSdk 35+）下所有自定义 ScrollView/根 View 的 Activity 必须处理 WindowInsets（MbmActivityUi.fitInsets）。

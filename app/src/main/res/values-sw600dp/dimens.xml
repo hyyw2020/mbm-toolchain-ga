@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  sw≥600dp（MEDIUM / EXPANDED）：设置面板宽度封顶并水平居中。
+  640dp 取值依据：Android 14+ 的设置类应用 canonical layout 常用 600~720dp，
+  640dp 在 7" 平板（600dp 宽）上几乎满宽、在 10" 平板（800dp）上留出边距，
+  不会出现「一行只放得下三个字」的拉伸。
+-->
+<resources>
+    <dimen name="settings_pane_max_width">640dp</dimen>
+</resources>

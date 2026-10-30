@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 词组队列导出：仅 cache 目录，交给主输入法导入即失效 -->
+    <cache-path
+        name="recall_export"
+        path="." />
+</paths>
