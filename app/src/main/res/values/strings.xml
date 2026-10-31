@@ -366,7 +366,7 @@
 
     <!-- 「不会读取什么」的可读公示（RecallPolicy） -->
     <string name="recall_disclosure_title">本服务不会读取什么</string>
-    <string name="recall_disclosure_body">· 密码输入框（isPassword / 提示语含“密码”）整屏不采集\n· 系统标记为“敏感数据”的窗口（accessibilityDataSensitive）不采集\n· FLAG_SECURE 窗口（银行、支付、部分 DRM 内容）不采集\n· 节点级与模式级敏感规则硬编码、不可关闭\n· 开启系统「高级保护模式」时本服务整体停用并明确提示\n· 其余可见文字才会被记录；不读取的通知、不触碰剪贴板历史</string>
+    <string name="recall_disclosure_body">· 火力全开：所有应用的可见文字均照常捕获，无任何应用/窗口级封锁\n· 密码框、系统敏感窗口照常采集（v1.0.39 起移除整屏丢弃规则）\n· FLAG_SECURE 窗口的系统截图由 Android 返回黑帧（OS 层行为）\n· 卡号 / 身份证 / 验证码等敏感词条照常收录，仅不在候选首位打扰\n· 系统「高级保护模式」不再停用本服务\n· 数据只存本机（SQLCipher 加密 + 不联网）；不读取的通知、不触碰剪贴板历史</string>
     <string name="recall_disclosure_apm_blocked">系统已开启「高级保护模式」，为遵守其安全策略，Recall 已停用。如需使用，请先在系统设置中关闭高级保护模式。</string>
     <string name="recall_disclosure_apm_enabled">系统已开启「高级保护模式」，Recall 已按策略停用。</string>
 

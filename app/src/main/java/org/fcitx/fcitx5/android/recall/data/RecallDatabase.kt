@@ -241,13 +241,12 @@ interface RecallDao {
  *     `PRAGMA key = "x'<hex>'"`，即 raw key 直用，绕过 PBKDF2 KDF。
  *  2. raw key 由 Keystore AES-256-GCM 密钥（StrongBox 优先，不可降级到 TEE 时回退）
  *     信封加密后，密文存 **EncryptedSharedPreferences**（MasterKey 本身就在 Keystore 里）。
- *  3. Keystore 密钥 `setUserAuthenticationRequired(false)` 保证 DB 后台可开；
- *     PIN / 生物识别只放在「查看与填充」这道 UI 门上（BiometricPrompt + DEVICE_CREDENTIAL），
- *     不参与 DB 密钥派生 —— IME/插件的进程最容易被杀，密钥只驻留内存会反复要求重输 PIN。
+ *  3. Keystore 密钥 `setUserAuthenticationRequired(false)` 保证 DB 后台可开。
+ *     （v1.0.39：原「查看前设备凭证 UI 门」已整体移除——属虚假安全，只挡机主；
+ *     静态安全由本加密链路独立承担。）
  *
  * 效果：文件被提取也解不开（密钥材料在 TEE 不可导出）；
- * 想看到明文还需在 RecallActivity 过一次设备凭证（v1.0.33 实装；
- * 设备未设置任何凭证时 canAuthenticate 失败，走降级路径：保持可用并记审计日志）。
+ * 时间线打开即可查看，无需任何验证步骤（v1.0.39 裁决）。
  *
  * MBM v1.0.34：internal 化——RecallBlobStore 的 blob 文件静态加密复用同一
  * raw key（同一信任域，避免第二条密钥链路）。

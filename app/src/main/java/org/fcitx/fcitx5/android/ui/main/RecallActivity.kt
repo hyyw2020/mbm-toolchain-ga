@@ -35,9 +35,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.appcompat.app.AlertDialog
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -52,7 +49,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import org.fcitx.fcitx5.android.R
-import org.fcitx.fcitx5.android.recall.AdvancedProtectionProbe
 import org.fcitx.fcitx5.android.recall.PhraseAutoWriter
 import org.fcitx.fcitx5.android.recall.RecallPolicy
 import org.fcitx.fcitx5.android.recall.RecallService
@@ -67,9 +63,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// MBM v1.0.33：须为 FragmentActivity 而非 ComponentActivity——
-// androidx.biometric.BiometricPrompt 的构造器只接受 FragmentActivity/Fragment
-// （内部借 FragmentManager 在配置变更后仍能收到回调）。
+// FragmentActivity（AppCompat 家族）：供 AlertDialog / FileProvider 等组件使用。
 class RecallActivity : FragmentActivity() {
 
     private var records: List<RecallRecord> = emptyList()
@@ -96,129 +90,23 @@ class RecallActivity : FragmentActivity() {
     private var deleteButton: MaterialButton? = null
     private var importButton: MaterialButton? = null
     private var exportButton: MaterialButton? = null
-    private var apmStatus: TextView? = null
     private var phraseButton: MaterialButton? = null
 
     /** v0.0.02：无障碍服务连接状态行 */
     private var serviceStatus: TextView? = null
-
-    /**
-     * MBM v1.0.33（隐私合规·R1）：设备凭证门。
-     * 时间线内容（他应用屏幕文字）属敏感数据，查看前需过一次设备凭证
-     * （PIN / 生物识别，BiometricPrompt + DEVICE_CREDENTIAL）。
-     * 设计约束（与 RecallDatabase 的密钥链路裁决一致）：本门只挡「查看与
-     * 填充」UI，不参与 DB 密钥派生——IME/插件进程最容易被杀，密钥只驻留
-     * 内存会反复要求重输 PIN。设备未设置任何凭证时无从验证，保持可用
-     * （数据仍有 SQLCipher 静态加密兜底），并记审计日志。
-     */
-    private var unlocked = false
-    private var lockOverlay: View? = null
-    private var unlockHint: TextView? = null
 
     private val dateFormat = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
-        refreshApmStatus()
         refreshServiceStatus()
-        if (needsUnlock()) {
-            showLockOverlay()
-            // 锁定期间不加载任何记录：observe()/分页首屏全部推迟到验证通过后
-        } else {
-            unlocked = true
-            observe()
-        }
+        // MBM v1.0.39 裁决：删除「设备凭证门」（时间线锁定/解锁查看）。
+        // 它属于虚假安全：只挡得住机主本人，挡不住拿到已解锁设备的人，
+        // 却实打实地把每次查看变成一次折腾。真正的安全=SQLCipher 静态加密
+        // + 不联网 + 本机审计日志，打开即看，火力全开。
+        observe()
         refreshAudit()
-    }
-
-    /** 设备是否设置了可用凭证（生物识别或 PIN/密码）。未设置则无从验证，返回 false。 */
-    private fun needsUnlock(): Boolean {
-        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or
-            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-        val can = BiometricManager.from(this).canAuthenticate(authenticators)
-        if (can != BiometricManager.BIOMETRIC_SUCCESS) {
-            RecallAuditLog.log("UNLOCK", "设备无可用凭证（canAuthenticate=$can），跳过验证门")
-            return false
-        }
-        return true
-    }
-
-    /** 在内容区上盖一层锁定浮层；验证通过后移除并开始加载数据。 */
-    private fun showLockOverlay() {
-        val content = (window.decorView as ViewGroup).findViewById<ViewGroup>(android.R.id.content)
-        val pad = (20 * resources.displayMetrics.density).toInt()
-        val hint = TextView(this).apply {
-            textSize = 12f
-            setTextColor(COLOR_DIM)
-            setPadding(0, dp(8), 0, 0)
-            text = "时间线数据以加密形式存储在本机；为防止他人翻看，查看前需验证设备凭证。"
-        }
-        unlockHint = hint
-        val overlay = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(COLOR_BG)
-            setPadding(pad, pad, pad, pad)
-            addView(TextView(context).apply {
-                text = "时间线已锁定"
-                textSize = 18f
-                setTypeface(null, Typeface.BOLD)
-                setTextColor(COLOR_FG)
-                gravity = Gravity.CENTER
-            })
-            addView(hint)
-            addView(MaterialButton(this@RecallActivity).apply {
-                text = "解锁查看"
-                setOnClickListener { promptUnlock() }
-            })
-        }
-        lockOverlay = overlay
-        content.addView(
-            overlay,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
-    }
-
-    /** MBM v1.0.33：BiometricPrompt + DEVICE_CREDENTIAL（与 DB 密钥链路解耦，只挡 UI）。 */
-    private fun promptUnlock() {
-        val prompt = BiometricPrompt(
-            this,
-            ContextCompat.getMainExecutor(this),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(
-                    result: BiometricPrompt.AuthenticationResult
-                ) {
-                    lockOverlay?.let { overlay ->
-                        (window.decorView as ViewGroup)
-                            .findViewById<ViewGroup>(android.R.id.content)
-                            .removeView(overlay)
-                    }
-                    lockOverlay = null
-                    unlocked = true
-                    RecallAuditLog.log("UNLOCK", "设备凭证验证通过，打开时间线")
-                    observe()
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    // 取消/失败：留在锁定页，可再次点击「解锁查看」重试
-                    unlockHint?.text = "验证未完成：$errString"
-                }
-            }
-        )
-        prompt.authenticate(
-            BiometricPrompt.PromptInfo.Builder()
-                .setTitle("验证身份以查看已捕获内容")
-                .setSubtitle("时间线以加密形式存储，查看前需验证设备凭证")
-                .setAllowedAuthenticators(
-                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                )
-                .build()
-        )
     }
 
     private fun buildUi() {
@@ -351,13 +239,7 @@ class RecallActivity : FragmentActivity() {
         }
         root.addView(guideText)
 
-        // MBM v1.0.26（P0-2）：APM 状态 + 「不会读取什么」可读公示（RecallPolicy 唯一事实来源）
-        apmStatus = TextView(this@RecallActivity).apply {
-            textSize = 12f
-            setTextColor(0xFFE5534B.toInt())
-            setPadding(0, dp(2), 0, dp(8))
-        }
-        root.addView(apmStatus)
+        // MBM v1.0.26（P0-2）：「不会读取什么」可读公示（RecallPolicy 唯一事实来源）
         root.addView(TextView(this@RecallActivity).apply {
             text = getString(R.string.recall_disclosure_title)
             textSize = 14f
@@ -1037,13 +919,6 @@ class RecallActivity : FragmentActivity() {
             it.topMargin = topMargin
         }
 
-    /** MBM v1.0.26：系统高级保护模式状态（命中时显式提示，不静默降级） */
-    private fun refreshApmStatus() {
-        val apm = AdvancedProtectionProbe.isAdvancedProtectionEnabled(this)
-        apmStatus?.text = if (apm) getString(R.string.recall_disclosure_apm_blocked) else ""
-        apmStatus?.visibility = if (apm) View.VISIBLE else View.GONE
-    }
-
     /**
      * v0.0.02：无障碍服务状态自检。
      *
@@ -1080,7 +955,6 @@ class RecallActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        refreshApmStatus()
         refreshServiceStatus()
     }
 
