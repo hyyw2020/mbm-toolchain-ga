@@ -5,20 +5,12 @@
 package org.fcitx.fcitx5.android.input.keyboard
 
 import android.text.InputType
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.transition.Slide
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxKeyMapping
@@ -27,6 +19,7 @@ import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.input.bar.KawaiiBarComponent
 import org.fcitx.fcitx5.android.input.broadcast.InputBroadcastReceiver
 import org.fcitx.fcitx5.android.input.broadcast.ReturnKeyDrawableComponent
+import org.fcitx.fcitx5.android.input.calc.CalcCandidateComponent
 import org.fcitx.fcitx5.android.input.dependency.fcitx
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.dependency.theme
@@ -36,7 +29,6 @@ import org.fcitx.fcitx5.android.input.popup.PopupComponent
 import org.fcitx.fcitx5.android.input.wm.EssentialWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
-import org.fcitx.fcitx5.android.utils.imeExceptionHandler
 import org.mechdancer.dependency.manager.must
 import splitties.views.dsl.core.add
 import splitties.views.dsl.core.frameLayout
@@ -55,6 +47,9 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
     private val popup: PopupComponent by manager.must()
     private val bar: KawaiiBarComponent by manager.must()
     private val returnKeyDrawable: ReturnKeyDrawableComponent by manager.must()
+
+    /** MBM v1.0.39：全局计算器候选条（宿主在 InputView，跨窗口常驻；缓冲/光标前文本双模式）。 */
+    private val calc: CalcCandidateComponent by manager.must()
 
     companion object : EssentialWindow.Key
 
@@ -75,7 +70,6 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
         }
 
     private lateinit var keyboardView: FrameLayout
-    private lateinit var windowRoot: LinearLayout
 
     private val keyboards: HashMap<String, BaseKeyboard> by lazy {
         hashMapOf(
@@ -94,12 +88,14 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
     private val keyActionListener = KeyActionListener { it, source ->
         if (it is KeyAction.LayoutSwitchAction) {
             // MBM v1.0.39：切换布局前先把计算缓冲原文提交，避免用户输入丢失
-            flushCalc()
+            calc.commitBufferRaw()
             switchLayout(it.act)
         } else if (interceptCalcAction(it)) {
             // 已被计算器缓冲消费（数字键盘算式输入）
         } else {
             commonKeyActionListener.listener.onKeyAction(it, source)
+            // 光标前文本模式兜底刷新（多数字段靠 onSelectionUpdate，个别字段需补一次）
+            calc.refreshFieldExpr()
         }
     }
 
@@ -110,27 +106,8 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
     // This will be called EXACTLY ONCE
     override fun onCreateView(): View {
         keyboardView = context.frameLayout(R.id.keyboard_view)
-        // MBM v1.0.39：数字键盘计算器候选条（缓冲非空时显示，键盘区相应缩短）
-        windowRoot = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        buildCalcBar()
-        windowRoot.addView(
-            calcBar,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-        windowRoot.addView(
-            keyboardView,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT, 1f
-            )
-        )
         attachLayout(TextKeyboard.Name)
-        return windowRoot
+        return keyboardView
     }
 
     private fun detachCurrentLayout() {
@@ -177,16 +154,13 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
     }
 
     override fun onStartInput(info: EditorInfo, capFlags: CapabilityFlags) {
-        // MBM v1.0.39：计算器只在数字键盘（TYPE_CLASS_NUMBER 且非密码变体）启用；
-        // 电话拨号盘与密码输入框保持旧的直通上屏行为，杜绝误提交。
+        // MBM v1.0.39：缓冲模式仅在数字键盘场景（TYPE_CLASS_NUMBER 且非密码变体）；
+        // 其余字段由组件的「光标前文本模式」全局接管（含符号键盘 / QWERTY / PickerWindow）。
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val variation = info.inputType and InputType.TYPE_MASK_VARIATION
         val eligible = cls == InputType.TYPE_CLASS_NUMBER &&
                 variation != InputType.TYPE_NUMBER_VARIATION_PASSWORD
-        // 新输入会话（含同字段重聚焦）：与拼音预编辑同语义，未上屏缓冲一律丢弃
-        calcBuffer.setLength(0)
-        calcEligible = eligible
-        refreshCalcBar()
+        calc.setBufferMode(eligible)
         val targetLayout = when (cls) {
             InputType.TYPE_CLASS_NUMBER -> NumberKeyboard.Name
             InputType.TYPE_CLASS_PHONE -> NumberKeyboard.Name
@@ -224,8 +198,7 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
         }
         popup.dismissAll()
         // 键盘窗口卸载（切窗/收起）：与拼音预编辑同语义，未上屏的算式缓冲直接丢弃
-        calcBuffer.setLength(0)
-        if (this::calcBar.isInitialized) calcBar.visibility = View.GONE
+        calc.clearBuffer()
     }
 
     // Call this when
@@ -235,74 +208,12 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
         bar.onKeyboardLayoutSwitched(currentKeyboardName == NumberKeyboard.Name)
     }
 
-    // ===================== MBM v1.0.39：数字键盘计算器（全局默认开启，无开关） =====================
-    // 交互模型（与拼音预编辑一致）：
-    //  - 数字键盘上的数字/运算符不直接上屏，先进入本地缓冲并显示在候选条；
-    //  - 缓冲为完整算式时候选条给出【结果】与【算式=结果】两个候选，点选即上屏；
-    //  - 空格 / 换行 / 切换布局：先把缓冲原文原样上屏，再执行原动作；
-    //  - 退格删缓冲末字符，缓冲空后恢复正常退格；
-    //  - 字段切换 / 键盘收起：缓冲丢弃（同拼音未选词丢失语义）。
-    // 安全边界：电话拨号盘与密码输入框不启用（直通上屏）；全部本地计算、不联网。
-
-    private val calcBuffer = StringBuilder()
-    private var calcEligible = false
-    private lateinit var calcBar: LinearLayout
-    private lateinit var calcExprView: TextView
-
-    private fun dp(v: Int) = (v * context.resources.displayMetrics.density).toInt()
-
-    private fun buildCalcBar() {
-        calcBar = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(4), dp(10), dp(4))
-            visibility = View.GONE
-        }
-        calcExprView = TextView(context).apply {
-            textSize = 14f
-            setTextColor(theme.candidateCommentColor)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.START
-        }
-    }
-
-    private fun refreshCalcBar() {
-        if (!this::calcBar.isInitialized) return
-        val text = calcBuffer.toString()
-        if (!calcEligible || text.isEmpty()) {
-            calcBar.visibility = View.GONE
-            return
-        }
-        calcBar.removeAllViews()
-        calcBar.addView(
-            calcExprView.apply { this.text = text },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        )
-        val result = CalcEngine.evaluate(text)
-        if (result != null) {
-            calcBar.addView(calcChip(result, accent = true) { commitCalc(result) })
-            calcBar.addView(calcChip("$text=$result", accent = false) { commitCalc("$text=$result") })
-        }
-        calcBar.visibility = View.VISIBLE
-    }
-
-    private fun calcChip(text: String, accent: Boolean, onClick: () -> Unit): TextView =
-        TextView(context).apply {
-            this.text = text
-            textSize = 15f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(if (accent) theme.accentKeyTextColor else theme.candidateTextColor)
-            background = GradientDrawable().apply {
-                cornerRadius = dp(8).toFloat()
-                setColor(if (accent) theme.accentKeyBackgroundColor else theme.keyBackgroundColor)
-            }
-            setPadding(dp(10), dp(5), dp(10), dp(5))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { marginStart = dp(6) }
-            setOnClickListener { onClick() }
-        }
+    // ===================== MBM v1.0.39：计算器（状态与渲染在 CalcCandidateComponent） =====================
+    // 缓冲模式（数字键盘）：数字/运算符键不直接上屏，进组件缓冲并渲染在 InputView 层候选条；
+    //   空格/换行/切布局：缓冲原文先上屏再执行原动作；退格删缓冲末字符。
+    // 光标前文本模式（任意键盘/窗口，含符号键盘与 PickerWindow）：组件监听 onSelectionUpdate，
+    //   从输入框提取尾部算式给出候选，点选原子地「删算式+提交」。
+    // 安全边界：密码类字段不启用；拼音预编辑非空时不干预；全部本地计算、不联网、无开关。
 
     /** 数字键盘按键的 keysym → 算式字符（非算式字符返回 null，不拦截）。 */
     private fun calcCharOf(sym: Int): Char? = when (sym) {
@@ -318,60 +229,32 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
 
     /**
      * 计算器按键拦截。返回 true 表示该按键已被缓冲消费，不再转发 fcitx 引擎。
+     * 仅缓冲模式（数字键盘+数字字段）会消费按键；其余一律放行。
      */
     private fun interceptCalcAction(action: KeyAction): Boolean {
-        if (!calcEligible) return false
         when (action) {
             is KeyAction.SymAction -> {
                 val sym = action.sym.sym
                 return when (sym) {
-                    FcitxKeyMapping.FcitxKey_BackSpace -> {
-                        if (calcBuffer.isNotEmpty()) {
-                            calcBuffer.deleteCharAt(calcBuffer.length - 1)
-                            refreshCalcBar()
-                            true
-                        } else false
-                    }
+                    FcitxKeyMapping.FcitxKey_BackSpace -> calc.backspaceBuffer()
                     FcitxKeyMapping.FcitxKey_space, FcitxKeyMapping.FcitxKey_Return -> {
-                        if (calcBuffer.isNotEmpty()) {
+                        if (calc.bufferNotEmpty) {
                             // 原文上屏（同步 InputConnection 写入），随后原动作照常执行
-                            commitCalc(calcBuffer.toString())
+                            calc.commitBufferRaw()
                             false
                         } else false
                     }
                     else -> {
                         val c = calcCharOf(sym)
-                        if (c == null) return false
-                        if (calcBuffer.length >= 64) return true
-                        calcBuffer.append(c)
-                        refreshCalcBar()
-                        true
+                        c != null && calc.appendBuffer(c)
                     }
                 }
             }
             else -> {
                 // 符号键盘切换 / 快捷短语等其他动作：先提交原文，不丢失用户输入
-                if (calcBuffer.isNotEmpty()) commitCalc(calcBuffer.toString())
+                calc.commitBufferRaw()
                 return false
             }
-        }
-    }
-
-    /** 切换布局前的原文提交（仅数字键盘有缓冲）。 */
-    private fun flushCalc() {
-        if (calcEligible && currentKeyboardName == NumberKeyboard.Name && calcBuffer.isNotEmpty()) {
-            commitCalc(calcBuffer.toString())
-        }
-    }
-
-    /** 把文本同步上屏并清空缓冲（InputConnection 写入在主线程即时生效，顺序可靠）。 */
-    private fun commitCalc(text: String) {
-        calcBuffer.setLength(0)
-        refreshCalcBar()
-        runCatching { service.finishComposing() }
-            .onFailure { Timber.w(it, "MBM calc: finishComposing failed, commit anyway") }
-        service.lifecycleScope.launch(imeExceptionHandler) {
-            service.commitText(text)
         }
     }
     // ===================== 计算器结束 =====================

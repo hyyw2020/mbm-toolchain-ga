@@ -2278,3 +2278,10 @@ setClassName 显式拉起 → 系统校验调用方是否持有 Activity 的 per
     不启用缓冲，保持直通上屏，杜绝拨号/输 PIN 时字段为空的误用面。
 - **文档同步**：PRIVACY.txt（根目录与 assets/licenses 双份）升至 v1.0.39 并新增
   计算器条目；NOTICE.txt 版本行更新；README.md 以当前实现覆盖 v1.0.37 旧描述。
+- **【v1.0.39b 覆盖】全局化**：真机验收发现候选条原挂在 KeyboardWindow 内部，
+  切到符号键盘（PickerWindow）即消失、QWERTY 上完全不生效。重构为
+  `CalcCandidateComponent`（宿主提升到 InputView 键盘区上方，跨窗口常驻），
+  新增「光标前文本模式」：监听 onSelectionUpdate，从输入框光标前文本提取尾部
+  算式（`getTextBeforeCursor(64)` → 尾串扫描 ≥3 字符且含数字 → CalcEngine 求值），
+  点选原子地「删算式+提交」；拼音预编辑非空（preeditEmpty 门控）与密码类字段
+  不启用；KeyboardWindow 仅保留缓冲模式的按键拦截委托。

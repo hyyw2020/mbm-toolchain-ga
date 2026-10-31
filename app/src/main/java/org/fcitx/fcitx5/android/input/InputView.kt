@@ -34,6 +34,7 @@ import org.fcitx.fcitx5.android.data.prefs.ManagedPreferenceProvider
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.bar.KawaiiBarComponent
+import org.fcitx.fcitx5.android.input.calc.CalcCandidateComponent
 import org.fcitx.fcitx5.android.input.broadcast.InputBroadcaster
 import org.fcitx.fcitx5.android.input.broadcast.PreeditEmptyStateComponent
 import org.fcitx.fcitx5.android.input.broadcast.PunctuationComponent
@@ -1264,6 +1265,9 @@ class InputView(
 
     private val horizontalCandidate = HorizontalCandidateComponent()
     private val keyboardWindow = KeyboardWindow()
+
+    /** MBM v1.0.39：全局计算器候选条（跨窗口常驻，宿主在 InputView 键盘区上方）。 */
+    private val calcCandidate = CalcCandidateComponent()
     private val symbolPicker = symbolPicker()
     private val emojiPicker = emojiPicker()
     private val emoticonPicker = emoticonPicker()
@@ -1284,6 +1288,7 @@ class InputView(
         scope += windowManager
         scope += kawaiiBar
         scope += horizontalCandidate
+        scope += calcCandidate
         broadcaster.onScopeSetupFinished(scope)
     }
 
@@ -1424,6 +1429,12 @@ class InputView(
         updateKeyboardSize()
 
         add(preedit.ui.root, lParams(matchParent, wrapContent) {
+            above(keyboardView)
+            centerHorizontally()
+        })
+        // MBM v1.0.39：全局计算器候选条——跨键盘窗口（含符号/表情 Picker）常驻；
+        // 与拼音预编辑互斥（组件侧 preeditEmpty 门控），不会同时出现。
+        add(calcCandidate.view, lParams(matchParent, wrapContent) {
             above(keyboardView)
             centerHorizontally()
         })
