@@ -21,37 +21,40 @@ class NumberKeyboard(
     companion object {
         const val Name = "Number"
 
+        /**
+         * MBM v1.0.39：改为「图二」样式——左列运算符竖排（% / + *）、数字栅格居中、
+         * 右上角退格、右侧 - *、底行「返回 / !?:# / 0 / 空格 / 换行」。
+         * 与图二的唯一差异：右列第 3 键用 `*`（乘号）替代 `@`——用户硬性要求
+         * 加减乘除全部可直接输入，乘号优先级高于 @；顶部工具条（KawaiiBar）不在此布局内。
+         */
         val Layout: List<List<KeyDef>> = listOf(
             listOf(
-                NumPadKey("+", 0xffab, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
+                NumPadKey("%", 0x025, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
                 NumPadKey("1", 0xffb1, 30f, 0f),
                 NumPadKey("2", 0xffb2, 30f, 0f),
                 NumPadKey("3", 0xffb3, 30f, 0f),
-                NumPadKey("/", 0xffaf, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
-                QuickPhraseKey(),
+                BackspaceKey(),
             ),
             listOf(
-                NumPadKey("-", 0xffad, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
+                NumPadKey("/", 0xffaf, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
                 NumPadKey("4", 0xffb4, 30f, 0f),
                 NumPadKey("5", 0xffb5, 30f, 0f),
                 NumPadKey("6", 0xffb6, 30f, 0f),
-                MiniSpaceKey()
+                NumPadKey("-", 0xffad, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
             ),
             listOf(
-                NumPadKey("*", 0xffaa, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
+                NumPadKey("+", 0xffab, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
                 NumPadKey("7", 0xffb7, 30f, 0f),
                 NumPadKey("8", 0xffb8, 30f, 0f),
                 NumPadKey("9", 0xffb9, 30f, 0f),
-                BackspaceKey()
+                NumPadKey("*", 0xffaa, 23f, 0.15f, KeyDef.Appearance.Variant.Alternative),
             ),
             listOf(
-                LayoutSwitchKey("ABC", TextKeyboard.Name),
-                NumPadKey(",", 0xffac, 23f, 0.1f, KeyDef.Appearance.Variant.Alternative),
-                LayoutSwitchKey("!?#", PickerWindow.Key.Symbol.name, 0.13333f, KeyDef.Appearance.Variant.AltForeground),
-                NumPadKey("0", 0xffb0, 30f, 0.23334f),
-                NumPadKey("=", 0xffbd, 23f, 0.13333f, KeyDef.Appearance.Variant.AltForeground),
-                NumPadKey(".", 0xffae, 23f, 0.1f, KeyDef.Appearance.Variant.Alternative),
-                ReturnKey()
+                LayoutSwitchKey("返回", TextKeyboard.Name, 0.2f, KeyDef.Appearance.Variant.Alternative),
+                LayoutSwitchKey("!?#", PickerWindow.Key.Symbol.name, 0.2f, KeyDef.Appearance.Variant.AltForeground),
+                NumPadKey("0", 0xffb0, 30f, 0.25f),
+                MiniSpaceKey(),
+                ReturnKey(0.2f),
             )
         )
     }

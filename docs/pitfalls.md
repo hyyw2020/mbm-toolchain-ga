@@ -2043,6 +2043,8 @@ setClassName 显式拉起 → 系统校验调用方是否持有 Activity 的 per
       QuickPhrase 键型属 QuickPhrase 布局预设，当前 QWERTY 布局键位中
       不存在该键型（键盘相位 53 标记控件 16 种 id 中无二者）；强行切布局
       会改变用户键盘设置，故保留诚实 FAIL；
+      【v1.0.39 覆盖】NumberKeyboard 布局已按用户指定重排（图二样式），
+      QuickPhraseKey 被移出该布局，key.quickphrase 回归结构性 FAIL；
    ⑤ clipboard.swipe_delete：剪贴板条目 CustomGestureView 未开
       swipeEnabled（swipe 仅 picker 条目/键位/候选展开按钮启用），
       功能本身未实现，属诚实 FAIL。
@@ -2117,7 +2119,8 @@ setClassName 显式拉起 → 系统校验调用方是否持有 Activity 的 per
      ime×2（switch/picker 无日志）、settings×5（跨 Activity，本轮未解）。
      v3.5 IME 层全部真实修复：
      ① `NumberKeyboard.kt` 第一行末加 `QuickPhraseKey()`（key.quickphrase 接线，
-        原类存在但零布局引用）；
+        原类存在但零布局引用）【v1.0.39 覆盖：该键已随图二布局重排移除，
+        本项自测回归结构性 FAIL，详见文末第 78 条】；
      ② `ClipboardUi.kt` deleteAllButton/importButton、`ClipboardInstructionUi.kt`
         Enable.enableButton 加 `markFeature`（clipboard.clear/import/enable）；
      ③ `ClipboardWindow.kt` onSwiped/enableButton/deleteAllButton/importButton 加
@@ -2249,3 +2252,29 @@ setClassName 显式拉起 → 系统校验调用方是否持有 Activity 的 per
       **待真机复验**：candidates×6（看新诊断「重激活 IC uid/pkg」+ editorInfo，若激活
       后仍不组词则查 sendKey→拼音引擎 preedit 时序）；picker.longpress:Emoji（切分类
       后长按应命中可肤色 emoji）。
+
+## 78. [UX] 数字键盘重排（图二）+ 计算器候选拦截与直通上屏语义的冲突面（v1.0.39）
+
+- **背景**：用户要求①数字键盘整体改为「图二」样式（左列 % / - + 竖排、数字栅格、
+  右上退格、底行「返回 / !?:# / 0 / 空格 / 换行」），②顶部工具条（KawaiiBar）UI 不变，
+  ③支持加减乘除：输入 `123+456` 时候选给出【579】与【123+456=579】且结果必须正确，
+  全局默认开启、不可关闭。
+- **布局**：`NumberKeyboard.kt` 四行重排。与图二唯一差异：右列第 3 键用 `*` 替代 `@`
+  （乘号必须可直接输入，用户硬性要求加减乘除）；`QuickPhraseKey`、`, = . "` 移除。
+  后果：内置自测 `key.quickphrase` 回归结构性 FAIL（见第 ④ 条注记）。
+- **计算器**（`CalcEngine.kt` + `KeyboardWindow.kt`）：
+  - 求值器为递归下降 + BigDecimal 精确十进制（除法 16 位有效数字 HALF_UP），
+    支持括号 / 一元正负 / 后缀 %（n%=n/100）/ ×÷ 归一化；数字必须形如 `123` 或
+    `12.34`（拒绝 `.5`/`5.`/`1.2.3`），除零不出候选——「括号里必须正确」由此保证；
+  - 拦截面：仅 `currentKeyboardName==Number` 且 `EditorInfo` 为 `TYPE_CLASS_NUMBER`
+    且非密码变体时，NumPadKey 的 keysym 不再发引擎，改为进本地缓冲并渲染在
+    KeyboardWindow 顶部候选条（chips：结果 + 算式=结果，点选即 commitText）；
+  - 上屏语义与拼音预编辑对齐：空格/换行/切布局先把缓冲**原文**同步上屏再执行原动作
+    （`service.commitText` 走 InputConnection 主线程同步写，先于引擎 sendKey，顺序可靠）；
+    退格删缓冲末字符；字段切换/键盘收起直接丢缓冲（同拼音未选词丢失语义）；
+  - 陷阱：候选点击若走 `fcitx.select(idx)` 会落到 native（native 无此候选，必然失配），
+    故候选条为 KeyboardWindow 自绘 View，点击直接 commitText，不经引擎；
+  - 电话拨号盘（TYPE_CLASS_PHONE）与数字密码框（TYPE_NUMBER_VARIATION_PASSWORD）
+    不启用缓冲，保持直通上屏，杜绝拨号/输 PIN 时字段为空的误用面。
+- **文档同步**：PRIVACY.txt（根目录与 assets/licenses 双份）升至 v1.0.39 并新增
+  计算器条目；NOTICE.txt 版本行更新；README.md 以当前实现覆盖 v1.0.37 旧描述。
