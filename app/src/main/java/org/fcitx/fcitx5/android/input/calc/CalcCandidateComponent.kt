@@ -46,8 +46,9 @@ class CalcCandidateComponent :
     UniqueViewComponent<CalcCandidateComponent, LinearLayout>(), InputBroadcastReceiver {
 
     companion object {
-        /** 允许出现在算式尾串中的字符（从光标处向前扫描）。 */
-        private const val EXPR_CHARS = "0123456789.+-*/×÷%() \t\u3000"
+        /** 允许出现在算式尾串中的字符（从光标处向前扫描；含括号规范三层与绝对值竖线）。 */
+        private const val EXPR_CHARS =
+            "0123456789.+-*/×÷%()[]{}| \t\u3000（）【】｛｝｜"
 
         private val TEXT_PASSWORD_VARIATIONS = intArrayOf(
             InputType.TYPE_TEXT_VARIATION_PASSWORD,
