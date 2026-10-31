@@ -56,6 +56,18 @@ android {
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = true
     }
+
+    // MBM v1.0.38 热修：修复 INSTALL_FAILED_CONTAINER_ERROR (res=-18) 安装失败。
+    // AGP 9.x 默认 useLegacyPackaging=false（即 extractNativeLibs=false）：.so 以
+    // 未压缩+页对齐方式直接驻留 APK、由系统 mmap 加载。部分设备/系统版本在
+    // 安装阶段提取原生库失败，报 "Failed to extract native libraries, res=-18"。
+    // 开启 legacy packaging 后，.so 改为压缩存储并在安装时解压提取到应用 lib 目录，
+    // 兼容所有主流 Android 10~17 设备。fcitx5 原生库体积大，必须保证可提取。
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 fcitxComponent {
