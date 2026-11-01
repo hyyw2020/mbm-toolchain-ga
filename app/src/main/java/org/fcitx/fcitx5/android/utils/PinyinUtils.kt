@@ -24,8 +24,13 @@ object PinyinUtils {
         runCatching { Transliterator.getInstance("Han-Latin; Latin-ASCII") }.getOrNull()
     }
 
-    private val initialsCache = ConcurrentHashMap<String, String?>()
-    private val pinyinCache = ConcurrentHashMap<String, String?>()
+    // 注意：ConcurrentHashMap 不允许 null 的 key/value。toPinyin/fullPinyin/initials 都可能返回 null
+    // （如纯数字 / 符号 / emoji 经 ICU 转写后无字母），因此用 PinyinBox 包裹以同时缓存「成功结果」与
+    // 「无结果」，避免向 ConcurrentHashMap 塞 null 触发 NullPointerException（见崩溃日志 NPE@PinyinUtils.kt:125）。
+    private class PinyinBox(val value: String?)
+
+    private val pinyinCache = ConcurrentHashMap<String, PinyinBox>()
+    private val initialsCache = ConcurrentHashMap<String, PinyinBox>()
 
     /**
      * 多音字词级校正表：词 -> 正确整词拼音（音节空格分隔，音节数 == 字数）。
@@ -109,8 +114,8 @@ object PinyinUtils {
      */
     fun toPinyin(text: String): String? {
         if (text.isBlank()) return null
-        pinyinCache[text]?.let { return it }
-        val transformer = hanToLatin ?: return null.also { pinyinCache[text] = null }
+        pinyinCache[text]?.let { return it.value }
+        val transformer = hanToLatin ?: return null.also { pinyinCache[text] = PinyinBox(null) }
         val base = runCatching { transformer.transliterate(text) }
             .getOrNull()
             ?.lowercase()
@@ -122,7 +127,7 @@ object PinyinUtils {
         } else {
             base
         }
-        pinyinCache[text] = result
+        pinyinCache[text] = PinyinBox(result)
         return result
     }
 
@@ -170,9 +175,9 @@ object PinyinUtils {
      */
     fun initials(text: String): String? {
         if (text.isBlank()) return null
-        initialsCache[text]?.let { return it }
+        initialsCache[text]?.let { return it.value }
         val py = toPinyin(text) ?: run {
-            initialsCache[text] = null
+            initialsCache[text] = PinyinBox(null)
             return null
         }
         val sb = StringBuilder()
@@ -188,7 +193,7 @@ object PinyinUtils {
             }
         }
         val result = sb.toString().takeIf { it.isNotEmpty() }
-        initialsCache[text] = result
+        initialsCache[text] = PinyinBox(result)
         return result
     }
 }
