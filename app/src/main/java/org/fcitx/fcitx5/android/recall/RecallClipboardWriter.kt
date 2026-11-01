@@ -44,6 +44,9 @@ object RecallClipboardWriter {
 
     @Volatile
     private var lastWriteAt = 0L
+    /** 上次写入内容的哈希：实现「按内容」节流——相同内容 2s 内去重，不同内容均落盘（P2-4）。 */
+    @Volatile
+    private var lastContentHash = 0
 
     /** 内存去重集合：惰性加载一次，追加时同步更新（避免每次 offer 全量读文件）。 */
     private val known: HashSet<String> by lazy {
@@ -74,10 +77,14 @@ object RecallClipboardWriter {
     fun offer(text: String) {
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
-        if (now - lastWriteAt < MIN_INTERVAL_MS) return
+        // 按内容节流（P2-4）：相同内容 2s 内去重，避免刷屏；
+        // 但 2 秒内快速滚动到的「不同长文本页面」各自独立落盘，不再被全局时间门控整批吞掉。
+        val h = text.hashCode()
+        if (h == lastContentHash && now - lastWriteAt < MIN_INTERVAL_MS) return
         val candidates = extractCandidates(text)
         if (candidates.isEmpty()) return
         lastWriteAt = now
+        lastContentHash = h
         scope.launch {
             try {
                 var appended = 0

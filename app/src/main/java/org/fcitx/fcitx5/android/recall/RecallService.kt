@@ -70,6 +70,10 @@ class RecallService : AccessibilityService() {
     @Volatile
     private var lastPkg: String? = null
 
+    /** 最近一次事件携带的窗口 id：与包名组合成帧缓存窗口键（P2-3：同 App 不同界面不再互相去重）。 */
+    @Volatile
+    private var lastWindowId = -1
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val screenshotExecutor = newSingleThreadExecutor()
 
@@ -145,6 +149,7 @@ class RecallService : AccessibilityService() {
         if (!enabled) return
         val pkg = e.packageName?.toString()
         if (!pkg.isNullOrEmpty()) lastPkg = pkg
+        lastWindowId = e.windowId
         when (e.eventType) {
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
@@ -169,7 +174,6 @@ class RecallService : AccessibilityService() {
     /** 节点树遍历 + 分词 + 写库 + OCR 兜底（全部后台线程）。 */
     private fun captureNodeTree(pkg: String) {
         val root = runCatching { rootInActiveWindow }.getOrNull() ?: return
-        val appLabel = appLabelOf(pkg)
         try {
             // P1-5 修复：删除 captureMutex —— collected 均为本方法局部变量，
             // walk 无共享状态，包整棵树遍历的锁是纯自我阻塞（拖慢 tick 数十毫秒）。
@@ -180,10 +184,12 @@ class RecallService : AccessibilityService() {
             if (text != null) {
                 ingest(text, "NODE")
             }
-            // OCR 兜底：节点树取不到文字（Canvas / 游戏 / 图片）。
-            // P2-3 修复：静止（无事件、无打字）时不再反复截图 OCR——内容没变，截图纯属耗电。
+            // OCR 兜底：节点树取不到文字（Canvas / 游戏 / 图片）时截图 OCR。
+            // 节流完全交给 RecallOcrController 内部（OCR_MIN_INTERVAL_MS 限频 +
+            // 区域哈希去重 + inFlight 互斥），这里不再叠加活动期门控——
+            // 否则用户停在静态图片 / 游戏 UI / PDF 静止阅读超过 2s 后 hasRecentActivity() 恒为 false，
+            // 本应兜底识别的屏永远触发不了 OCR（P1-1 功能回归）。
             if (text == null && ocrEnabled &&
-                picker.hasRecentActivity() &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
             ) {
                 captureWithOcr()
@@ -200,7 +206,7 @@ class RecallService : AccessibilityService() {
     private fun ingest(text: String, source: String) {
         if (!enabled) return // 与 captureTick 一致的隐私门控
         val pkg = lastPkg ?: return
-        if (!frameCache.shouldCapture(pkg, text, SystemClock.elapsedRealtime())) return
+        if (!frameCache.shouldCapture("$pkg/$lastWindowId", text, SystemClock.elapsedRealtime())) return
         // record 是 suspend（含 Room 写盘），在后台 IO 协程里异步落库，不让拾取线程阻塞；
         // 帧级去重已前置，DB 内去重仅作最终兜底，异步不影响正确性。
         val label = appLabelOf(pkg)

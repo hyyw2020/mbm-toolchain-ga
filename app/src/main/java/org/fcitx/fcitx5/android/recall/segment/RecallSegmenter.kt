@@ -9,11 +9,13 @@
  * 通道 B（NER）：离线专名识别（RecallNer），对游戏名 / 应用名 / 人名 / 地名等专名召回。
  *
  * 三层过滤（缺一不可，顺序固定）：
- *   1. 长度过滤：词条长度需在 [MIN_PHRASE_LEN, MAX_WHOLE_PHRASE_LEN]；
- *   2. 拼音键可用性：无法派生拼音键（非全汉字）的词条直接丢弃
- *      （RecallWordStore 经 AppPhraseImporter.keysForName 派生，非汉字无键可派）；
+ *   1. 长度过滤：常规词条长度需在 [MIN_PHRASE_LEN, MAX_WHOLE_PHRASE_LEN]；
+ *      敏感数字串（通道 C）可绕过此上限——卡号/身份证本身就超出常规短语长度。
+ *   2. 拼音键可用性：普通非全汉字词条若无法派生拼音键（纯符号等）则丢弃；
+ *      keysForName 已支持英文/数字 ascii 兜底键，故「含字母或数字」本身不再是丢弃理由。
  *   3. 敏感打标降权：命中模式级正则（卡号/身份证/验证码）的词条打标 sensitive=true，
  *      由 RecallWordStore 降级为 COLD_ORDER、不出候选首位（E2/E3 降权，而非整屏丢弃）。
+ *      纯汉字词永远不可能命中数字类正则，故敏感判定主要在通道 C（整行扫描）生效。
  *
  * 全部离线、零网络；新词发现基于一个**有界滚动语料缓冲**，防止内存无界增长。
  */
@@ -119,26 +121,44 @@ class RecallSegmenter {
             for (e in RecallNer.detect(line)) {
                 emit(best, e.text, CandidateSource.NER, e.confidence)
             }
+
+            // —— 通道 C：敏感数字串（卡号/身份证/验证码）显式召回并降权（P1-2 修复）——
+            // 这些串不在 hanRuns 内（非汉字），旧实现因第二层 isAllHan 门控整条丢弃，
+            // 导致「敏感打标降权」机制从未生效（纯汉字永远无法命中数字类正则）。
+            // 此处对整行扫描敏感模式，命中串绕过汉字/长度门控直接收录，并强制 sensitive。
+            for (tok in RecallPolicy.findSensitiveTokens(line)) {
+                if (tok.length >= RecallConfig.MIN_PHRASE_LEN && tok.length <= 30) {
+                    emit(best, tok, CandidateSource.DICT, 0.5f, forceSensitive = true, forceLength = true)
+                }
+            }
         }
         return best.values.toList()
     }
 
-    /** 三层过滤 + 去重合并：满足条件则写入 best（同 phrase 取更优者）。 */
+    /**
+     * 三层过滤 + 去重合并：满足条件则写入 best（同 phrase 取更优者）。
+     * @param forceSensitive 敏感数字串通道（C）专用：命中敏感模式即强制打标，绕过汉字门控。
+     * @param forceLength    敏感数字串可能超出常规短语长度上限（如 16~19 位卡号），允许绕过长度门控。
+     */
     private fun emit(
         best: MutableMap<String, RecallCandidate>,
         phrase: String,
         source: CandidateSource,
-        confidence: Float
+        confidence: Float,
+        forceSensitive: Boolean = false,
+        forceLength: Boolean = false
     ) {
-        // 第一层：长度过滤
-        if (phrase.length < RecallConfig.MIN_PHRASE_LEN ||
-            phrase.length > RecallConfig.MAX_WHOLE_PHRASE_LEN
+        // 第一层：长度过滤（敏感串可绕过）
+        if (!forceLength &&
+            (phrase.length < RecallConfig.MIN_PHRASE_LEN ||
+                phrase.length > RecallConfig.MAX_WHOLE_PHRASE_LEN)
         ) return
-        // 第二层：拼音键可用性 —— 无法派生拼音键（非全汉字）直接丢弃
-        if (!RecallTextUtils.isAllHan(phrase)) return
+        // 第二层：拼音键可用性 —— 普通非全汉字词条若无拼音键价值则丢弃；
+        // 但命中敏感正则的串（卡号/身份证/验证码）仍收录并强制降权（不出首位）。
+        // 注：keysForName 已支持英文/数字 ascii 兜底键，故「含字母或数字」本身不再构成丢弃理由。
+        val sensitive = forceSensitive || RecallPolicy.findSensitiveTokens(phrase).isNotEmpty()
+        if (!sensitive && !RecallTextUtils.isAllHan(phrase)) return
         // 第三层：敏感打标降权（不丢弃整屏，仅标记）
-        val sensitive = RecallPolicy.findSensitiveTokens(phrase).isNotEmpty()
-
         val prev = best[phrase]
         if (prev == null) {
             best[phrase] = RecallCandidate(phrase, source, confidence, sensitive)
