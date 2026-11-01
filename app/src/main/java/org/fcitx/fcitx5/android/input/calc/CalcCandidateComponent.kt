@@ -37,6 +37,7 @@ import org.fcitx.fcitx5.android.input.dependency.context
 import org.fcitx.fcitx5.android.input.dependency.theme
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.keyboard.CalcEngine
+import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.utils.imeExceptionHandler
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -79,6 +80,31 @@ class CalcCandidateComponent :
 
     /** 兜底刷新的挂起任务（个别字段不上报光标更新，按键后延迟补一次）。 */
     private var pendingRefresh: Runnable? = null
+
+    /**
+     * MBM v1.0.42：会话/窗口重挂后主动恢复计算候选。
+     * onStartInput 与窗口 detach 都会把 fieldExpr 清空，而系统的 onUpdateSelection
+     * 只在光标变化时才派发——键盘收起再弹出（同一编辑框、光标未动）时广播不来，
+     * 计算条就一直空着，直到用户再按键。这里在重置后主动多档延迟重算
+     * （IC 就绪时机不定，幂等去重无副作用），实现「重新聚焦即恢复」。
+     */
+    private val pendingRestores = mutableListOf<Runnable>()
+
+    private fun scheduleFieldRestore(vararg delays: Long) {
+        if (bufferMode) return
+        pendingRestores.forEach { view.removeCallbacks(it) }
+        pendingRestores.clear()
+        delays.forEach { d ->
+            val r = object : Runnable {
+                override fun run() {
+                    pendingRestores.remove(this)
+                    if (!bufferMode) updateFieldExpr()
+                }
+            }
+            pendingRestores.add(r)
+            view.postDelayed(r, d)
+        }
+    }
 
     override val view by lazy {
         LinearLayout(context).apply {
@@ -153,6 +179,15 @@ class CalcCandidateComponent :
         fieldExpr = null
         preeditEmpty = true
         render()
+        // MBM v1.0.42：重置后主动重算，重新聚焦已含算式的输入框时立刻恢复计算候选，
+        // 不再依赖不一定会来的 onUpdateSelection（光标未动则系统不派发）
+        scheduleFieldRestore(150, 400)
+    }
+
+    override fun onWindowAttached(window: InputWindow) {
+        // MBM v1.0.42：窗口重挂（键盘重弹/布局切窗）会触发 KeyboardWindow.onDetached
+        // → clearBuffer 把 fieldExpr 一并清空；attach 后同样主动重算恢复候选
+        scheduleFieldRestore(150, 400)
     }
 
     override fun onPreeditEmptyStateUpdate(empty: Boolean) {
