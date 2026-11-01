@@ -908,9 +908,12 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     override fun onComputeInsets(outInsets: Insets) {
         if (inputDeviceMgr.isVirtualKeyboard) {
             inputView?.keyboardView?.getLocationInWindow(inputViewLocation)
+            // MBM v1.0.43：可触摸区域上沿必须覆盖浮在键盘上方的计算条 / 预编辑条，
+            // 否则点击这些条上的候选项会被判定为「点击 IME 外部」→ 键盘收起、候选点不上屏。
+            val top = inputView?.touchableTopY() ?: inputViewLocation[1]
             outInsets.apply {
-                contentTopInsets = inputViewLocation[1]
-                visibleTopInsets = inputViewLocation[1]
+                contentTopInsets = top
+                visibleTopInsets = top
                 touchableInsets = Insets.TOUCHABLE_INSETS_VISIBLE
             }
         } else {

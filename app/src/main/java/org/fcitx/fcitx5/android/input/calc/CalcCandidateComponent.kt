@@ -28,6 +28,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.widget.LinearLayout
 import android.widget.TextView
 import org.fcitx.fcitx5.android.core.CapabilityFlags
@@ -262,7 +263,32 @@ class CalcCandidateComponent :
                 ic.endBatchEdit()
             }
         }.getOrDefault(false)
-        if (ok) {
+        // MBM v1.0.43 兜底：个别 App（部分搜索框）会拒绝 deleteSurroundingText，
+        // 上面整段静默失败后候选就「点了没反应」。改为先把算式选中、再整体替换上屏。
+        val ok2 = if (!ok) runCatching {
+            ic.beginBatchEdit()
+            try {
+                val before = ic.getTextBeforeCursor(expr.length, 0)
+                if (before == null || before.toString() != expr) {
+                    false
+                } else {
+                    val et = ic.getExtractedText(ExtractedTextRequest(), 0)
+                        ?: return@runCatching false
+                    val cursor = et.startOffset + et.selectionStart
+                    val from = cursor - expr.length
+                    if (from < 0) {
+                        false
+                    } else {
+                        ic.setSelection(from, cursor)
+                        ic.commitText(replacement, 1)
+                        true
+                    }
+                }
+            } finally {
+                ic.endBatchEdit()
+            }
+        }.getOrDefault(false) else true
+        if (ok || ok2) {
             fieldExpr = null
             render()
         } else {

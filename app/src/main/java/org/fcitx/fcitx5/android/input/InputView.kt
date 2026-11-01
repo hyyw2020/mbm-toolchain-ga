@@ -1365,6 +1365,40 @@ class InputView(
 
     val keyboardView: View
 
+    /**
+     * MBM v1.0.43：IME「可见 / 可触摸区域」的上沿（窗口坐标）。
+     *
+     * 计算条（[calcCandidate]）与预编辑条（[preedit]）是 keyboardView 的**兄弟节点**，
+     * 布局在它上方（`above(keyboardView)`）。而 onComputeInsets 只能拿到一条
+     * visibleTopInsets —— 旧实现只写 keyboardView 的顶部，于是这两条就落在了
+     * IME 声明的可触摸区域**之外**：点击其上的候选项会被系统判定为「点击 IME 外部」，
+     * 直接收起键盘，候选项的 onClick 根本不会执行
+     * （现象＝点了计算候选、输入法立刻收起、结果也上不了屏）。
+     *
+     * 这里把当前可见的浮层一并纳入，返回最靠上的那条的顶部。
+     */
+    fun touchableTopY(): Int {
+        val loc = IntArray(2)
+        var top = Int.MAX_VALUE
+        fun consider(v: View?) {
+            if (v == null || v.visibility != View.VISIBLE) return
+            // 尚未完成布局时 getLocationInWindow 会给出 (0,0)，若据此把上沿取 0
+            // 会让整屏都变成 IME 可触摸区（App 点不动）——坐标不可信的一律跳过
+            if (v.width <= 0 || v.height <= 0) return
+            v.getLocationInWindow(loc)
+            if (loc[1] <= 0) return
+            if (loc[1] < top) top = loc[1]
+        }
+        consider(keyboardView)
+        consider(preedit.ui.root)
+        consider(calcCandidate.view)
+        if (top == Int.MAX_VALUE) {
+            keyboardView.getLocationInWindow(loc)
+            top = loc[1]
+        }
+        return top
+    }
+
     init {
         // MUST call before any operation
         setupScope()
