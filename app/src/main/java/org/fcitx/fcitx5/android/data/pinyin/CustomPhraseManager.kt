@@ -12,6 +12,8 @@
 package org.fcitx.fcitx5.android.data.pinyin
 
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PinyinCustomPhrase
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 object CustomPhraseManager {
     @JvmStatic
@@ -43,4 +45,23 @@ object CustomPhraseManager {
     fun invalidateCache() {
         cache = null
     }
+
+    /**
+     * 词组文件的**全局读写锁**（MBM v1.0.41）。
+     *
+     * 背景（Recall 新词在部分输入框不生效的根因之一）：Recall 写词（[RecallWordStore]）
+     * 与应用名场景重建（AppPhraseImporter）都是「loadCached → 过滤 → saveCached」的
+     * 读-改-写序列，却各自持有不同的锁。两者并发时会互相丢条目：一方基于另一方保存
+     * 前的旧数组计算出 merged 并后写，另一方刚写入的新词被整批抹掉，落盘文件与
+     * native 引擎字典因此长期停留在旧快照上。
+     *
+     * 约定：任何「读数组 → 改动 → 落盘」的操作都必须在本锁内完成，包括
+     * AppPhraseImporter.rebuildLocked / RecallWordStore.commit|clearAll /
+     * BaseInputView.deleteCustomPhraseByValue / 设置页保存。
+     */
+    val writeLock = ReentrantLock()
+
+    /** 在全局写锁内执行一段读-改-写操作。 */
+    @JvmStatic
+    fun <T> withWriteLock(block: () -> T): T = writeLock.withLock(block)
 }

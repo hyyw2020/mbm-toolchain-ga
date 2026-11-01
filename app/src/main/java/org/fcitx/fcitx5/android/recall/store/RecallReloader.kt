@@ -18,6 +18,7 @@ import android.os.Looper
 import org.fcitx.fcitx5.android.core.reloadPinyinCustomPhrase
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.recall.RecallConfig
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 object RecallReloader {
@@ -70,7 +71,18 @@ object RecallReloader {
         }
         retryCount = 0
         runCatching {
-            conn.runIfReady { reloadPinyinCustomPhrase() }
+            // v1.0.41：runIfReady 在 fcitx 尚未就绪时会**静默丢弃**本次 reload
+            // （内部只判 isReady，既不排队也不重试），而这里仍走 onSuccess 分支，
+            // 于是「词组已落盘、引擎却没重新加载」被误判成已生效 —— 表现就是
+            // 新词要等下一次事件（重启输入法 / 下次捕获）才偶然生效。
+            // 改用 runOnReady：未就绪时挂起等待，就绪后立即执行，reload 不会被丢。
+            // 作用域取连接自身的 lifecycleScope，fcitx 停止时协程自动取消，不会泄漏。
+            conn.lifecycleScope.launch {
+                // 失败在协程内捕获（runOnReady 若在连接断开后执行会抛 IllegalStateException）
+                runCatching { conn.runOnReady { reloadPinyinCustomPhrase() } }
+                    .onSuccess { Timber.d("MBM Recall: reloadPinyinCustomPhrase done") }
+                    .onFailure { Timber.w(it, "MBM Recall: reload failed") }
+            }
         }.onSuccess {
             Timber.d("MBM Recall: reloadPinyinCustomPhrase scheduled")
             onAck?.invoke(true)

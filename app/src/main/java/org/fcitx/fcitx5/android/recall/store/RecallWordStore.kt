@@ -46,6 +46,20 @@ object RecallWordStore {
 
     private val lock = ReentrantLock()
 
+    /** 历史遗留的冷词 order（v1.0.40 及更早 COLD_ORDER 误置为 1，见 RecallConfig）。 */
+    private const val LEGACY_COLD_ORDER = 1
+
+    /**
+     * 本模块写过的条目判定（order ∈ {HOT_ORDER, COLD_ORDER, LEGACY_COLD_ORDER}）。
+     *
+     * 与 AppPhraseImporter 对称：两边都只删自己写过的条目，互不越界。
+     * 捕获的新词常与已安装应用名同形（「芝士录屏」），若按 value 无差别剔除，
+     * 会把应用名条目冲掉，导致「搜索应用」场景置顶失效；反之亦然。
+     */
+    private fun isOwnEntry(p: PinyinCustomPhrase): Boolean =
+        p.order == RecallConfig.HOT_ORDER || p.order == RecallConfig.COLD_ORDER ||
+            p.order == LEGACY_COLD_ORDER
+
     private fun loadManaged(): MutableSet<String> =
         appContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
             .getStringSet(KEY_MANAGED, emptySet())
@@ -84,33 +98,40 @@ object RecallWordStore {
                 keys.map { PinyinCustomPhrase(it, order, cand.phrase) }
             }
 
-            val existing = runCatching { CustomPhraseManager.loadCached() }
-                .getOrNull() ?: emptyArray()
-            val kept = existing.filterNot { it.value in managed }
+            // 「读 → 合并 → 落盘」整段置于全局写锁内，与 AppPhraseImporter 场景重建互斥，
+            // 避免两者并发读-改-写互相抹掉对方刚写入的词条（v1.0.41）。
+            val nextManaged = CustomPhraseManager.withWriteLock {
+                val existing = runCatching { CustomPhraseManager.loadCached() }
+                    .getOrNull() ?: emptyArray()
+                // 只剔除本模块写过的旧条目：应用名条目（order ∈ {1,8}）与用户自造词组保留
+                val kept = existing.filterNot { isOwnEntry(it) && it.value in managed }
 
-            var merged = (kept + freshEntries).toMutableList()
-            val nextManaged = (managed + freshPhrases).toMutableSet()
+                var merged = (kept + freshEntries).toMutableList()
+                val managed2 = (managed + freshPhrases).toMutableSet()
 
-            // 超过硬上限 → 按最久未出现 LRU 淘汰最冷
-            val overflow = nextManaged.size - RecallConfig.MANAGED_HARD_CAP
-            if (overflow > 0) {
-                val coldest = nextManaged
-                    .sortedBy { seen[it] ?: 0L }
-                    .take(overflow)
-                    .toSet()
-                nextManaged -= coldest
-                merged = merged.filterNot { it.value in coldest }.toMutableList()
-                // 内存有界：被淘汰的词条同步移出 seen。旧实现只裁 managed 不裁 seen，
-                // seen 随历史词组只增不减（词库无上限 ⇒ 内存无上限），违背冻结方案内存护栏。
-                coldest.forEach { seen.remove(it) }
+                // 超过硬上限 → 按最久未出现 LRU 淘汰最冷
+                val overflow = managed2.size - RecallConfig.MANAGED_HARD_CAP
+                if (overflow > 0) {
+                    val coldest = managed2
+                        .sortedBy { seen[it] ?: 0L }
+                        .take(overflow)
+                        .toSet()
+                    managed2 -= coldest
+                    merged = merged.filterNot { isOwnEntry(it) && it.value in coldest }
+                        .toMutableList()
+                    // 内存有界：被淘汰的词条同步移出 seen。旧实现只裁 managed 不裁 seen，
+                    // seen 随历史词组只增不减（词库无上限 ⇒ 内存无上限），违背冻结方案内存护栏。
+                    coldest.forEach { seen.remove(it) }
+                }
+
+                runCatching { CustomPhraseManager.saveCached(merged.toTypedArray()) }
+                    .onFailure { Timber.w(it, "MBM Recall: save custom phrases failed") }
+                managed2
             }
             // seen 兜底上限：即便走不到淘汰分支（如 MANAGED_HARD_CAP 调大），
             // 也保证「最近出现时间」表不无限膨胀，超出按最久未出现清理。
             trimSeenLocked()
             managed = nextManaged
-
-            runCatching { CustomPhraseManager.saveCached(merged.toTypedArray()) }
-                .onFailure { Timber.w(it, "MBM Recall: save custom phrases failed") }
             persistManaged()
         }
         RecallReloader.scheduleReload()
@@ -144,10 +165,13 @@ object RecallWordStore {
     /** 清空全部托管词条（设置页「清空屏幕记忆词组」）。 */
     fun clearAll() {
         lock.withLock {
-            val existing = runCatching { CustomPhraseManager.loadCached() }
-                .getOrNull() ?: emptyArray()
-            val kept = existing.filterNot { it.value in managed }
-            runCatching { CustomPhraseManager.saveCached(kept.toTypedArray()) }
+            CustomPhraseManager.withWriteLock {
+                val existing = runCatching { CustomPhraseManager.loadCached() }
+                    .getOrNull() ?: emptyArray()
+                // 同样只清本模块写过的条目，保留应用名条目与用户自造词组
+                val kept = existing.filterNot { isOwnEntry(it) && it.value in managed }
+                runCatching { CustomPhraseManager.saveCached(kept.toTypedArray()) }
+            }
             managed = mutableSetOf()
             seen.clear()
             persistManaged()

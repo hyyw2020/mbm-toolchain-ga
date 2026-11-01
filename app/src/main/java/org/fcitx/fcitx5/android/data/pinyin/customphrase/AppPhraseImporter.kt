@@ -93,6 +93,14 @@ object AppPhraseImporter {
         prefs(ctx).getStringSet(KEY_MANAGED, emptySet())?.contains(managedKeyOf(p)) == true
 
     /**
+     * 确实是「应用名条目」的判定（在 [isManaged] 之上再加归属判定 [isOwnEntry]）。
+     * v1.0.41：Recall 捕获的新词常与应用名同形（key=value 完全一致），仅用 [isManaged]
+     * 会把这些 Recall 词条一并过滤掉（管理界面里看不见、用户保存时还会被整批丢掉）。
+     */
+    fun isManagedAppEntry(ctx: Context, p: PinyinCustomPhrase): Boolean =
+        isManaged(ctx, p) && isOwnEntry(p)
+
+    /**
      * 当前 EditorInfo 是否「应用搜索」场景：
      * 主判据 hint 文本含「搜索」且含「应用/软件」；辅判据宿主是桌面类包名。
      */
@@ -183,6 +191,22 @@ object AppPhraseImporter {
         }
     }
 
+    /**
+     * 本模块写过的条目判定（order ∈ {ORDER_APP_SEARCH=1, ORDER_NORMAL=8}）。
+     *
+     * 关键背景（v1.0.41 修复）：应用名与 Recall 屏幕记忆捕获的新词经常是同一个 value
+     * （「芝士录屏」既是已安装应用名，也会被屏幕记忆捕获），两者 key=value 完全同形。
+     * 旧实现按 key=value 无差别剔除，于是每次「输入框场景切换」（桌面搜索 ↔ 普通）
+     * 触发的场景重建都会把 Recall 刚写入的热词条一并删掉，只剩 order=8 的应用名条目；
+     * native 侧 order=8 → 第 8 候选位，超出键盘可见候选条（4~5 个），
+     * 表现为「桌面搜索框能出、其它输入框出不来」的即时性失效。
+     *
+     * 按 order 归属剔除后两者可以共存：同一 key 的多条目由 native 取 order 最小者，
+     * 应用搜索场景 order=1 置顶，普通场景 Recall 的 order=2 靠前 —— 全场景即时可见。
+     */
+    private fun isOwnEntry(p: PinyinCustomPhrase): Boolean =
+        p.order == ORDER_APP_SEARCH || p.order == ORDER_NORMAL
+
     // ---------- 导入 / 重写 ----------
 
     /**
@@ -191,7 +215,8 @@ object AppPhraseImporter {
      */
     private suspend fun rebuild(ctx: Context, scene: Int) = withContext(Dispatchers.IO) {
         rebuildMutex.withLock {
-            rebuildLocked(ctx, scene)
+            // 与 Recall 写词共享同一把文件锁，避免读-改-写交叉丢条目（v1.0.41）
+            CustomPhraseManager.withWriteLock { rebuildLocked(ctx, scene) }
         }
     }
 
@@ -202,7 +227,8 @@ object AppPhraseImporter {
         // MBM v1.0.31：缓存版 load/save（词库无上限 + 大词库免重复全量 JNI load）
         val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull() ?: emptyArray()
         val oldManaged = prefs(ctx).getStringSet(KEY_MANAGED, emptySet()) ?: emptySet()
-        val kept = existing.filterNot { oldManaged.contains(managedKeyOf(it)) }
+        // 只剔除本模块自己写过的条目（order ∈ {1, 8}），见 [isOwnEntry] 注释。
+        val kept = existing.filterNot { isOwnEntry(it) && oldManaged.contains(managedKeyOf(it)) }
         val merged = kept + fresh
         runCatching { CustomPhraseManager.saveCached(merged.toTypedArray()) }
             .onFailure { Timber.w(it, "MBM: save app phrase entries failed") }

@@ -110,7 +110,9 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
     private val initialItems = run {
         // 属性初始化期 Fragment 尚未 attach，requireContext() 会抛异常，用全局 appContext
         (CustomPhraseManager.loadCached() ?: emptyArray())
-            .filterNot { AppPhraseImporter.isManaged(appContext, it) }
+            // v1.0.41：只过滤「真的是应用名条目」的托管项；与应用名同形（key=value 相同）
+            // 的 Recall 屏幕记忆词条属于用户资产，要留在列表里（否则保存时会被冲掉）
+            .filterNot { AppPhraseImporter.isManagedAppEntry(appContext, it) }
     }
 
     private var keyLabel = KEY

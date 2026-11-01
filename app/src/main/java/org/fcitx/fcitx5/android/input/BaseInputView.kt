@@ -137,14 +137,18 @@ abstract class BaseInputView(
     private fun deleteCustomPhraseByValue(value: String) {
         service.lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) {
-                runCatching {
-                    // MBM v1.0.31：走缓存版 load/save，大词库下避免每次长按都全量 JNI load
-                    val items = CustomPhraseManager.loadCached() ?: return@runCatching false
-                    val remaining = items.filterNot { it.value == value }
-                    if (remaining.size == items.size) return@runCatching false
-                    CustomPhraseManager.saveCached(remaining.toTypedArray())
-                    true
-                }.getOrDefault(false)
+                // v1.0.41：读-改-写置于全局写锁内，避免与 Recall 写词 / 应用名场景重建并发丢条目
+                CustomPhraseManager.withWriteLock {
+                    runCatching {
+                        // MBM v1.0.31：走缓存版 load/save，大词库下避免每次长按都全量 JNI load
+                        val items =
+                            CustomPhraseManager.loadCached() ?: return@runCatching false
+                        val remaining = items.filterNot { it.value == value }
+                        if (remaining.size == items.size) return@runCatching false
+                        CustomPhraseManager.saveCached(remaining.toTypedArray())
+                        true
+                    }.getOrDefault(false)
+                }
             }
             Toast.makeText(
                 service,
