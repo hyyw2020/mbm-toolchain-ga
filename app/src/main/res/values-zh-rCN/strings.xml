@@ -331,4 +331,14 @@
     <string name="keyboard_height_percent_base">键盘高度百分比</string>
     <string name="display_metrics">显示指标 (Resources.getDisplayMetrics)</string>
     <string name="real_size">真实尺寸 (Display.getRealSize)</string>
+
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">拆分选词</string>
+    <string name="slide_select_words">滑动选词</string>
+    <string name="select_all">全选</string>
+    <string name="copy">复制</string>
+    <string name="word_select_copied">已复制</string>
+    <string name="word_select_empty_hint">请先滑动选择文字</string>
+    <string name="word_select_read_failed">读取条目内容失败</string>
+    <string name="word_select_truncated">内容过长，仅显示前 %1$d 个词</string>
 </resources>

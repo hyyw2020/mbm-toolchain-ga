@@ -141,6 +141,12 @@ abstract class ClipboardAdapter(
                     )
                     add(
                         ImeMenuPopup.Item(
+                            ctx.getString(R.string.split_select_words),
+                            R.drawable.ic_baseline_text_format_24
+                        ) { onSplitSelect(entry) }
+                    )
+                    add(
+                        ImeMenuPopup.Item(
                             ctx.getString(R.string.share),
                             R.drawable.ic_baseline_share_24
                         ) { onShare(entry) }
@@ -174,6 +180,9 @@ abstract class ClipboardAdapter(
     abstract fun onUnpin(id: Int)
 
     abstract fun onEdit(id: Int)
+
+    /** MBM v1.0.45：拆分选词——把条目全文拆成词块，滑动选择片段后复制 */
+    abstract fun onSplitSelect(entry: ClipboardEntry)
 
     abstract fun onShare(entry: ClipboardEntry)
 

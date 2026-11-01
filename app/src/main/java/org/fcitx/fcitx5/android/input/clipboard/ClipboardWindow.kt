@@ -211,6 +211,38 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                 }
             }
 
+            override fun onSplitSelect(entry: ClipboardEntry) {
+                MbmDebug.logFeature("clipboard.split_select", "window id=${entry.id}")
+                // U07：连点去重
+                if (!claimAction("split:${entry.id}:${entry.sha256}")) return
+                val targetId = entry.id
+                val targetSha = entry.sha256
+                service.lifecycleScope.launch(imeExceptionHandler) {
+                    try {
+                        // blob 条目的 text 列只有预览，必须先解密读全文（U1 同源）；
+                        // 读取限长见 WordTokenizer.MAX_CHARS，面板不展示超长后半段
+                        val text: String = if (entry.isBlob) {
+                            withContext(Dispatchers.IO) {
+                                val stream = ClipboardManager.readFullText(entry)
+                                    ?: throw IllegalStateException("clipboard blob file missing")
+                                stream.use { readCapped(it, WordTokenizer.MAX_CHARS).first }
+                            }
+                        } else {
+                            entry.text
+                        }
+                        // U09：读取期间条目可能已被删除/替换，目标变了就放弃本次打开
+                        if (!isTargetIntact(targetId, targetSha)) {
+                            Timber.w("拆分选词目标已变化，丢弃过期结果")
+                            return@launch
+                        }
+                        windowManager.attachWindow(WordSelectWindow(text))
+                    } catch (e: Throwable) {
+                        Timber.e(e, "打开拆分选词失败")
+                        Toast.makeText(service, R.string.word_select_read_failed, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
             override fun onPaste(entry: ClipboardEntry) {
                 MbmDebug.logFeature("clipboard.paste", "window id=${entry.id}")
                 // U07：连点去重——同一条目短时间内只粘一次

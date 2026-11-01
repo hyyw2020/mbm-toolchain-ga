@@ -161,4 +161,14 @@
     <string name="following_system_settings">Wie Systemeinstellungen</string>
     <string name="button_sound">Ton bei Tastendruck</string>
     <string name="button_sound_volume">Ton Tastendruck Lautstärke</string>
-    </resources>
+    
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">Wörter aufteilen &amp; auswählen</string>
+    <string name="slide_select_words">Zum Wählen der Wörter wischen</string>
+    <string name="select_all">Alles auswählen</string>
+    <string name="copy">Kopieren</string>
+    <string name="word_select_copied">Kopiert</string>
+    <string name="word_select_empty_hint">Zuerst über die Wörter wischen, um Text auszuwählen</string>
+    <string name="word_select_read_failed">Inhalt des Eintrags konnte nicht gelesen werden</string>
+    <string name="word_select_truncated">Text zu lang, nur die ersten %1$d Wörter werden angezeigt</string>
+</resources>

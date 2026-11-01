@@ -91,4 +91,14 @@
     <string name="quickphrase_phrase">구문</string>
     <string name="reload_config">구성 새로고침</string>
     <string name="input_method_options">입력기 옵션</string>
-    </resources>
+    
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">단어 분리 후 선택</string>
+    <string name="slide_select_words">슬라이드하여 단어 선택</string>
+    <string name="select_all">모두 선택</string>
+    <string name="copy">복사</string>
+    <string name="word_select_copied">복사됨</string>
+    <string name="word_select_empty_hint">먼저 슬라이드하여 텍스트를 선택하세요</string>
+    <string name="word_select_read_failed">항목 내용을 읽지 못했습니다</string>
+    <string name="word_select_truncated">텍스트가 너무 길어 처음 %1$d개 단어만 표시합니다</string>
+</resources>

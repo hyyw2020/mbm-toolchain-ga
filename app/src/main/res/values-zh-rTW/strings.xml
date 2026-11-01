@@ -317,4 +317,14 @@
     <string name="emoji_skin_tone_type_6">🏿 深膚色 (Type-6)</string>
     <string name="hide_unsupported_emojis">隱藏不支援的表情</string>
     <string name="preferred_voice_input">首選語音輸入</string>
+
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">拆分選詞</string>
+    <string name="slide_select_words">滑動選詞</string>
+    <string name="select_all">全選</string>
+    <string name="copy">複製</string>
+    <string name="word_select_copied">已複製</string>
+    <string name="word_select_empty_hint">請先滑動選擇文字</string>
+    <string name="word_select_read_failed">讀取條目內容失敗</string>
+    <string name="word_select_truncated">內容過長，僅顯示前 %1$d 個詞</string>
 </resources>

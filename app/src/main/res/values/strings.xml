@@ -378,4 +378,14 @@
     <!-- MBM: 离线手写 -->
     <string name="handwriting">离线手写</string>
     <string name="handwriting_engine_failed">手写识别引擎初始化失败</string>
+
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">Split &amp; select words</string>
+    <string name="slide_select_words">Slide to select words</string>
+    <string name="select_all">Select all</string>
+    <string name="copy">Copy</string>
+    <string name="word_select_copied">Copied</string>
+    <string name="word_select_empty_hint">Slide over the words to select text first</string>
+    <string name="word_select_read_failed">Failed to read entry content</string>
+    <string name="word_select_truncated">Text is too long, only showing the first %1$d words</string>
 </resources>

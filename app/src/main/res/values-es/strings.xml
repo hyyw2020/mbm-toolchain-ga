@@ -124,4 +124,14 @@
     <string name="i_do_not_need_it">No lo necesito</string>
     <string name="grant_permission">Otorgar permiso</string>
     <string name="update_table">Actualizar tabla</string>
-    </resources>
+    
+    <!-- MBM: 拆分选词（滑动选词） -->
+    <string name="split_select_words">Dividir y seleccionar palabras</string>
+    <string name="slide_select_words">Desliza para seleccionar palabras</string>
+    <string name="select_all">Seleccionar todo</string>
+    <string name="copy">Copiar</string>
+    <string name="word_select_copied">Copiado</string>
+    <string name="word_select_empty_hint">Primero desliza sobre las palabras para seleccionar texto</string>
+    <string name="word_select_read_failed">No se pudo leer el contenido de la entrada</string>
+    <string name="word_select_truncated">Texto demasiado largo, solo se muestran las primeras %1$d palabras</string>
+</resources>
