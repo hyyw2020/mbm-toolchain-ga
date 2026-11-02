@@ -9,6 +9,7 @@ import org.fcitx.fcitx5.android.core.data.DataManager
 import org.fcitx.fcitx5.android.data.pinyin.dict.BuiltinDictionary
 import org.fcitx.fcitx5.android.data.pinyin.dict.LibIMEDictionary
 import org.fcitx.fcitx5.android.data.pinyin.dict.PinyinDictionary
+import org.fcitx.fcitx5.android.utils.PinyinUtils
 import org.fcitx.fcitx5.android.utils.appContext
 import org.fcitx.fcitx5.android.utils.errorArg
 import timber.log.Timber
@@ -99,7 +100,13 @@ object PinyinDictManager {
         try {
             incomingDict.toTextDictionary(incomingTxt)
             existing.toTextDictionary(oldTxt)
-            mergedTxt.writeText(mergeDictText(oldTxt.readText(), incomingTxt.readText()))
+            mergedTxt.writeText(
+                mergeDictText(
+                    oldTxt.readText(),
+                    // v1.0.55：新库文本先补全单列纯词组行的拼音列，避免纯词表在合并时被整行丢弃
+                    normalizeSingleWordLines(incomingTxt.readText())
+                )
+            )
             pinyinDictConv(mergedTxt.absolutePath, outBin.absolutePath, MODE_TXT_TO_BIN)
             if (!outBin.renameTo(existing.file)) {
                 throw IOException("Failed to replace ${existing.file.absolutePath}")
@@ -120,6 +127,33 @@ object PinyinDictManager {
      * 使重复出现的词/词组排序概率显著上升；重复导入同一文件也会继续提权。
      * 无频率的条目（2 列行）按 0 处理，输出时省略频率列。
      */
+    /**
+     * v1.0.55：单行规范化——补全「词 拼音 频率」三列中的缺失拼音列。
+     * libIME 文本词典每行必须为「词 拼音 [频率]」两/三列（loadTextImpl 只接受 2/3 token），
+     * 单列纯词组行（如 Recall 导出的 recall_phrase_export.txt）会被静默跳过，
+     * 产出 0 字节空词库（用户可见「永远显示 0MB」）。
+     * 对「仅一个 token 且含汉字」的行：用离线 ICU 拼音（[PinyinUtils]）生成
+     * 音节 `'` 连接的全拼列，默认频率 10.0；无法生成拼音的行保持原样（由 libIME 继续跳过）。
+     * 已规范的行（2/3 列）原样返回，幂等可重复调用。
+     */
+    fun normalizeDictLine(line: String): String {
+        val tokens = line.trim().split(' ', '\t').filter { it.isNotEmpty() }
+        if (tokens.size == 1 && tokens[0].any { it in '\u4E00'..'\u9FFF' }) {
+            val word = tokens[0]
+            val py = PinyinUtils.toPinyin(word)
+                ?.split(' ')
+                ?.filter { it.isNotEmpty() }
+                ?.joinToString("'")
+                ?.takeIf { it.isNotBlank() }
+            if (py != null) return "$word $py 10.0"
+        }
+        return line
+    }
+
+    /** 对整段文本逐行做 [normalizeDictLine]（流式场景请改用 normalizeDictLine 逐行处理）。 */
+    fun normalizeSingleWordLines(text: String): String =
+        text.lineSequence().joinToString("\n") { normalizeDictLine(it) }
+
     private fun mergeDictText(oldText: String, newText: String): String {
         val map = LinkedHashMap<String, Double>()
         fun feed(line: String) {
