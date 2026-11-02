@@ -70,6 +70,24 @@ object PersonalPhraseImporter {
     /** v1.0.50：低频固定短语候选档位（靠后，不打扰常用词）。 */
     private const val PERSONAL_PHRASE_COLD_ORDER = 6
 
+    /** v1.0.51：三连词（前二词→第三词）短语候选档位，比二词接续 [4,6] 略低，作更长的联想候选项。 */
+    private const val PERSONAL_TRI_HOT_ORDER = 5
+
+    /** v1.0.51：三连词低频档位（靠后，不打扰常用词）。 */
+    private const val PERSONAL_TRI_COLD_ORDER = 7
+
+    /** v1.0.51：双向联想（前词+后词挂到后词拼音）候选档位，让敲后词也能看到整短语。 */
+    private const val PERSONAL_REV_HOT_ORDER = 5
+
+    /** v1.0.51：双向联想低频档位（靠后，不打扰常用词）。 */
+    private const val PERSONAL_REV_COLD_ORDER = 7
+
+    /** v1.0.51：单次同步注入的三连词 / 双向联想条数上限，防止词库膨胀。 */
+    private const val TRIGRAM_LIMIT = 200
+
+    /** v1.0.51：单次同步注入的双向联想条数上限。 */
+    private const val REVERSE_LIMIT = 200
+
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -112,6 +130,10 @@ object PersonalPhraseImporter {
             contextBoost += SmartDictManager.predictNext(cw, CONTEXT_FOLLOWERS)
             for ((succ, _) in SmartDictManager.predictContinuationCounts(cw, CONT_PER_SEED, 2)) {
                 contextPhrases += cw + succ
+                // 上下文里也带上三词整短语，使「刚打完前二词」时三连词联想即时前置
+                for ((w3, _) in SmartDictManager.predictTriContinuation(cw, succ, 1, 2)) {
+                    contextPhrases += cw + succ + w3
+                }
             }
         }
         val now = System.currentTimeMillis()
@@ -139,6 +161,44 @@ object PersonalPhraseImporter {
                 }
                 contCount++
                 if (contCount >= CONTINUATION_LIMIT) break
+            }
+        }
+        // v1.0.51：三连词(Trigram)联想 + 双向联想（建立在 v1.0.49 二词接续之上，进一步把联想拉长、双向化）
+        //  - 三连词：把「前词→后词→再后词」学成三词整短语「前词+后词+再后词」，挂到**前词**拼音下，
+        //    敲前词即出三词整短语（如敲「zhongguo」出「中华人民共和国」），比二词接续更长更准。
+        //  - 双向联想：把「前词+后词」额外挂到**后词**的拼音下，敲后词也能看到整短语，
+        //    让联想在前后两个方向都生效（v1.0.49 只在敲前词时出现）。
+        var triCount = 0
+        var revCount = 0
+        for ((w1, _) in top.take(200)) {
+            if (triCount >= TRIGRAM_LIMIT && revCount >= REVERSE_LIMIT) break
+            for ((w2, _) in SmartDictManager.predictContinuationCounts(w1, CONT_PER_SEED, 2)) {
+                // 双向联想：前词+后词 挂到后词拼音（敲后词也能看到整短语）
+                if (revCount < REVERSE_LIMIT) {
+                    val phrase = w1 + w2
+                    if (phrase.length in 3..12) {
+                        var order = revOrder(2)
+                        if (phrase in contextPhrases) order = order.coerceAtMost(PERSONAL_REV_HOT_ORDER)
+                        AppPhraseImporter.keysForName(w2).forEach { key ->
+                            entries += PinyinCustomPhrase(key, order, phrase)
+                        }
+                        revCount++
+                    }
+                }
+                // 三连词：前词+后词+再后词 挂到前词拼音
+                if (triCount < TRIGRAM_LIMIT) {
+                    for ((w3, cnt) in SmartDictManager.predictTriContinuation(w1, w2, 1, 2)) {
+                        val tri = w1 + w2 + w3
+                        if (tri.length !in 4..14) continue
+                        var order = triOrder(cnt)
+                        if (tri in contextPhrases) order = order.coerceAtMost(PERSONAL_TRI_HOT_ORDER)
+                        AppPhraseImporter.keysForName(w1).forEach { key ->
+                            entries += PinyinCustomPhrase(key, order, tri)
+                        }
+                        triCount++
+                        if (triCount >= TRIGRAM_LIMIT) break
+                    }
+                }
             }
         }
         // v1.0.50：高频固定短语（3/4 字）直接作为个人候选挂到自身拼音下。
@@ -174,7 +234,7 @@ object PersonalPhraseImporter {
                 .onFailure { Timber.w(it, "MBM: save personal phrase failed") }
         }
         persistManaged(ctx, managedKeys.toMutableSet())
-        Timber.d("MBM: personal phrase synced words=${top.size} entries=${finalEntries.size} cont=$contCount phrases=$phraseCount contextBoost=${contextBoost.size} contextPhrases=${contextPhrases.size}")
+        Timber.d("MBM: personal phrase synced words=${top.size} entries=${finalEntries.size} cont=$contCount phrases=$phraseCount tri=$triCount rev=$revCount contextBoost=${contextBoost.size} contextPhrases=${contextPhrases.size}")
         // 复用 Recall 的去抖 reload 通道，通知 fcitx 重新解析自定义词组（候选即时生效）
         RecallReloader.scheduleReload()
     }
@@ -217,6 +277,24 @@ object PersonalPhraseImporter {
         val t = (ln((count + 1).toDouble()) / 4.0).coerceIn(0.0, 1.0)
         val step = ((1 - t) * (PERSONAL_PHRASE_COLD_ORDER - PERSONAL_PHRASE_HOT_ORDER)).roundToInt()
         return PERSONAL_PHRASE_HOT_ORDER + step
+    }
+
+    /**
+     * v1.0.51：三连词短语候选顺序（落在 [5,7]，比二词接续 [4,6] 略低，作为更长但更专的联想候选项）。
+     */
+    private fun triOrder(count: Int): Int {
+        val t = (ln((count + 1).toDouble()) / 4.0).coerceIn(0.0, 1.0)
+        val step = ((1 - t) * (PERSONAL_TRI_COLD_ORDER - PERSONAL_TRI_HOT_ORDER)).roundToInt()
+        return PERSONAL_TRI_HOT_ORDER + step
+    }
+
+    /**
+     * v1.0.51：双向联想短语候选顺序（同样落在 [5,7]，让敲后词也能看到整短语但不喧宾夺主）。
+     */
+    private fun revOrder(count: Int): Int {
+        val t = (ln((count + 1).toDouble()) / 4.0).coerceIn(0.0, 1.0)
+        val step = ((1 - t) * (PERSONAL_REV_COLD_ORDER - PERSONAL_REV_HOT_ORDER)).roundToInt()
+        return PERSONAL_REV_HOT_ORDER + step
     }
 
     /**

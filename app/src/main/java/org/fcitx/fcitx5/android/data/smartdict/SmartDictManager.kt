@@ -103,7 +103,9 @@ object SmartDictManager {
         val prevToken: String? = null,
         // MBM v1.0.50：字符级 3/4 字固定短语计数（独立于 ICU 分词，捕捉「不忘初心」、
         // 人名、地址、签名等整短语，弥补单字频/bi-gram 只记相邻词对、丢整短语的盲区）
-        val phrases: Map<String, Int> = emptyMap()
+        val phrases: Map<String, Int> = emptyMap(),
+        // MBM v1.0.51：三连词（前二词→第三词）共现计数，键为「前词\u0000后词」，支撑三词整短语联想
+        val trigrams: Map<String, Map<String, Int>> = emptyMap()
     )
 
     private val storeFile: File by lazy {
@@ -131,6 +133,12 @@ object SmartDictManager {
     /** v1.0.48：二元接续「前词→{后词→计数}」，支撑上下文预测。 */
     private val bigramCache = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
 
+    /** v1.0.51：三连词「前二词→{第三词→计数}」，键为「前词\u0000后词」，支撑三词整短语联想。 */
+    private val trigramCache = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
+
+    /** 三连词键分隔符（不会出现在中文词内），用于把 (前词, 后词) 拼成一个稳定键。 */
+    private fun trigramKey(a: String, b: String) = "$a\u0000$b"
+
     /** v1.0.50：字符级 3/4 字固定短语计数（独立于 ICU 分词），支撑整短语预测。 */
     private val ngramCache = ConcurrentHashMap<String, Int>()
 
@@ -140,6 +148,9 @@ object SmartDictManager {
 
     /** v1.0.48：最近提交词栈（最多保留 2 个，构成「上下文」供预测后继词）。 */
     private val recentDeque = ArrayDeque<String>()
+
+    /** v1.0.51：最近两词窗口（跨次提交链三连词用；纯内存、不落盘，重启即清空，计数已落盘无损）。 */
+    private val recentTwoDeque = ArrayDeque<String>()
 
     /** 最近上下文快照（读路径无锁读取，写路径在 [writeMutex] 内更新）。 */
     @Volatile
@@ -235,8 +246,12 @@ object SmartDictManager {
         val bg = bigramCache.filterKeys { cache.containsKey(it) }
             .mapValues { (_, m) -> m.filterKeys { k -> cache.containsKey(k) } }
         val ph = ngramCache.filterKeys { it.length in 3..4 }
+        val tri = trigramCache.filterKeys { k ->
+            val (a, b) = k.split('\u0000', limit = 2)
+            cache.containsKey(a) && cache.containsKey(b)
+        }.mapValues { (_, m) -> m.filterKeys { cache.containsKey(it) } }
         val payload = json.encodeToString(
-            UsageMap(cache.toMap(), rec, bg, prevToken, ph)
+            UsageMap(cache.toMap(), rec, bg, prevToken, ph, tri)
         ).toByteArray(Charsets.UTF_8)
         // 先写临时文件再原子重命名：避免写一半崩溃/被杀留下半文件，
         // 也避免与并发读者交错（rename 在同一文件系统上是原子的）
@@ -258,6 +273,8 @@ object SmartDictManager {
             loaded.bigrams.forEach { (k, v) -> bigramCache[k] = ConcurrentHashMap(v.toMap()) }
             ngramCache.clear()
             loaded.phrases.forEach { (k, v) -> ngramCache[k] = v }
+            trigramCache.clear()
+            loaded.trigrams.forEach { (k, v) -> trigramCache[k] = ConcurrentHashMap(v.toMap()) }
             prevToken = loaded.prevToken
             cacheLoaded = true
         }
@@ -326,11 +343,24 @@ object SmartDictManager {
                 for (i in 0 until seq.size - 1) {
                     bumpBigram(seq[i], seq[i + 1])
                 }
+                // 跨次提交三连词：最近两词 → 本次首词（捕捉分三次提交的中文词链，如 中国/人民/共和国）
+                if (recentTwoDeque.size == 2 && seq[0].length in 2..8) {
+                    val a = recentTwoDeque[0]; val b = recentTwoDeque[1]
+                    if (map.containsKey(a) && map.containsKey(b)) bumpTrigram(a, b, seq[0])
+                }
+                for (i in 0 until seq.size - 2) {
+                    bumpTrigram(seq[i], seq[i + 1], seq[i + 2])
+                }
                 prevToken = seq.last()
                 // 维护最近上下文栈（最多 2 个），供上下文预测取「前词」
                 recentDeque.addLast(seq.last())
                 while (recentDeque.size > 2) recentDeque.removeFirst()
                 recentContextSnapshot = recentDeque.toList()
+                // 维护最近两词窗口供三连词跨次学习
+                for (t in seq) {
+                    recentTwoDeque.addLast(t)
+                    while (recentTwoDeque.size > 2) recentTwoDeque.removeFirst()
+                }
             }
             // v1.0.50：字符级 3/4 字固定短语挖掘（独立于 ICU 分词，捕捉整短语）
             bumpPhrases(text.take(2000))
@@ -367,6 +397,16 @@ object SmartDictManager {
         inner.merge(b, 1) { _, v -> v + 1 }
     }
 
+    /** v1.0.51：三连词计数（内存态），带软上限防极端膨胀。 */
+    private fun bumpTrigram(a: String, b: String, c: String) {
+        if (a == b || b == c || a == c) return
+        val key = trigramKey(a, b)
+        if (trigramCache.size > 100_000 && !trigramCache.containsKey(key)) return
+        val inner = trigramCache.getOrPut(key) { ConcurrentHashMap() }
+        if (inner.size > 20_000) return
+        inner.merge(c, 1) { _, v -> v + 1 }
+    }
+
     /** v1.0.48：给定前词，返回按共现频次排序的后继词（上下文预测核心）。 */
     fun predictNext(prev: String, limit: Int = 5): List<String> {
         val m: Map<String, Int>? = if (cacheLoaded) {
@@ -391,6 +431,25 @@ object SmartDictManager {
             bigramCache[prev]?.toMap()
         } else {
             load().bigrams[prev]
+        }
+        return m?.entries
+            ?.filter { it.value >= minCount }
+            ?.sortedByDescending { it.value }
+            ?.take(limit)
+            ?.map { it.key to it.value } ?: emptyList()
+    }
+
+    /**
+     * v1.0.51：三连词联想的数据底座。
+     * 给定前二词，返回其高置信度第三词及共现计数（计数 ≥ [minCount]，按计数降序、最多 [limit] 个）。
+     * 调用方把「前词+后词+第三词」拼成三词整短语挂到**前词**的拼音下，即可实现「敲前词拼音直接给出
+     * 三词整短语」（如敲「zhongguo」出「中华人民共和国」），把 v1.0.49 的二词接续扩展到三词链。
+     */
+    fun predictTriContinuation(first: String, second: String, limit: Int = 1, minCount: Int = 2): List<Pair<String, Int>> {
+        val m: Map<String, Int>? = if (cacheLoaded) {
+            trigramCache[trigramKey(first, second)]?.toMap()
+        } else {
+            load().trigrams[trigramKey(first, second)]
         }
         return m?.entries
             ?.filter { it.value >= minCount }
@@ -441,8 +500,10 @@ object SmartDictManager {
             recencyCache.clear()
             bigramCache.clear()
             ngramCache.clear()
+            trigramCache.clear()
             prevToken = null
             recentDeque.clear()
+            recentTwoDeque.clear()
             recentContextSnapshot = emptyList()
             cacheLoaded = true
             dirty = true
@@ -462,6 +523,13 @@ object SmartDictManager {
             ngramCache.remove(word)
             // 一并清掉其它词对它的后继计数
             bigramCache.forEach { it.value.remove(word) }
+            // 清掉以该词为前两元的 trigram、以及该词作为第三元的计数
+            val triIt = trigramCache.iterator()
+            while (triIt.hasNext()) {
+                val (k, m) = triIt.next()
+                val (a, b) = k.split('\u0000', limit = 2)
+                if (a == word || b == word) triIt.remove() else m.remove(word)
+            }
             dirty = true
             // 同上：用户操作立即落盘
             withContext(Dispatchers.IO) { save() }
