@@ -274,12 +274,19 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         //  - 之后每 120s 仅在「本地统计有新增」时再同步一次（无新增不 reload，零开销）。
         // 学习统计由 commitText 在隐私模式外持续记录（见 SmartDictManager.recordUsage）。
         lifecycleScope.launch(imeExceptionHandler) {
-            PersonalPhraseImporter.initialSync(this@FcitxInputMethodService)
+            // v1.0.53：initialSync 与周期性 syncIfDirty 内含「读加密文件 + 全量 JSON 解析」，
+            // 必须放到 IO 线程，否则冷启动时会在主线程同步阻塞（输入法启动卡顿 / ANR 风险）。
+            // （常规上屏的 requestContextRerank 早已在 Dispatchers.IO 下执行，见 commitText）
+            withContext(Dispatchers.IO) {
+                PersonalPhraseImporter.initialSync(this@FcitxInputMethodService)
+            }
             // 生命周期作用域销毁时本协程被取消，delay 抛 CancellationException 自然退出；
             // 仅当「本地统计有新增」才同步，无新增不触发 reload（零开销）
             while (true) {
                 kotlinx.coroutines.delay(120_000)
-                runCatching { PersonalPhraseImporter.syncIfDirty(this@FcitxInputMethodService) }
+                withContext(Dispatchers.IO) {
+                    runCatching { PersonalPhraseImporter.syncIfDirty(this@FcitxInputMethodService) }
+                }
             }
         }
         // 应用装卸后延迟重枚举（等安装/卸载完成再读 label）

@@ -120,6 +120,10 @@ object PersonalPhraseImporter {
      */
     fun syncFromUsage(ctx: Context) {
         if (!SmartDictManager.isLearningEnabled()) return
+        // v1.0.53：同步候选前一次性预热内存缓存（调用方须在 IO 线程，initialSync/syncIfDirty/
+        // requestContextRerank/SmartDictActivity 均已迁 IO）。之后所有预测查询命中内存，
+        // 不再各自 fallback 到 load() 重复读盘+解析（冷启动/首次同步尤为明显）。
+        SmartDictManager.loadIfNotLoaded()
         val top = SmartDictManager.topWords(SYNC_LIMIT)
         if (top.isEmpty()) return
         // 上下文预测：取最近提交词的高频后继词，构成「应被前置」的候选集合

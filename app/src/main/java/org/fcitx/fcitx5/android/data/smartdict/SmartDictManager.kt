@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -264,22 +265,40 @@ object SmartDictManager {
         }
     }.onFailure { Timber.w(it, "save smart dict usage failed") }
 
+    /** 把文件内容读进内存缓存（非挂起核心，调用方需自行保证线程与锁）。 */
+    private fun loadIntoCache() {
+        if (cacheLoaded) return
+        val loaded = load()
+        cache.clear(); cache.putAll(loaded.counts)
+        recencyCache.clear(); recencyCache.putAll(loaded.recency)
+        bigramCache.clear()
+        loaded.bigrams.forEach { (k, v) -> bigramCache[k] = ConcurrentHashMap(v.toMap()) }
+        ngramCache.clear()
+        loaded.phrases.forEach { (k, v) -> ngramCache[k] = v }
+        trigramCache.clear()
+        loaded.trigrams.forEach { (k, v) -> trigramCache[k] = ConcurrentHashMap(v.toMap()) }
+        prevToken = loaded.prevToken
+        cacheLoaded = true
+    }
+
     /** 首次访问时把文件读进内存；之后所有读写都走各缓存。 */
     private suspend fun ensureLoaded(): ConcurrentHashMap<String, Int> {
         if (!cacheLoaded) {
-            val loaded = withContext(Dispatchers.IO) { load() }
-            cache.clear(); cache.putAll(loaded.counts)
-            recencyCache.clear(); recencyCache.putAll(loaded.recency)
-            bigramCache.clear()
-            loaded.bigrams.forEach { (k, v) -> bigramCache[k] = ConcurrentHashMap(v.toMap()) }
-            ngramCache.clear()
-            loaded.phrases.forEach { (k, v) -> ngramCache[k] = v }
-            trigramCache.clear()
-            loaded.trigrams.forEach { (k, v) -> trigramCache[k] = ConcurrentHashMap(v.toMap()) }
-            prevToken = loaded.prevToken
-            cacheLoaded = true
+            withContext(Dispatchers.IO) { loadIntoCache() }
         }
         return cache
+    }
+
+    /**
+     * v1.0.53：读取型调用（同步候选前）一次性预热内存缓存。
+     * - **必须在 IO 线程调用**：内部会读加密文件 + 全量 JSON 解析；
+     * - 与 recordUsage 共用同一写锁，避免并发双加载或读到半初始化的缓存；
+     * - 调用后 topWords / predictNext / predictContinuationCounts / phraseCandidates 全部命中内存缓存，
+     *   不再各自 fallback 到 load() 重复读盘+解析（旧实现冷启动/首次同步时每个预测查询都会重读一遍，浪费明显）。
+     */
+    fun loadIfNotLoaded() {
+        if (cacheLoaded) return
+        runBlocking { writeMutex.withLock { if (!cacheLoaded) loadIntoCache() } }
     }
 
     /** 把内存快照落盘一次（调用方须持有 [writeMutex]）。 */
