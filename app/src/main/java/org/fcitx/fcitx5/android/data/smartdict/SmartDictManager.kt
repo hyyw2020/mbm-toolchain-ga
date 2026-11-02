@@ -350,6 +350,25 @@ object SmartDictManager {
             ?.map { it.key } ?: emptyList()
     }
 
+    /**
+     * v1.0.49：短语接续预测的数据底座。
+     * 给定前词，返回其高置信度后继词及共现计数（计数 ≥ [minCount]，按计数降序、最多 [limit] 个）。
+     * 调用方把「前词+后继词」拼成整词挂到**前词的拼音**下，即可实现「敲前词拼音直接给出整短语」
+     * 的短语级预测（区别于 v1.0.48 把后继词挂到自身拼音的弱联想）。
+     */
+    fun predictContinuationCounts(prev: String, limit: Int = 3, minCount: Int = 2): List<Pair<String, Int>> {
+        val m: Map<String, Int>? = if (cacheLoaded) {
+            bigramCache[prev]?.toMap()
+        } else {
+            load().bigrams[prev]
+        }
+        return m?.entries
+            ?.filter { it.value >= minCount }
+            ?.sortedByDescending { it.value }
+            ?.take(limit)
+            ?.map { it.key to it.value } ?: emptyList()
+    }
+
     /** v1.0.48：最近提交词栈（最多 [limit] 个，最新者排在末位）。 */
     fun recentContextWords(limit: Int = 2): List<String> = recentContextSnapshot.takeLast(limit)
 
