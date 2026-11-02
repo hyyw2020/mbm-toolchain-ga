@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
+import org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter
 import org.fcitx.fcitx5.android.recall.RecallService
 import org.fcitx.fcitx5.android.utils.imeExceptionHandler
 import org.fcitx.fcitx5.android.core.CapabilityFlags
@@ -255,6 +256,19 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 AppPhraseImporter.ensureImported(this@FcitxInputMethodService, fcitx)
+            }
+        }
+        // MBM v1.0.46：个人学习 → 候选预测闭环。
+        //  - 启动后先把历史高频个人词同步进候选（首屏即用）；
+        //  - 之后每 120s 仅在「本地统计有新增」时再同步一次（无新增不 reload，零开销）。
+        // 学习统计由 commitText 在隐私模式外持续记录（见 SmartDictManager.recordUsage）。
+        lifecycleScope.launch(imeExceptionHandler) {
+            PersonalPhraseImporter.initialSync(this@FcitxInputMethodService)
+            // 生命周期作用域销毁时本协程被取消，delay 抛 CancellationException 自然退出；
+            // 仅当「本地统计有新增」才同步，无新增不触发 reload（零开销）
+            while (true) {
+                kotlinx.coroutines.delay(120_000)
+                runCatching { PersonalPhraseImporter.syncIfDirty(this@FcitxInputMethodService) }
             }
         }
         // 应用装卸后延迟重枚举（等安装/卸载完成再读 label）

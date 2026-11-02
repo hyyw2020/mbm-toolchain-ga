@@ -21,6 +21,7 @@ import org.fcitx.fcitx5.android.data.crypto.StreamingFileCipher
 import org.fcitx.fcitx5.android.data.pinyin.PinyinDictManager
 import org.fcitx.fcitx5.android.data.rules.RuleImporter
 import org.fcitx.fcitx5.android.data.table.TableManager
+import org.fcitx.fcitx5.android.input.clipboard.WordTokenizer
 import org.fcitx.fcitx5.android.utils.appContext
 import timber.log.Timber
 import java.io.File
@@ -120,6 +121,40 @@ object SmartDictManager {
     private val flushScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var flushJob: Job? = null
 
+    // ---------- 个人学习（预测闭环）----------
+
+    /**
+     * 本地统计自上次同步到候选后是否有新增。IME 周期性调用
+     * [org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter.syncIfDirty]
+     * 时据此判断是否需要重新注入候选，避免无谓的 reload。
+     */
+    @Volatile
+    private var dirty = false
+
+    /** 读取并清除 dirty 标记；返回 true 表示自上次同步后有新统计或变更 */
+    fun consumeDirty(): Boolean {
+        val d = dirty
+        dirty = false
+        return d
+    }
+
+    private fun prefs() =
+        appContext.getSharedPreferences("mbm_smartdict", android.content.Context.MODE_PRIVATE)
+
+    /**
+     * 个人学习总开关（默认开启）。关闭后高频个人词不再自动进候选，
+     * 但本地统计照常保留（开关重新打开即可立即生效，无需重新积累）。
+     */
+    fun isLearningEnabled(): Boolean = prefs().getBoolean("learning_enabled", true)
+
+    fun setLearningEnabled(value: Boolean) {
+        prefs().edit().putBoolean("learning_enabled", value).apply()
+        dirty = true
+    }
+
+    /** 纯标点/数字串不计入个人词（与旧 recordUsage 的过滤口径一致） */
+    private const val PUNCT = "!@#\$%^&*()-_=+[]{};:,.<>?/|\\\"'~`"
+
     /**
      * N23：统计文件里是用户真实输入过的词，此前以**明文**落在 filesDir，
      * 与「剪贴板数据已 AES-256-GCM 加密」不一致。这里复用项目既有能力：
@@ -201,18 +236,31 @@ object SmartDictManager {
         }
     }
 
-    /** 由输入法提交文本时调用；隐私模式下不调用 */
+    /**
+     * 由输入法提交文本时调用；隐私模式下不调用。
+     *
+     * MBM v1.0.46：从「整段记一个词」升级为「按词切分逐词计频」——用户输入的整句/
+     * 词组落屏时，先用 [WordTokenizer] 切出真实词块再分别累加，学到的是「词」而非
+     * 偶发的整句拼接；敲对应拼音时这些高频个人词才会被 [PersonalPhraseImporter] 抬到
+     * 候选前列，真正构成「越用越懂你」的预测闭环。
+     */
     suspend fun recordUsage(text: String) {
         if (text.isBlank()) return
-        val word = text.trim()
-        if (word.length !in 2..12) return
-        if (word.all { it.isDigit() || it in "!@#\$%^&*()-_=+[]{};:,.<>?/" }) return
+        // 单次上屏最多取前 500 个词块计频：超大段（粘贴整篇）只采头部，避免词表被一次粘贴撑爆
+        val tokens = WordTokenizer.tokenize(text).tokens
+            .asSequence().take(500)
+            .map { text.substring(it.start, it.end) }
+            .toList()
+        if (tokens.isEmpty()) return
         writeMutex.withLock {
             val map = ensureLoaded()
-            // MBM v1.0.23：应用户要求「无上限」，不再按频次裁剪 2000 条；
-            // 词表本身是 JSON 文本（每条仅词+次数），数万条体积也在百 KB 级，无 IO 风险。
-            // N24：只累加内存计数，落盘由 scheduleFlush 合并，不再每次上屏全量读写
-            map.merge(word, 1) { _, v -> v + 1 }
+            for (raw in tokens) {
+                val w = raw.trim()
+                if (w.length !in 2..12) continue
+                if (w.all { it.isDigit() || it in PUNCT }) continue
+                map.merge(w, 1) { _, v -> v + 1 }
+            }
+            dirty = true
             scheduleFlush()
         }
     }
@@ -228,6 +276,7 @@ object SmartDictManager {
         writeMutex.withLock {
             cache.clear()
             cacheLoaded = true
+            dirty = true
             // 用户主动清空：立即落盘，不等合并窗口
             withContext(Dispatchers.IO) { save(emptyMap()) }
         }
@@ -239,6 +288,7 @@ object SmartDictManager {
             val map = ensureLoaded()
             if (!map.containsKey(word)) return false
             map.remove(word)
+            dirty = true
             // 同上：用户操作立即落盘
             val snapshot = map.toMap()
             withContext(Dispatchers.IO) { save(snapshot) }

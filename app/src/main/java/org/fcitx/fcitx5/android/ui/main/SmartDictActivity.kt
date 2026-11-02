@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter
 import org.fcitx.fcitx5.android.data.smartdict.SmartDictManager
 
 /**
@@ -77,7 +78,8 @@ class SmartDictActivity : ComponentActivity() {
         listOf(
             "全选" to { selectAll() },
             "全不选" to { clearSelection() },
-            "刷新" to { reload() }
+            "刷新" to { reload() },
+            "同步到候选" to { syncToCandidates() }
         ).forEach { (label, action) ->
             actions.addView(MaterialButton(this).apply {
                 text = label
@@ -86,6 +88,43 @@ class SmartDictActivity : ComponentActivity() {
             })
         }
         root.addView(actions)
+
+        // 个人学习开关：开启后高频个人词自动进候选（预测闭环）；关闭则仅保留本地统计
+        val learnToggle = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(COLOR_PANEL)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dp(8) }
+        }
+        val learnCheck = CheckBox(this).apply {
+            isChecked = SmartDictManager.isLearningEnabled()
+        }
+        learnCheck.setOnCheckedChangeListener { _, checked ->
+            SmartDictManager.setLearningEnabled(checked)
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    if (checked) PersonalPhraseImporter.syncFromUsage(this@SmartDictActivity)
+                    else PersonalPhraseImporter.clearAll(this@SmartDictActivity)
+                }
+                Toast.makeText(
+                    this@SmartDictActivity,
+                    if (checked) "已开启：高频词将自动进入候选" else "已关闭：候选中的个人词已清除",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+        learnToggle.addView(learnCheck)
+        learnToggle.addView(TextView(this).apply {
+            text = "个人学习（高频词自动进候选，越用越懂你）"
+            textSize = 12f
+            setTextColor(COLOR_FG)
+            setPadding(dp(8), 0, 0, 0)
+        })
+        root.addView(learnToggle)
 
         deleteButton = MaterialButton(this).apply {
             text = "删除选中项"
@@ -129,6 +168,20 @@ class SmartDictActivity : ComponentActivity() {
             entries = withContext(Dispatchers.IO) { SmartDictManager.listAll() }
             val words = withContext(Dispatchers.IO) { SmartDictManager.topWords() }
             render(words)
+        }
+    }
+
+    private fun syncToCandidates() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                PersonalPhraseImporter.syncFromUsage(this@SmartDictActivity)
+            }
+            Toast.makeText(
+                this@SmartDictActivity,
+                if (SmartDictManager.isLearningEnabled()) "已同步高频词到候选" else "学习已关闭，未同步",
+                Toast.LENGTH_SHORT
+            ).show()
+            reload()
         }
     }
 
