@@ -100,7 +100,10 @@ object SmartDictManager {
         // MBM v1.0.48：二元接续（前词→后词）共现计数，支撑「上下文预测」
         val bigrams: Map<String, Map<String, Int>> = emptyMap(),
         // 上一次提交的最后一词，用于跨次提交的「X 之后 Y」接续学习
-        val prevToken: String? = null
+        val prevToken: String? = null,
+        // MBM v1.0.50：字符级 3/4 字固定短语计数（独立于 ICU 分词，捕捉「不忘初心」、
+        // 人名、地址、签名等整短语，弥补单字频/bi-gram 只记相邻词对、丢整短语的盲区）
+        val phrases: Map<String, Int> = emptyMap()
     )
 
     private val storeFile: File by lazy {
@@ -127,6 +130,9 @@ object SmartDictManager {
 
     /** v1.0.48：二元接续「前词→{后词→计数}」，支撑上下文预测。 */
     private val bigramCache = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
+
+    /** v1.0.50：字符级 3/4 字固定短语计数（独立于 ICU 分词），支撑整短语预测。 */
+    private val ngramCache = ConcurrentHashMap<String, Int>()
 
     /** v1.0.48：上一次提交的最后一词（内存态，进程重启后从首词重新累计，无伤大雅）。 */
     @Volatile
@@ -228,8 +234,9 @@ object SmartDictManager {
         val rec = recencyCache.filterKeys { cache.containsKey(it) }
         val bg = bigramCache.filterKeys { cache.containsKey(it) }
             .mapValues { (_, m) -> m.filterKeys { k -> cache.containsKey(k) } }
+        val ph = ngramCache.filterKeys { it.length in 3..4 }
         val payload = json.encodeToString(
-            UsageMap(cache.toMap(), rec, bg, prevToken)
+            UsageMap(cache.toMap(), rec, bg, prevToken, ph)
         ).toByteArray(Charsets.UTF_8)
         // 先写临时文件再原子重命名：避免写一半崩溃/被杀留下半文件，
         // 也避免与并发读者交错（rename 在同一文件系统上是原子的）
@@ -249,6 +256,8 @@ object SmartDictManager {
             recencyCache.clear(); recencyCache.putAll(loaded.recency)
             bigramCache.clear()
             loaded.bigrams.forEach { (k, v) -> bigramCache[k] = ConcurrentHashMap(v.toMap()) }
+            ngramCache.clear()
+            loaded.phrases.forEach { (k, v) -> ngramCache[k] = v }
             prevToken = loaded.prevToken
             cacheLoaded = true
         }
@@ -323,8 +332,29 @@ object SmartDictManager {
                 while (recentDeque.size > 2) recentDeque.removeFirst()
                 recentContextSnapshot = recentDeque.toList()
             }
+            // v1.0.50：字符级 3/4 字固定短语挖掘（独立于 ICU 分词，捕捉整短语）
+            bumpPhrases(text.take(2000))
             dirty = true
             scheduleFlush()
+        }
+    }
+
+    /** v1.0.50：连续汉字串内的 3/4 字固定短语计数。 */
+    private val CJK_RUN = Regex("[一-鿿]+")
+
+    private fun bumpPhrases(src: String) {
+        for (run in CJK_RUN.findAll(src)) {
+            val s = run.value
+            if (s.length < 3) continue
+            val maxLen = minOf(s.length, 4)
+            for (len in 3..maxLen) {
+                for (i in 0..s.length - len) {
+                    val sub = s.substring(i, i + len)
+                    if (sub.length != len) continue
+                    if (ngramCache.size > 150_000 && !ngramCache.containsKey(sub)) continue
+                    ngramCache.merge(sub, 1) { _, v -> v + 1 }
+                }
+            }
         }
     }
 
@@ -369,6 +399,23 @@ object SmartDictManager {
             ?.map { it.key to it.value } ?: emptyList()
     }
 
+    /**
+     * v1.0.50：高频固定短语候选（个人短语预测核心）。
+     * 返回反复出现（计数 ≥ 2）的 3/4 字短语，按「计数降序、同计数新鲜度降序」排序、最多 [limit] 个。
+     * 这些短语独立于 ICU 分词，捕捉「不忘初心」、人名、地址、签名等整短语。
+     */
+    fun phraseCandidates(limit: Int = 200): List<Pair<String, Int>> {
+        val src: Map<String, Int> = if (cacheLoaded) ngramCache else load().phrases
+        return src.entries
+            .filter { it.key.length in 3..4 && it.value >= 2 }
+            .map { it.key to it.value }
+            .sortedWith(
+                compareByDescending<Pair<String, Int>> { it.second }
+                    .thenByDescending { wordRecency(it.first) ?: 0L }
+            )
+            .take(limit)
+    }
+
     /** v1.0.48：最近提交词栈（最多 [limit] 个，最新者排在末位）。 */
     fun recentContextWords(limit: Int = 2): List<String> = recentContextSnapshot.takeLast(limit)
 
@@ -393,6 +440,7 @@ object SmartDictManager {
             cache.clear()
             recencyCache.clear()
             bigramCache.clear()
+            ngramCache.clear()
             prevToken = null
             recentDeque.clear()
             recentContextSnapshot = emptyList()
@@ -411,6 +459,7 @@ object SmartDictManager {
             map.remove(word)
             recencyCache.remove(word)
             bigramCache.remove(word)
+            ngramCache.remove(word)
             // 一并清掉其它词对它的后继计数
             bigramCache.forEach { it.value.remove(word) }
             dirty = true

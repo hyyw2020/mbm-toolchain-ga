@@ -61,6 +61,15 @@ object PersonalPhraseImporter {
     /** v1.0.49：接续短语合成时取每个前词的后继词个数。 */
     private const val CONT_PER_SEED = 2
 
+    /** v1.0.50：单次同步注入的高频固定短语（3/4 字）条数上限，防止词库膨胀。 */
+    private const val PHRASE_LIMIT = 200
+
+    /** v1.0.50：高频固定短语候选档位（比单字个人词略低，作为次级候选，但高于冷词）。 */
+    private const val PERSONAL_PHRASE_HOT_ORDER = 4
+
+    /** v1.0.50：低频固定短语候选档位（靠后，不打扰常用词）。 */
+    private const val PERSONAL_PHRASE_COLD_ORDER = 6
+
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -132,6 +141,19 @@ object PersonalPhraseImporter {
                 if (contCount >= CONTINUATION_LIMIT) break
             }
         }
+        // v1.0.50：高频固定短语（3/4 字）直接作为个人候选挂到自身拼音下。
+        // 独立于 ICU 分词，捕捉「不忘初心」、人名、地址、签名等整短语——这是单字频与
+        // bi-gram（只记相邻词对）都学不到的盲区。上下文命中者（最近提交词正是该短语）封顶到最高档。
+        var phraseCount = 0
+        for ((phrase, cnt) in SmartDictManager.phraseCandidates(PHRASE_LIMIT)) {
+            if (phrase.length !in 3..4) continue
+            var order = phraseOrder(cnt)
+            if (phrase in contextPhrases) order = order.coerceAtMost(PERSONAL_PHRASE_HOT_ORDER)
+            AppPhraseImporter.keysForName(phrase).forEach { key ->
+                entries += PinyinCustomPhrase(key, order, phrase)
+            }
+            phraseCount++
+        }
         // 按 key=value 去重、保留最高优先级（最小 order）：避免「整词同时是学名单词」时
         // 同一拼音下出现两条相同 value 让 fcitx 候选去重失真
         val dedup = LinkedHashMap<String, PinyinCustomPhrase>()
@@ -152,7 +174,7 @@ object PersonalPhraseImporter {
                 .onFailure { Timber.w(it, "MBM: save personal phrase failed") }
         }
         persistManaged(ctx, managedKeys.toMutableSet())
-        Timber.d("MBM: personal phrase synced words=${top.size} entries=${finalEntries.size} cont=$contCount contextBoost=${contextBoost.size} contextPhrases=${contextPhrases.size}")
+        Timber.d("MBM: personal phrase synced words=${top.size} entries=${finalEntries.size} cont=$contCount phrases=$phraseCount contextBoost=${contextBoost.size} contextPhrases=${contextPhrases.size}")
         // 复用 Recall 的去抖 reload 通道，通知 fcitx 重新解析自定义词组（候选即时生效）
         RecallReloader.scheduleReload()
     }
@@ -184,6 +206,17 @@ object PersonalPhraseImporter {
         val t = (ln((count + 1).toDouble()) / 5.0).coerceIn(0.0, 1.0)
         val step = ((1 - t) * (PERSONAL_CONT_COLD_ORDER - PERSONAL_CONT_HOT_ORDER)).roundToInt()
         return PERSONAL_CONT_HOT_ORDER + step
+    }
+
+    /**
+     * v1.0.50：把高频固定短语的出现次数合成候选顺序。
+     * 计数越高（短语越固定）档位越靠前，落在 [PERSONAL_PHRASE_HOT_ORDER=4, PERSONAL_PHRASE_COLD_ORDER=6]，
+     * 作为单字个人词之下的次级候选出现，让整短语预测可见又不喧宾夺主。
+     */
+    private fun phraseOrder(count: Int): Int {
+        val t = (ln((count + 1).toDouble()) / 4.0).coerceIn(0.0, 1.0)
+        val step = ((1 - t) * (PERSONAL_PHRASE_COLD_ORDER - PERSONAL_PHRASE_HOT_ORDER)).roundToInt()
+        return PERSONAL_PHRASE_HOT_ORDER + step
     }
 
     /**
