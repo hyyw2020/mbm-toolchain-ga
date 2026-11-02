@@ -126,14 +126,29 @@ object PersonalPhraseImporter {
         val contextBoost = mutableSetOf<String>()
         // 上下文短语：最近提交词的高置信度「前词+后词」整词
         val contextPhrases = mutableSetOf<String>()
+        // v1.0.52：高置信度「下一词」集合——预测出的后继词/第三词（计数≥2，置信度足够）除参与
+        // 整短语合成外，还作为独立候选以最高档注入其自身拼音下，实现「刚打完前词/前两词，
+        // 预测的下一词自动排到首位」的实时联想，而不再要求该词本身是全球高频个人词。
+        val standaloneNext = mutableSetOf<String>()
         for (cw in SmartDictManager.recentContextWords(2)) {
             contextBoost += SmartDictManager.predictNext(cw, CONTEXT_FOLLOWERS)
             for ((succ, _) in SmartDictManager.predictContinuationCounts(cw, CONT_PER_SEED, 2)) {
                 contextPhrases += cw + succ
+                standaloneNext += succ
                 // 上下文里也带上三词整短语，使「刚打完前二词」时三连词联想即时前置
                 for ((w3, _) in SmartDictManager.predictTriContinuation(cw, succ, 1, 2)) {
                     contextPhrases += cw + succ + w3
                 }
+            }
+        }
+        // v1.0.52：三词窗口实时续写 —— 最近两词 (w1,w2) 同时作为上下文时，把预测出的第三词
+        // 抬到候选首列（order 封顶），实现「打了前两个词，第三个词自动靠前」。比 v1.0.48
+        // 仅用「上一词→下一词」单步预测的联想窗口更长、更准。
+        val ctx2 = SmartDictManager.recentContextWords(2)
+        if (ctx2.size == 2) {
+            for ((w3, _) in SmartDictManager.predictTriContinuation(ctx2[0], ctx2[1], CONTEXT_FOLLOWERS, 2)) {
+                contextBoost += w3
+                standaloneNext += w3
             }
         }
         val now = System.currentTimeMillis()
@@ -213,6 +228,17 @@ object PersonalPhraseImporter {
                 entries += PinyinCustomPhrase(key, order, phrase)
             }
             phraseCount++
+        }
+        // v1.0.52：把高置信度「下一词」作为独立候选以最高档（order 3）注入其自身拼音下，
+        // 实现「刚打完前词/前两词，预测的下一词自动排到首位」的实时联想（区别于此前仅 topWords
+        // 内高频词才享此待遇）。standaloneNext 仅含计数≥2 的接续/三连词后继，已过滤低置信噪声。
+        for (w in standaloneNext) {
+            if (w.length !in 2..12) continue
+            // 跳过纯数字/标点串（与 SmartDictManager.recordUsage 过滤口径一致）
+            if (w.none { it.isLetter() || it in '\u4e00'..'\u9fff' }) continue
+            AppPhraseImporter.keysForName(w).forEach { key ->
+                entries += PinyinCustomPhrase(key, PERSONAL_HOT_ORDER, w)
+            }
         }
         // 按 key=value 去重、保留最高优先级（最小 order）：避免「整词同时是学名单词」时
         // 同一拼音下出现两条相同 value 让 fcitx 候选去重失真

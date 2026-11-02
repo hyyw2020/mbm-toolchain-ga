@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.math.exp
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -338,18 +339,22 @@ object SmartDictManager {
                 // 跨次提交接续：上一次提交的最后一词 → 本次首个词
                 val prev = prevToken
                 if (prev != null && map.containsKey(prev) && seq[0].length in 2..8) {
-                    bumpBigram(prev, seq[0])
+                    bumpBigram(prev, seq[0], reinforcementFor(prev, seq[0]))
                 }
                 for (i in 0 until seq.size - 1) {
-                    bumpBigram(seq[i], seq[i + 1])
+                    val a = seq[i]; val b = seq[i + 1]
+                    bumpBigram(a, b, reinforcementFor(a, b))
                 }
                 // 跨次提交三连词：最近两词 → 本次首词（捕捉分三次提交的中文词链，如 中国/人民/共和国）
                 if (recentTwoDeque.size == 2 && seq[0].length in 2..8) {
                     val a = recentTwoDeque[0]; val b = recentTwoDeque[1]
-                    if (map.containsKey(a) && map.containsKey(b)) bumpTrigram(a, b, seq[0])
+                    if (map.containsKey(a) && map.containsKey(b)) {
+                        bumpTrigram(a, b, seq[0], reinforcementForTri(a, b, seq[0]))
+                    }
                 }
                 for (i in 0 until seq.size - 2) {
-                    bumpTrigram(seq[i], seq[i + 1], seq[i + 2])
+                    val a = seq[i]; val b = seq[i + 1]; val c = seq[i + 2]
+                    bumpTrigram(a, b, c, reinforcementForTri(a, b, c))
                 }
                 prevToken = seq.last()
                 // 维护最近上下文栈（最多 2 个），供上下文预测取「前词」
@@ -388,36 +393,103 @@ object SmartDictManager {
         }
     }
 
-    /** v1.0.48：二元接续计数（内存态，进程内高效累加），带软上限防极端膨胀。 */
-    private fun bumpBigram(a: String, b: String) {
-        if (a == b) return
+    /**
+     * v1.0.52：二元接续计数（内存态，进程内高效累加），带软上限防极端膨胀。
+     * [weight] 默认 1；纠错式强化学习会按 [reinforcementFor] 放大，让「用户实际选择的接续」
+     * 比单纯 +1 更快超越旧的高频错误预测，联想更贴合个人习惯。
+     */
+    private fun bumpBigram(a: String, b: String, weight: Int = 1) {
+        if (a == b || weight <= 0) return
         if (bigramCache.size > 100_000 && !bigramCache.containsKey(a)) return
         val inner = bigramCache.getOrPut(a) { ConcurrentHashMap() }
         if (inner.size > 20_000) return
-        inner.merge(b, 1) { _, v -> v + 1 }
+        inner.merge(b, weight) { _, v -> v + weight }
     }
 
-    /** v1.0.51：三连词计数（内存态），带软上限防极端膨胀。 */
-    private fun bumpTrigram(a: String, b: String, c: String) {
-        if (a == b || b == c || a == c) return
+    /**
+     * v1.0.52：三连词计数（内存态），带软上限防极端膨胀。[weight] 语义同 [bumpBigram]。
+     */
+    private fun bumpTrigram(a: String, b: String, c: String, weight: Int = 1) {
+        if (a == b || b == c || a == c || weight <= 0) return
         val key = trigramKey(a, b)
         if (trigramCache.size > 100_000 && !trigramCache.containsKey(key)) return
         val inner = trigramCache.getOrPut(key) { ConcurrentHashMap() }
         if (inner.size > 20_000) return
-        inner.merge(c, 1) { _, v -> v + 1 }
+        inner.merge(c, weight) { _, v -> v + weight }
     }
 
-    /** v1.0.48：给定前词，返回按共现频次排序的后继词（上下文预测核心）。 */
+    /**
+     * v1.0.52：纠错式强化学习 —— 根据「本次实际接续 (a→b)」与此前模型对上下文 a 的预测对比，
+     * 决定给这条接续加多少权重：
+     *  - 模型本就把 b 预测为 a 的首选项 → 普通 +1（已学对，维持）；
+     *  - 模型预测过 b 但排在后面 → +2（用户用选择纠正了排序，把被选中的项顶上去）；
+     *  - 模型从未预测到 b → +3（全新个人接续，强学习，确保下次直接出现）。
+     * 这样联想会快速收敛到用户真实意图，而不是被早期错误的高频统计长期带偏。
+     * 读取的是「本次 bump 之前」的模型状态，故能准确判断「原预测是否正确」。
+     */
+    private fun reinforcementFor(a: String, b: String): Int {
+        val inner = bigramCache[a] ?: return 3
+        if (inner.isEmpty()) return 3
+        var topKey: String? = null
+        var topVal = -1
+        for ((k, v) in inner) {
+            if (v > topVal) {
+                topVal = v
+                topKey = k
+            }
+        }
+        return when {
+            b == topKey -> 1
+            inner.containsKey(b) -> 2
+            else -> 3
+        }
+    }
+
+    /** v1.0.52：三连词（a,b→c）的纠错式强化权重，规则同 [reinforcementFor]。 */
+    private fun reinforcementForTri(a: String, b: String, c: String): Int {
+        val inner = trigramCache[trigramKey(a, b)] ?: return 3
+        if (inner.isEmpty()) return 3
+        var topKey: String? = null
+        var topVal = -1
+        for ((k, v) in inner) {
+            if (v > topVal) {
+                topVal = v
+                topKey = k
+            }
+        }
+        return when {
+            c == topKey -> 1
+            inner.containsKey(c) -> 2
+            else -> 3
+        }
+    }
+
+    /**
+     * v1.0.52：新鲜度自适应乘数。对「同一前词」的多个后继词，在共现计数之外再乘一个
+     * 与「该后继词最近一次上屏距今」相关的权重：越近期用过的接续，权重越高（最多 +50%，
+     * 半衰期约 7 天）。这样「当前话题」的联想会自然压过陈旧的同频接续，而存储的计数本身
+     * 不被改写（用户清空/换话题后仍可凭原始计数恢复），零数据损失。
+     */
+    private fun recencyMultiplier(lastSeen: Long?, now: Long): Double {
+        if (lastSeen == null) return 1.0
+        val ageDays = (now - lastSeen) / (24.0 * 3600 * 1000)
+        return 1.0 + 0.5 * exp(-ageDays / 7.0)
+    }
+
+    /** v1.0.48：给定前词，返回按共现频次排序的后继词（上下文预测核心）。v1.0.52 叠加新鲜度自适应排序。 */
     fun predictNext(prev: String, limit: Int = 5): List<String> {
         val m: Map<String, Int>? = if (cacheLoaded) {
             bigramCache[prev]?.toMap()
         } else {
             load().bigrams[prev]
         }
-        return m?.entries
-            ?.sortedByDescending { it.value }
-            ?.take(limit)
-            ?.map { it.key } ?: emptyList()
+        if (m.isNullOrEmpty()) return emptyList()
+        val now = System.currentTimeMillis()
+        return m.entries
+            .map { (k, v) -> k to v * recencyMultiplier(wordRecency(k), now) }
+            .sortedByDescending { it.second }
+            .take(limit)
+            .map { it.first }
     }
 
     /**
@@ -432,11 +504,17 @@ object SmartDictManager {
         } else {
             load().bigrams[prev]
         }
-        return m?.entries
-            ?.filter { it.value >= minCount }
-            ?.sortedByDescending { it.value }
-            ?.take(limit)
-            ?.map { it.key to it.value } ?: emptyList()
+        if (m.isNullOrEmpty()) return emptyList()
+        val now = System.currentTimeMillis()
+        // v1.0.52：排序叠加新鲜度自适应（计数口径仍返回原始计数，供 contOrder 分档不变），
+        // 让更贴近当前话题的接续短语优先进入候选。
+        return m.entries
+            .filter { it.value >= minCount }
+            .map { it.key to it.value }
+            .sortedWith(
+                compareByDescending<Pair<String, Int>> { it.second * recencyMultiplier(wordRecency(it.first), now) }
+            )
+            .take(limit)
     }
 
     /**
