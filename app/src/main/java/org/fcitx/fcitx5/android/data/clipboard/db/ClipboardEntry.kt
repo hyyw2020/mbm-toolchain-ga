@@ -75,7 +75,10 @@ data class ClipboardEntry(
                 false
             }
             return ClipboardEntry(
-                text = if (transformer != null) transformer(str) else str,
+                // MBM v1.0.56：transformer（如剪贴板过滤插件 ClearURLs）若抛异常（catalog 未初始化、
+                // 正则越界等）必须降级为原文，绝不能因过滤失败而整条丢弃用户的复制。
+                // 否则插件开启期间所有剪贴板历史录入都会静默失效。
+                text = if (transformer != null) runCatching { transformer(str) }.getOrDefault(str) else str,
                 timestamp = clipData.timestamp(),
                 type = desc.getMimeType(0),
                 sensitive = sensitive

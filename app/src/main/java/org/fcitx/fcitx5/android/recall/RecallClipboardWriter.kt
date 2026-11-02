@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.recall.data.RecallAuditLog
 import org.fcitx.fcitx5.android.utils.appContext
 import timber.log.Timber
@@ -75,6 +76,11 @@ object RecallClipboardWriter {
      * 捕获回调中调用：提炼 + 节流 + 后台追加到本地队列（不阻塞捕获主路径）。
      */
     fun offer(text: String) {
+        // MBM v1.0.56 隐私闸门：Recall 的 walk() 故意采集密码框/敏感节点（见 RecallService），
+        // 但这类屏幕文字绝不能写进剪贴板候选——否则密码、令牌、银行卡号会被导入剪贴板历史并可一键上屏。
+        // RecallService 与 IME 同进程，PrivacyController 单例共享，故此处能读到 IME 判定的隐私态。
+        // 与 ClipboardManager.onPrimaryClipChanged 的 `if (PrivacyController.inPrivacyMode) return` 保持一致。
+        if (PrivacyController.inPrivacyMode) return
         if (text.isBlank()) return
         val now = System.currentTimeMillis()
         // 按内容节流（P2-4）：相同内容 2s 内去重，避免刷屏；

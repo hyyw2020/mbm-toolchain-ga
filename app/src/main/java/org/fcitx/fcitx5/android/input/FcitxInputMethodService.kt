@@ -636,6 +636,9 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
                 ei?.inputType,
                 ei?.imeOptions
             )
+            // MBM v1.0.56：把静默失败改成可见反馈，避免「点了没反应」让用户误以为功能坏掉。
+            // 多数情况是目标输入框此刻未聚焦（如系统搜索框刚弹出但连接尚未建立）。
+            lifecycleScope.launch { pasteToast("当前输入框未接受粘贴，请先点一下输入框") }
             return
         }
         if (!entry.isBlob) {
