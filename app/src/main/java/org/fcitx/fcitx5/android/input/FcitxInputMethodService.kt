@@ -157,6 +157,17 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     @Volatile
     private var suggestionSelected = false
 
+    /**
+     * MBM v1.0.47：滑动选词「实时预编辑上屏」进行中标记。
+     * 置位期间 [handleCursorUpdate] 忽略编辑器自发的光标/选区回调
+     * （那些回调由我们的 setComposingText 触发，不应回灌 fcitx 状态机，
+     * 否则会让原本干净的预编辑被 reset 掉）。
+     */
+    @Volatile
+    private var wordSelectPreviewActive = false
+    private var wordSelectPreviewStart = 0
+    private var wordSelectPreviewText = ""
+
     private fun resetComposingState() {
         composing.clear()
         composingText = FormattedText.Empty
@@ -1208,6 +1219,9 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         newComposingEnd: Int,
         updateIndex: Int
     ) {
+        // MBM v1.0.47：滑动选词上屏预览期间，编辑器因我们的 setComposingText 收到的
+        // 光标/选区回调一律忽略，避免回灌 fcitx 状态机造成预编辑错乱。
+        if (wordSelectPreviewActive) return
         if (selection.consume(newSelStart, newSelEnd)) {
             // try restore composing range in case it was dropped by InputFilter
             // but only when prediction matches, since InputFilter can also change editor content
@@ -1334,6 +1348,88 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         composing.clear()
         composingText = FormattedText.Empty
         ic.finishComposingText()
+    }
+
+    // ============ MBM v1.0.47：滑动选词「实时预编辑上屏」 ============
+
+    /**
+     * 把当前选中的词块片段作为 composing 预编辑实时写入目标输入框（上屏预览）。
+     * 滑动选词过程中每当选区变化就调用一次，目标框里即可看到「跟着手指走」的预览。
+     * 空串或无输入连接时退化为取消。
+     */
+    fun setWordSelectPreview(text: String) {
+        if (text.isEmpty()) {
+            cancelWordSelectPreview()
+            return
+        }
+        val ic = currentInputConnection ?: return
+        // 预览起始点复用当前光标（首次）或上一次预览起点（连续滑动），
+        // 不与 fcitx 的 composing 状态纠缠，互不污染。
+        val start = if (wordSelectPreviewActive) wordSelectPreviewStart else selection.latest.start
+        wordSelectPreviewStart = start
+        wordSelectPreviewText = text
+        wordSelectPreviewActive = true
+        runCatching {
+            ic.beginBatchEdit()
+            try {
+                ic.setComposingText(text, text.length)
+            } finally {
+                ic.endBatchEdit()
+            }
+        }.onFailure { Timber.e(it, "MBM: setWordSelectPreview 失败") }
+    }
+
+    /**
+     * 取消预览：丢弃 composing 文本，输入框恢复原状（不提交任何内容）。
+     * 用于滑动中途清空选区、或「复制」后保持原输入框干净。
+     */
+    fun cancelWordSelectPreview() {
+        if (!wordSelectPreviewActive) return
+        val ic = currentInputConnection
+        wordSelectPreviewActive = false
+        wordSelectPreviewText = ""
+        if (ic != null) {
+            runCatching {
+                ic.beginBatchEdit()
+                try {
+                    ic.setComposingText("", 1)
+                } finally {
+                    ic.endBatchEdit()
+                }
+            }.onFailure { Timber.e(it, "MBM: cancelWordSelectPreview 失败") }
+        }
+        resetComposingState()
+    }
+
+    /**
+     * 完成选词：把指定片段定稿上屏（commitText），并返回是否确有内容提交。
+     * 不依赖预览状态，直接用面板传入的选区文本，确保「先复制后完成」等交叉操作也正确上屏。
+     */
+    fun commitWordSelectPreview(text: String): Boolean {
+        if (text.isEmpty()) {
+            wordSelectPreviewActive = false
+            return false
+        }
+        val ic = currentInputConnection ?: run {
+            wordSelectPreviewActive = false
+            wordSelectPreviewText = ""
+            return false
+        }
+        // 先把可能存在的实时预览清掉，再从干净光标处 commit，避免重复或错位。
+        cancelWordSelectPreview()
+        val start = selection.latest.start
+        resetComposingState()
+        val ok = runCatching {
+            ic.beginBatchEdit()
+            try {
+                ic.commitText(text, 1)
+            } finally {
+                ic.endBatchEdit()
+            }
+        }.isSuccess
+        if (ok) selection.predict(start + text.length)
+        Timber.d("MBM: commitWordSelectPreview 提交「${text.take(16)}…」len=${text.length} ok=$ok")
+        return ok
     }
 
     @SuppressLint("RestrictedApi")

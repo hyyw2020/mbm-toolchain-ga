@@ -44,10 +44,21 @@ class WordSelectWindow(private val source: String) :
     private val ui by lazy {
         WordSelectUi(context, theme, source, maskSensitive).apply {
             setContent(WordTokenizer.tokenize(source))
+            // 滑动选词 → 实时上屏预览：选区变化即回填背景输入框的 composing 预编辑
+            onSelectionChanged = { text ->
+                if (text != null) service.setWordSelectPreview(text)
+                else service.cancelWordSelectPreview()
+            }
             copyButton.setOnClickListener {
                 copySelected()
+                // 复制到剪贴板即可，不自动上屏：清掉输入框里的实时预览，保持原输入框干净
+                service.cancelWordSelectPreview()
             }
             doneButton.setOnClickListener {
+                // 完成 = 把选中片段定稿上屏；无选区则直接关闭并清掉可能残留的预览
+                val sel = selectedText()
+                service.cancelWordSelectPreview()
+                if (sel != null) service.commitWordSelectPreview(sel)
                 windowManager.attachWindow(ClipboardWindow())
             }
         }
@@ -62,6 +73,8 @@ class WordSelectWindow(private val source: String) :
     override fun onAttached() = Unit
 
     override fun onDetached() {
+        // 退出滑动选词（如顶栏返回箭头）：清掉可能残留的上屏预览，避免输入框里挂着半截片段
+        service.cancelWordSelectPreview()
         ui.release()
     }
 

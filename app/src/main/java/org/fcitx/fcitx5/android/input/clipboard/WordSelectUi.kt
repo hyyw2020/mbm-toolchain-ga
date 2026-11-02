@@ -65,8 +65,20 @@ class WordSelectUi(
     /** 手势起始词块，滑动时选区在 [anchor, current] 间伸缩 */
     private var anchorIndex = -1
 
+    /** 手指当前所在词块（独立于 selEnd 单独跟踪，缩小后再扩大也不会漏更新） */
+    private var currentIndex = -1
+
     /** 正在程序化同步全选框状态，抑制监听器回写 */
     private var syncingSelectAll = false
+
+    /** 最近一次回填给上屏预览的选区文本，避免滑动时重复触发服务层调用 */
+    private var lastPreview: String? = null
+
+    /**
+     * 选区变化回调：实时把选中文本交给服务层做上屏预览。
+     * null 表示当前无选区（清空/未选）。
+     */
+    var onSelectionChanged: ((text: String?) -> Unit)? = null
 
     // ---- 触摸与边缘自动滚动 ----
 
@@ -90,8 +102,10 @@ class WordSelectUi(
                     scrollView.scrollBy(0, speed)
                     // 内容滚动了但手指没动，不会再来 MOVE 事件：主动重算指下词块延伸选区
                     val idx = chipAt(lastTouchX, lastTouchY)
-                    if (idx in chips.indices && idx != selEnd) {
-                        selectRange(anchorIndex, idx)
+                    if (idx in chips.indices && idx != currentIndex) {
+                        anchorIndex = anchorIndex.coerceAtLeast(0)
+                        currentIndex = idx
+                        selectRange(anchorIndex, currentIndex)
                     }
                 }
             }
@@ -109,6 +123,8 @@ class WordSelectUi(
                     lastTouchY = event.y
                     val idx = chipAt(event.x, event.y)
                     if (idx < 0) return false
+                    anchorIndex = idx
+                    currentIndex = idx
                     selectRange(idx, idx)
                     handler.removeCallbacks(edgeScrollTicker)
                     handler.post(edgeScrollTicker)
@@ -117,8 +133,11 @@ class WordSelectUi(
                     lastTouchX = event.x
                     lastTouchY = event.y
                     val idx = chipAt(event.x, event.y)
-                    if (idx in chips.indices && idx != selEnd) {
-                        selectRange(anchorIndex, idx)
+                    // 移到空白处：维持当前选区，把事件交还给 ScrollView 做滚动/惯性
+                    if (idx in chips.indices && idx != currentIndex) {
+                        anchorIndex = anchorIndex.coerceAtLeast(0)
+                        currentIndex = idx
+                        selectRange(anchorIndex, currentIndex)
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -154,6 +173,12 @@ class WordSelectUi(
         syncingSelectAll = true
         selectAllBox.isChecked = lo == 0 && hi == chips.size - 1
         syncingSelectAll = false
+        // 实时上屏预览：选区变化即回填服务层（背景输入框 composing 预编辑）
+        val text = selectedText()
+        if (text != lastPreview) {
+            lastPreview = text
+            onSelectionChanged?.invoke(text)
+        }
     }
 
     private fun setChipSelected(i: Int, selected: Boolean) {
@@ -315,10 +340,15 @@ class WordSelectUi(
         selStart = -1
         selEnd = -1
         anchorIndex = -1
+        currentIndex = -1
         for (i in chips.indices) setChipSelected(i, false)
         syncingSelectAll = true
         selectAllBox.isChecked = false
         syncingSelectAll = false
+        if (lastPreview != null) {
+            lastPreview = null
+            onSelectionChanged?.invoke(null)
+        }
     }
 
     val hasSelection: Boolean get() = selStart in 0..selEnd && selEnd < chips.size
