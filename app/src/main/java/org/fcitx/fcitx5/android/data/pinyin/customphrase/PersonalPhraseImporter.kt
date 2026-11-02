@@ -24,6 +24,9 @@
 package org.fcitx.fcitx5.android.data.pinyin.customphrase
 
 import android.content.Context
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.roundToInt
 import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.smartdict.SmartDictManager
 import org.fcitx.fcitx5.android.recall.store.RecallReloader
@@ -43,8 +46,8 @@ object PersonalPhraseImporter {
     /** 单次同步注入候选的条数上限（按词频取前 N），保证托管集合有界、reload 可控。 */
     private const val SYNC_LIMIT = 800
 
-    /** 前 N 个高频词标记为热（其余低频标记为冷）。 */
-    private const val HOT_RANK = 200
+    /** 上下文预测：取最近提交词的高频后继词个数（抬到候选前列的数量）。 */
+    private const val CONTEXT_FOLLOWERS = 5
 
     private fun prefs(ctx: Context) =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -66,15 +69,26 @@ object PersonalPhraseImporter {
     /**
      * 把本地统计的高频个人词写入自定义词组。关闭学习开关或统计为空时直接返回。
      * 全程在全局写锁内读-改-写，与 AppPhraseImporter / RecallWordStore 互斥。
+     *
+     * MBM v1.0.48：候选顺序从「高频=3 / 低频=7」两档升级为**按词频+新鲜度的连续分级**
+     * （order 落在 3..7 之间，越常用的词越靠前）；并叠加**上下文预测**——把最近提交词的高频
+     * 后继词整体抬到候选前列（order 封顶为 3），实现「刚打完 X，Y 就排在前面」。
      */
     fun syncFromUsage(ctx: Context) {
         if (!SmartDictManager.isLearningEnabled()) return
         val top = SmartDictManager.topWords(SYNC_LIMIT)
         if (top.isEmpty()) return
-        // 按词频分层：前 HOT_RANK 个高频词置热（order=3），其余低频置冷（order=7）
+        // 上下文预测：取最近提交词的高频后继词，构成「应被前置」的候选集合
+        val contextBoost = mutableSetOf<String>()
+        for (cw in SmartDictManager.recentContextWords(2)) {
+            contextBoost += SmartDictManager.predictNext(cw, CONTEXT_FOLLOWERS)
+        }
+        val now = System.currentTimeMillis()
+        // 按词频+新鲜度算出每个词的候选顺序（落在 3..7），上下文命中者封顶到最高档
         val entries = ArrayList<PinyinCustomPhrase>(top.size * 3)
-        top.forEachIndexed { idx, (word, _) ->
-            val order = if (idx < HOT_RANK) PERSONAL_HOT_ORDER else PERSONAL_COLD_ORDER
+        top.forEach { (word, count) ->
+            var order = gradedOrder(count, SmartDictManager.wordRecency(word), now)
+            if (word in contextBoost) order = order.coerceAtMost(PERSONAL_HOT_ORDER)
             AppPhraseImporter.keysForName(word).forEach { key ->
                 entries += PinyinCustomPhrase(key, order, word)
             }
@@ -90,9 +104,27 @@ object PersonalPhraseImporter {
                 .onFailure { Timber.w(it, "MBM: save personal phrase failed") }
         }
         persistManaged(ctx, managedKeys.toMutableSet())
-        Timber.d("MBM: personal phrase synced words=${top.size} entries=${entries.size}")
+        Timber.d("MBM: personal phrase synced words=${top.size} entries=${entries.size} contextBoost=${contextBoost.size}")
         // 复用 Recall 的去抖 reload 通道，通知 fcitx 重新解析自定义词组（候选即时生效）
         RecallReloader.scheduleReload()
+    }
+
+    /**
+     * v1.0.48：把词频与新鲜度合成为候选顺序。
+     *  - 词频项：ln(count+1)，常用词分高；
+     *  - 新鲜度项：最近上屏的词额外加权，权重按指数衰减（约 3 天半衰期），让「当前话题」的词优先。
+     * 合成分映射到 [PERSONAL_HOT_ORDER=3, PERSONAL_COLD_ORDER=7]，常用且新鲜的词最靠前。
+     */
+    private fun gradedOrder(count: Int, lastSeen: Long?, now: Long): Int {
+        val freqScore = ln((count + 1).toDouble())
+        val recencyScore = if (lastSeen != null) {
+            val ageDays = (now - lastSeen) / (24.0 * 3600 * 1000)
+            exp(-ageDays / 3.0)
+        } else 0.0
+        val score = freqScore + recencyScore
+        val t = (score / 6.0).coerceIn(0.0, 1.0)
+        val step = ((1 - t) * (PERSONAL_COLD_ORDER - PERSONAL_HOT_ORDER)).roundToInt()
+        return PERSONAL_HOT_ORDER + step
     }
 
     /**
@@ -102,6 +134,34 @@ object PersonalPhraseImporter {
         if (!SmartDictManager.isLearningEnabled()) return
         if (!SmartDictManager.consumeDirty()) return
         syncFromUsage(ctx)
+    }
+
+    /**
+     * v1.0.48：上屏后即时触发「上下文预测」重排——把最近提交词的高频后继词抬到候选前列。
+     * 走与 [syncFromUsage] 相同的自定义词组通道（输入流同步出候选、零延迟），经 RecallReloader
+     * 去抖 reload 即时生效。带双重节流（全局最短 1.5s、同一上下文 5s 内不重复）避免高频提交下
+     * 反复重写词库；上下文无变化或学习关闭时直接跳过。
+     */
+    @Volatile
+    private var lastRerankMs = 0L
+
+    @Volatile
+    private var lastRerankCtx = ""
+
+    fun requestContextRerank(ctx: Context) {
+        if (!SmartDictManager.isLearningEnabled()) return
+        val ctxKey = SmartDictManager.recentContextWords(2).joinToString("|")
+        val now = System.currentTimeMillis()
+        // 同一上下文 5s 内不重复重排（已在前词基础上排好）
+        if (ctxKey == lastRerankCtx && now - lastRerankMs < 5000) return
+        // 全局最短间隔 1.5s，避免连续提交（如快速选词）频繁重写词库
+        if (now - lastRerankMs < 1500) return
+        lastRerankMs = now
+        lastRerankCtx = ctxKey
+        SmartDictManager.markDirty()
+        syncFromUsage(ctx)
+        // 本次已全量同步（含上下文），清掉脏标记避免周期性同步重复劳动
+        SmartDictManager.consumeDirty()
     }
 
     /** IME 启动后立即做一次，让历史高频词立即可作为候选（首屏即用）。 */

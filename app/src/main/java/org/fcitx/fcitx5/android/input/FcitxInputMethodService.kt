@@ -561,6 +561,9 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             val t = text
             imeFallbackScope.launch(Dispatchers.IO) {
                 runCatching { SmartDictManager.recordUsage(t) }
+                // MBM v1.0.48：上屏即更新「上下文预测」——刚提交的词作为前词，
+                // 把其高频后继词抬到候选前列（见 PersonalPhraseImporter.requestContextRerank）。
+                runCatching { PersonalPhraseImporter.requestContextRerank(this@FcitxInputMethodService) }
             }
         }
         // MBM v1.0.25：提交整段包 runCatching —— 任意调用方（CommitAction 标点提交、

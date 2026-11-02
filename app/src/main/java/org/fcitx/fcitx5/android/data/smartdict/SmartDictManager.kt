@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlin.collections.ArrayDeque
 import org.fcitx.fcitx5.android.data.crypto.AppKeyManager
 import org.fcitx.fcitx5.android.data.crypto.StreamingFileCipher
 import org.fcitx.fcitx5.android.data.pinyin.PinyinDictManager
@@ -92,7 +93,15 @@ object SmartDictManager {
     // ---------- 本地使用统计（智能候选词）----------
 
     @Serializable
-    private data class UsageMap(val counts: Map<String, Int> = emptyMap())
+    private data class UsageMap(
+        val counts: Map<String, Int> = emptyMap(),
+        // MBM v1.0.48：词级「最近一次上屏时间」，用于按新鲜度给候选加权（当前话题的词优先）
+        val recency: Map<String, Long> = emptyMap(),
+        // MBM v1.0.48：二元接续（前词→后词）共现计数，支撑「上下文预测」
+        val bigrams: Map<String, Map<String, Int>> = emptyMap(),
+        // 上一次提交的最后一词，用于跨次提交的「X 之后 Y」接续学习
+        val prevToken: String? = null
+    )
 
     private val storeFile: File by lazy {
         File(appContext.filesDir, "smart_dict_usage.json")
@@ -112,6 +121,23 @@ object SmartDictManager {
      * 用并发 Map：[topWords] 可能被主线程在锁外并发读。
      */
     private val cache = ConcurrentHashMap<String, Int>()
+
+    /** v1.0.48：词级最近上屏时间戳（与 [cache] 同源，随 [ensureLoaded] 一并加载）。 */
+    private val recencyCache = ConcurrentHashMap<String, Long>()
+
+    /** v1.0.48：二元接续「前词→{后词→计数}」，支撑上下文预测。 */
+    private val bigramCache = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
+
+    /** v1.0.48：上一次提交的最后一词（内存态，进程重启后从首词重新累计，无伤大雅）。 */
+    @Volatile
+    private var prevToken: String? = null
+
+    /** v1.0.48：最近提交词栈（最多保留 2 个，构成「上下文」供预测后继词）。 */
+    private val recentDeque = ArrayDeque<String>()
+
+    /** 最近上下文快照（读路径无锁读取，写路径在 [writeMutex] 内更新）。 */
+    @Volatile
+    private var recentContextSnapshot: List<String> = emptyList()
 
     @Volatile
     private var cacheLoaded = false
@@ -172,12 +198,12 @@ object SmartDictManager {
         }
     }
 
-    private fun load(): MutableMap<String, Int> = runCatching {
-        if (!storeFile.exists()) return mutableMapOf()
+    private fun load(): UsageMap = runCatching {
+        if (!storeFile.exists()) return UsageMap()
         val key = cipherKey()
         val text = (key?.let { StreamingFileCipher.openDecrypted(storeFile, it) }
             ?: storeFile.inputStream()).use { it.readBytes().toString(Charsets.UTF_8) }
-        json.decodeFromString<UsageMap>(text).counts.toMutableMap()
+        json.decodeFromString<UsageMap>(text)
     }.getOrElse { e ->
         // 解析失败（损坏/半写文件）：保留现场备份，绝不把损坏文件当空表直接覆写
         if (storeFile.length() > 0) {
@@ -186,16 +212,25 @@ object SmartDictManager {
                 .onFailure { Timber.w(it, "backup corrupt usage file failed") }
             Timber.w(e, "smart dict usage file unreadable, backed up to ${backup.name}")
         }
-        mutableMapOf()
+        UsageMap()
     }
 
-    private fun save(map: Map<String, Int>) = runCatching {
-        val payload = json.encodeToString(UsageMap(map)).toByteArray(Charsets.UTF_8)
+    /**
+     * v1.0.48：落盘全量快照（词频 + 新鲜度 + 二元接续 + 前词）。
+     * 仅保留仍在词频表内的词，避免 recency/bigrams 随使用无界膨胀。
+     */
+    private fun save() = runCatching {
         val key = cipherKey()
         if (key == null) {
             Timber.w("smart dict usage 未落盘：加密密钥不可用（绝不退回明文写入）")
             return@runCatching
         }
+        val rec = recencyCache.filterKeys { cache.containsKey(it) }
+        val bg = bigramCache.filterKeys { cache.containsKey(it) }
+            .mapValues { (_, m) -> m.filterKeys { k -> cache.containsKey(k) } }
+        val payload = json.encodeToString(
+            UsageMap(cache.toMap(), rec, bg, prevToken)
+        ).toByteArray(Charsets.UTF_8)
         // 先写临时文件再原子重命名：避免写一半崩溃/被杀留下半文件，
         // 也避免与并发读者交错（rename 在同一文件系统上是原子的）
         val tmp = File(storeFile.parentFile, "${storeFile.name}.tmp")
@@ -206,12 +241,15 @@ object SmartDictManager {
         }
     }.onFailure { Timber.w(it, "save smart dict usage failed") }
 
-    /** 首次访问时把文件读进内存；之后所有读写都走 [cache]。 */
+    /** 首次访问时把文件读进内存；之后所有读写都走各缓存。 */
     private suspend fun ensureLoaded(): ConcurrentHashMap<String, Int> {
         if (!cacheLoaded) {
             val loaded = withContext(Dispatchers.IO) { load() }
-            cache.clear()
-            cache.putAll(loaded)
+            cache.clear(); cache.putAll(loaded.counts)
+            recencyCache.clear(); recencyCache.putAll(loaded.recency)
+            bigramCache.clear()
+            loaded.bigrams.forEach { (k, v) -> bigramCache[k] = ConcurrentHashMap(v.toMap()) }
+            prevToken = loaded.prevToken
             cacheLoaded = true
         }
         return cache
@@ -220,8 +258,7 @@ object SmartDictManager {
     /** 把内存快照落盘一次（调用方须持有 [writeMutex]）。 */
     private suspend fun flushLocked() {
         if (!cacheLoaded) return
-        val snapshot = cache.toMap()
-        withContext(Dispatchers.IO) { save(snapshot) }
+        withContext(Dispatchers.IO) { save() }
     }
 
     /**
@@ -243,6 +280,11 @@ object SmartDictManager {
      * 词组落屏时，先用 [WordTokenizer] 切出真实词块再分别累加，学到的是「词」而非
      * 偶发的整句拼接；敲对应拼音时这些高频个人词才会被 [PersonalPhraseImporter] 抬到
      * 候选前列，真正构成「越用越懂你」的预测闭环。
+     *
+     * MBM v1.0.48：在逐词计频基础上新增三件事——
+     *  - **新鲜度**：记录每个词最近一次上屏时间，预测时按新鲜度加权（当前话题的词优先）；
+     *  - **二元接续**：记录「前词→后词」共现，支撑「刚打完 X 就预测 Y」的上下文联想；
+     *  - **最近上下文**：保留最近提交词栈，供 [PersonalPhraseImporter] 把后继词抬到候选前列。
      */
     suspend fun recordUsage(text: String) {
         if (text.isBlank()) return
@@ -254,31 +296,91 @@ object SmartDictManager {
         if (tokens.isEmpty()) return
         writeMutex.withLock {
             val map = ensureLoaded()
-            for (raw in tokens) {
-                val w = raw.trim()
-                if (w.length !in 2..12) continue
-                if (w.all { it.isDigit() || it in PUNCT }) continue
+            val now = System.currentTimeMillis()
+            // 过滤出「有效词」：2..12 字、且非纯数字/标点串（与旧口径一致）
+            val words = tokens.filter { w ->
+                w.length in 2..12 && !(w.all { c -> c.isDigit() || c in PUNCT })
+            }
+            if (words.isEmpty()) return@withLock
+            for (w in words) {
                 map.merge(w, 1) { _, v -> v + 1 }
+                recencyCache[w] = now
+            }
+            // 仅对多字词（2..8 字）建立接续，避免单字噪声污染「前词→后词」
+            val seq = words.filter { it.length in 2..8 }
+            if (seq.isNotEmpty()) {
+                // 跨次提交接续：上一次提交的最后一词 → 本次首个词
+                val prev = prevToken
+                if (prev != null && map.containsKey(prev) && seq[0].length in 2..8) {
+                    bumpBigram(prev, seq[0])
+                }
+                for (i in 0 until seq.size - 1) {
+                    bumpBigram(seq[i], seq[i + 1])
+                }
+                prevToken = seq.last()
+                // 维护最近上下文栈（最多 2 个），供上下文预测取「前词」
+                recentDeque.addLast(seq.last())
+                while (recentDeque.size > 2) recentDeque.removeFirst()
+                recentContextSnapshot = recentDeque.toList()
             }
             dirty = true
             scheduleFlush()
         }
     }
 
+    /** v1.0.48：二元接续计数（内存态，进程内高效累加），带软上限防极端膨胀。 */
+    private fun bumpBigram(a: String, b: String) {
+        if (a == b) return
+        if (bigramCache.size > 100_000 && !bigramCache.containsKey(a)) return
+        val inner = bigramCache.getOrPut(a) { ConcurrentHashMap() }
+        if (inner.size > 20_000) return
+        inner.merge(b, 1) { _, v -> v + 1 }
+    }
+
+    /** v1.0.48：给定前词，返回按共现频次排序的后继词（上下文预测核心）。 */
+    fun predictNext(prev: String, limit: Int = 5): List<String> {
+        val m: Map<String, Int>? = if (cacheLoaded) {
+            bigramCache[prev]?.toMap()
+        } else {
+            load().bigrams[prev]
+        }
+        return m?.entries
+            ?.sortedByDescending { it.value }
+            ?.take(limit)
+            ?.map { it.key } ?: emptyList()
+    }
+
+    /** v1.0.48：最近提交词栈（最多 [limit] 个，最新者排在末位）。 */
+    fun recentContextWords(limit: Int = 2): List<String> = recentContextSnapshot.takeLast(limit)
+
+    /** v1.0.48：某词最近上屏时间戳（毫秒），未记录返回 null。 */
+    fun wordRecency(word: String): Long? =
+        if (cacheLoaded) recencyCache[word] else load().recency[word]
+
+    /** 标记本地统计有新增（供预测闭环周期性同步判定）。 */
+    fun markDirty() {
+        dirty = true
+    }
+
     /** 默认返回全部（无上限）；UI 如确需截断可显式传 limit */
     fun topWords(limit: Int = Int.MAX_VALUE): List<Pair<String, Int>> {
         // N24：命中缓存时纯内存（旧实现每次都在调用方线程——含主线程——读全文 JSON）
-        val source: Map<String, Int> = if (cacheLoaded) cache else load()
+        val source: Map<String, Int> = if (cacheLoaded) cache else load().counts
         return source.entries.sortedByDescending { it.value }.take(limit).map { it.key to it.value }
     }
 
     suspend fun clearUsage() {
         writeMutex.withLock {
             cache.clear()
+            recencyCache.clear()
+            bigramCache.clear()
+            prevToken = null
+            recentDeque.clear()
+            recentContextSnapshot = emptyList()
             cacheLoaded = true
             dirty = true
             // 用户主动清空：立即落盘，不等合并窗口
-            withContext(Dispatchers.IO) { save(emptyMap()) }
+            withContext(Dispatchers.IO) { save() }
         }
     }
 
@@ -288,10 +390,13 @@ object SmartDictManager {
             val map = ensureLoaded()
             if (!map.containsKey(word)) return false
             map.remove(word)
+            recencyCache.remove(word)
+            bigramCache.remove(word)
+            // 一并清掉其它词对它的后继计数
+            bigramCache.forEach { it.value.remove(word) }
             dirty = true
             // 同上：用户操作立即落盘
-            val snapshot = map.toMap()
-            withContext(Dispatchers.IO) { save(snapshot) }
+            withContext(Dispatchers.IO) { save() }
             return true
         }
     }
