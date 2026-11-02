@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
@@ -233,9 +234,28 @@ class QuickPhraseListFragment : Fragment(), OnItemChangedListener<QuickPhrase> {
                 return@launch
             }
             val entryName = fileName.substringBeforeLast('.')
-            if (ui.entries.any { it.name == entryName }) {
-                ctx.importErrorDialog(R.string.quickphrase_already_exists)
-                return@launch
+            // v1.0.54 更新式导入：同名自定义词条不再报错，而是合并（重复条目提权去重）；
+            // 仅与内置词条同名时保留原报错
+            val existing = ui.entries.filterIsInstance<CustomQuickPhrase>()
+                .firstOrNull { it.name == entryName }
+            if (existing != null) {
+                try {
+                    withContext(Dispatchers.IO) {
+                        val inputStream = cr.openInputStream(uri)!!
+                        QuickPhraseManager.mergeUpdate(existing, inputStream, fileName).getOrThrow()
+                    }
+                    ui.updateItem(ui.indexItem(existing), existing)
+                    Toast.makeText(
+                        ctx, R.string.quickphrase_merged, Toast.LENGTH_SHORT
+                    ).show()
+                    // 同名合并不改变 name/enable 状态，dustman 不会脏，需强制重载引擎词条
+                    reloadQuickPhrase(force = true)
+                    return@launch
+                } catch (e: Exception) {
+                    ctx.importErrorDialog(e)
+                    nm.cancel(id)
+                    return@launch
+                }
             }
             NotificationCompat.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_baseline_format_quote_24)
@@ -258,8 +278,8 @@ class QuickPhraseListFragment : Fragment(), OnItemChangedListener<QuickPhrase> {
         }
     }
 
-    private fun reloadQuickPhrase() {
-        if (!dustman.dirty) return
+    private fun reloadQuickPhrase(force: Boolean = false) {
+        if (!force && !dustman.dirty) return
         resetDustman()
         // save the reference to NotificationManager, in case we need to cancel notification
         // after Fragment detached

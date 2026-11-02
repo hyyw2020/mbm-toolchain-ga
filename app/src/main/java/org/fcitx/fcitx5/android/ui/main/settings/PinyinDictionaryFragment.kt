@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationCompat
@@ -155,9 +156,28 @@ class PinyinDictionaryFragment : Fragment(), OnItemChangedListener<PinyinDiction
                 return@launch
             }
             val entryName = fileName.substringBeforeLast('.')
-            if (ui.entries.any { it.name == entryName }) {
-                ctx.importErrorDialog(R.string.dict_already_exists)
-                return@launch
+            // v1.0.54 更新式导入：同名【用户】词库不再报错，而是合并进已有词库，
+            // 重复词/词组提高优先级；仅与内置词库同名时保留原报错（内置词库不可替换）
+            val existing = ui.entries.filterIsInstance<LibIMEDictionary>()
+                .firstOrNull { it.name == entryName }
+            if (existing != null) {
+                try {
+                    val updated = withContext(Dispatchers.IO) {
+                        val inputStream = cr.openInputStream(uri)!!
+                        PinyinDictManager.mergeUpdate(existing, inputStream, fileName).getOrThrow()
+                    }
+                    ui.updateItem(ui.indexItem(existing), updated)
+                    Toast.makeText(
+                        ctx, R.string.dict_merged, Toast.LENGTH_SHORT
+                    ).show()
+                    // 同名合并不改变 name/enable 状态，dustman 不会脏，需强制重载引擎词典
+                    reloadDict(force = true)
+                    return@launch
+                } catch (e: Exception) {
+                    ctx.importErrorDialog(e)
+                    nm.cancel(id)
+                    return@launch
+                }
             }
             NotificationCompat.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_baseline_library_books_24)
@@ -180,8 +200,8 @@ class PinyinDictionaryFragment : Fragment(), OnItemChangedListener<PinyinDiction
         }
     }
 
-    private fun reloadDict() {
-        if (!dustman.dirty) return
+    private fun reloadDict(force: Boolean = false) {
+        if (!force && !dustman.dirty) return
         resetDustman()
         // Save the reference to NotificationManager, because reloadDict() could be called
         // right before the Fragment detached from Activity, and at the time reload completes,

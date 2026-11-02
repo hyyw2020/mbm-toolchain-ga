@@ -75,6 +75,81 @@ object PinyinDictManager {
         return new
     }
 
+    /**
+     * v1.0.54 更新式导入：把新词库合并进已存在的同名用户词库，而不是报错拒绝。
+     * 合并规则：拼音+词 相同的条目视为重复，重复词/词组提高优先级
+     * （频率取 max + 0.5*min，重复导入可继续叠加，越用越靠前）。
+     */
+    fun mergeUpdate(
+        existing: LibIMEDictionary,
+        stream: InputStream,
+        fileName: String
+    ): Result<LibIMEDictionary> = runCatching {
+        val type = PinyinDictionary.Type.fromFileName(fileName)
+            ?: errorArg(R.string.exception_dict_filename, fileName)
+        val tempFile = File(appContext.cacheDir, fileName)
+        tempFile.outputStream().use { stream.copyTo(it) }
+        val incomingDict = PinyinDictionary.new(tempFile)
+            ?: errorArg(R.string.exception_dict_filename, fileName)
+        val incomingTxt = File.createTempFile("import_incoming", ".txt", appContext.cacheDir)
+        val oldTxt = File.createTempFile("import_existing", ".txt", appContext.cacheDir)
+        val mergedTxt = File.createTempFile("import_merged", ".txt", appContext.cacheDir)
+        // 输出到目标目录内，保证与目标文件同文件系统，renameTo 才能原子替换
+        val outBin = File(existing.file.parentFile, ".merge_tmp_${existing.file.name}")
+        try {
+            incomingDict.toTextDictionary(incomingTxt)
+            existing.toTextDictionary(oldTxt)
+            mergedTxt.writeText(mergeDictText(oldTxt.readText(), incomingTxt.readText()))
+            pinyinDictConv(mergedTxt.absolutePath, outBin.absolutePath, MODE_TXT_TO_BIN)
+            if (!outBin.renameTo(existing.file)) {
+                throw IOException("Failed to replace ${existing.file.absolutePath}")
+            }
+            LibIMEDictionary(existing.file)
+        } finally {
+            tempFile.delete()
+            incomingTxt.delete()
+            oldTxt.delete()
+            mergedTxt.delete()
+            outBin.delete()
+        }
+    }
+
+    /**
+     * 合并两份 libIME 文本词典（每行：词 拼音 [频率]）。
+     * 相同 (拼音, 词) 的条目聚合：freq = max(old, new) + 0.5 * min(old, new)，
+     * 使重复出现的词/词组排序概率显著上升；重复导入同一文件也会继续提权。
+     * 无频率的条目（2 列行）按 0 处理，输出时省略频率列。
+     */
+    private fun mergeDictText(oldText: String, newText: String): String {
+        val map = LinkedHashMap<String, Double>()
+        fun feed(line: String) {
+            val tokens = line.trim().split(' ', '\t').filter { it.isNotEmpty() }
+            if (tokens.size < 2) return
+            val freq = if (tokens.size >= 3) tokens[2].toDoubleOrNull() ?: return else 0.0
+            val word = tokens[0]
+            val pinyin = tokens[1]
+            val key = "$pinyin\u0000$word"
+            val merged = map[key]
+            map[key] = if (merged == null) freq
+            else maxOf(merged, freq) + minOf(merged, freq) * 0.5
+        }
+        oldText.lineSequence().forEach(::feed)
+        newText.lineSequence().forEach(::feed)
+        return buildString {
+            for ((key, freq) in map) {
+                val sep = key.indexOf('\u0000')
+                append(key, sep + 1, key.length)
+                append(' ')
+                append(key, 0, sep)
+                if (freq != 0.0) {
+                    append(' ')
+                    append(freq)
+                }
+                append('\n')
+            }
+        }
+    }
+
     fun cellDictConv(src: String, dest: String) {
         val process = Runtime.getRuntime()
             .exec(

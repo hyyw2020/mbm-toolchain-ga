@@ -66,6 +66,35 @@ object QuickPhraseManager {
         }
     }
 
+    /**
+     * v1.0.54 更新式导入：把新快速输入文件合并进已存在的同名自定义词条，而不是报错拒绝。
+     * 合并规则：完全相同的「键=短语」只保留一份；两份中都出现的条目（重复词/词组）
+     * 提到同键分组的最前，提高候选优先级；随后是仅旧文件、仅新文件的条目。
+     */
+    fun mergeUpdate(
+        existing: CustomQuickPhrase,
+        stream: InputStream,
+        fileName: String
+    ): Result<CustomQuickPhrase> = runCatching {
+        val newEntries = mutableListOf<QuickPhraseEntry>()
+        stream.bufferedReader().useLines { lines ->
+            lines.forEachIndexed { idx, line ->
+                if (line.isNotBlank()) {
+                    newEntries += QuickPhraseEntry.fromLine(line)
+                        ?: errorRuntime(R.string.exception_quickphrase_parse, "\n(${idx + 1}) $line")
+                }
+            }
+        }
+        val oldEntries = existing.loadData()
+        val oldSet = oldEntries.map { it.keyword to it.phrase }.toSet()
+        val newSet = newEntries.map { it.keyword to it.phrase }.toSet()
+        val duplicated = oldEntries.filter { it.keyword to it.phrase in newSet }
+        val oldOnly = oldEntries.filter { it.keyword to it.phrase !in newSet }
+        val newOnly = newEntries.filter { it.keyword to it.phrase !in oldSet }
+        existing.saveData(QuickPhraseData(duplicated + oldOnly + newOnly))
+        CustomQuickPhrase(existing.file, existing.isEnabled)
+    }
+
     private fun <T : QuickPhrase> listDir(
         dir: File,
         block: (File) -> T?

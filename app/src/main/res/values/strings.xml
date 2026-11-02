@@ -38,6 +38,8 @@
     <string name="importing">Importing</string>
     <string name="import_error">Import Error</string>
     <string name="dict_already_exists">Dictionary already exists</string>
+    <string name="dict_merged">Merged into existing dictionary; duplicate entries were prioritized</string>
+    <string name="quickphrase_merged">Merged into existing quick phrases; duplicate entries were deduplicated and prioritized</string>
     <string name="invalid_dict">Invalid dictionary type</string>
     <string name="whether_import_dict">Would you like to import this dictionary?</string>
     <string name="import_">Import</string>

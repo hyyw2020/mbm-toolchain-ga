@@ -38,6 +38,8 @@
     <string name="importing">正在匯入</string>
     <string name="import_error">匯入錯誤</string>
     <string name="dict_already_exists">词库已存在</string>
+    <string name="dict_merged">已合併進同名用戶詞庫，重複詞/詞組已提高優先級</string>
+    <string name="quickphrase_merged">已合併進同名快速輸入，重複條目已去重並提高優先級</string>
     <string name="invalid_dict">字典類型無效</string>
     <string name="whether_import_dict">您想要匯入此词库嗎？</string>
     <string name="import_">匯入</string>
