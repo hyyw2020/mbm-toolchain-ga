@@ -94,6 +94,10 @@ class RecallSegmenter {
             for (run in RecallTextUtils.hanRuns(line)) {
                 if (run.length <= RecallConfig.MAX_WHOLE_PHRASE_LEN) {
                     emit(best, run, CandidateSource.DICT, 0.6f)
+                } else if (run.length <= RecallConfig.MAX_RUN_WHOLE_LEN) {
+                    // v1.0.60：中等长度专名 / 标语（如「三国志王者天下」7 字、游戏名 / slogan）
+                    // 直接整词收录，避免被定长 4 字窗口切碎成无意义碎片而整词反而丢弃。
+                    emit(best, run, CandidateSource.DICT, 0.6f, forceLength = true)
                 } else {
                     var i = 0
                     while (i + RecallConfig.WINDOW_PHRASE_LEN <= run.length) {
