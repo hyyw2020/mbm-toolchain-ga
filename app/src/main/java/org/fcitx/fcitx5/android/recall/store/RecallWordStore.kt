@@ -46,19 +46,19 @@ object RecallWordStore {
 
     private val lock = ReentrantLock()
 
-    /** 历史遗留的冷词 order（v1.0.40 及更早 COLD_ORDER 误置为 1，见 RecallConfig）。 */
-    private const val LEGACY_COLD_ORDER = 1
-
     /**
-     * 本模块写过的条目判定（order ∈ {HOT_ORDER, COLD_ORDER, LEGACY_COLD_ORDER}）。
+     * 本模块写过的条目判定（order ∈ {HOT_ORDER, COLD_ORDER}）。
      *
      * 与 AppPhraseImporter 对称：两边都只删自己写过的条目，互不越界。
-     * 捕获的新词常与已安装应用名同形（「芝士录屏」），若按 value 无差别剔除，
-     * 会把应用名条目冲掉，导致「搜索应用」场景置顶失效；反之亦然。
+     * **关键约束：本判定绝不能包含 order=1。** AppPhraseImporter 的「应用搜索场景置顶」
+     * 条目正是 order=1（ORDER_APP_SEARCH），旧实现曾误带 LEGACY_COLD_ORDER=1 与之冲突：
+     * Recall 火力全开必然捕获应用名（如桌面「搜索应用」时看到的 WorkBuddy），其 commit()
+     * 合并自定义词组时会把 AppPhraseImporter 的 order=1 置顶条目当成「自己的旧冷词」误删，
+     * 导致「搜索应用」场景应用名不再置顶（降级到 order=2/8）。
+     * Recall 当前只写入 {HOT_ORDER=2, COLD_ORDER=9}，与应用名的 {1, 8} 完全错开，互不越界。
      */
     private fun isOwnEntry(p: PinyinCustomPhrase): Boolean =
-        p.order == RecallConfig.HOT_ORDER || p.order == RecallConfig.COLD_ORDER ||
-            p.order == LEGACY_COLD_ORDER
+        p.order == RecallConfig.HOT_ORDER || p.order == RecallConfig.COLD_ORDER
 
     private fun loadManaged(): MutableSet<String> =
         appContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
