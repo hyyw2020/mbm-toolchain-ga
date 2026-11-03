@@ -20,12 +20,19 @@ package org.fcitx.fcitx5.android.recall
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityService.TakeScreenshotCallback
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
+import android.os.Build.VERSION_CODES
 import android.os.SystemClock
+import androidx.core.app.NotificationCompat
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import org.fcitx.fcitx5.android.utils.notificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,10 +121,19 @@ class RecallService : AccessibilityService() {
 
         /** IME 打字时刻同步抓取：由 FcitxInputMethodService 在 commitText / 按键时调用。 */
         fun notifyTyping() = instance?.picker?.notifyTyping()
+
+        /** MBM v1.0.58：保活常驻通知（前台服务）ID 与渠道。 */
+        private const val KEEPALIVE_CHANNEL_ID = "mbm_recall_keepalive"
+        private const val KEEPALIVE_NOTIF_ID = 0x5265 // "Re"
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // MBM v1.0.58：立即提升为前台服务并挂常驻通知——这是「打开后一直打开、不被系统杀死」
+        // 的核心保活手段。若延迟到首帧之后再 startForeground，系统可能在窗口期内已回收进程
+        // （用户感知为约 40s 的「九离」/OCR 中断）。dataSync 类型对应 normal 权限、可长期常驻。
+        ensureKeepAliveChannel()
+        startForeground(KEEPALIVE_NOTIF_ID, buildKeepAliveNotification())
         // P2-5 修复：picker 惰性初始化（无 lateinit 窗口期），
         // instance 必须最后赋值——保证外部看到 instance 时全部内部状态已就绪。
         // 偏好开关（总 / OCR / 拾词 / 剪贴板）实时同步到内存字段。
@@ -184,12 +200,11 @@ class RecallService : AccessibilityService() {
             if (text != null) {
                 ingest(text, "NODE")
             }
-            // OCR 兜底：节点树取不到文字（Canvas / 游戏 / 图片）时截图 OCR。
-            // 节流完全交给 RecallOcrController 内部（OCR_MIN_INTERVAL_MS 限频 +
-            // 区域哈希去重 + inFlight 互斥），这里不再叠加活动期门控——
-            // 否则用户停在静态图片 / 游戏 UI / PDF 静止阅读超过 2s 后 hasRecentActivity() 恒为 false，
-            // 本应兜底识别的屏永远触发不了 OCR（P1-1 功能回归）。
-            if (text == null && ocrEnabled &&
+            // MBM v1.0.58：OCR 由「节点树取不到文字才兜底」改为「节点树有文字也持续跑」，
+            // 满足「每 0.1 秒 OCR 一次屏幕」的硬要求。三重门控（区域哈希去重 + inFlight 互斥 +
+            // OCR_MIN_INTERVAL_MS=100 限频）保证静止屏零开销（仅 24×24 哈希比对）、变化帧才
+            // 触发全量 PaddleOCR 推理，因此即便常跑也不会无谓耗电/卡顿。
+            if (ocrEnabled &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
             ) {
                 captureWithOcr()
@@ -213,7 +228,11 @@ class RecallService : AccessibilityService() {
         scope.launch(Dispatchers.IO) {
             RecallRepository.record(this@RecallService, pkg, label, text, source)
         }
-        if (autoAddEnabled) {
+        // MBM v1.0.58：捕获文字是否注入输入法候选栏，由 RecallConfig.INJECT_INTO_IME 统一闸门。
+        // 用户硬约束「所有训练文字数据不得出现在输入法之中」——屏幕/OCR 捕获的「训练文字」
+        // 只进剪贴板与屏幕记忆库（RecallActivity 面板可回溯），默认【不】写入 fcitx 自定义词组，
+        // 因此不再作为候选污染正常打字。已安装应用名（AppPhraseImporter）非训练文字，照常置顶候选。
+        if (autoAddEnabled && RecallConfig.INJECT_INTO_IME) {
             // 分词 + 词库合并移出拾取线程：投递到专用单线程执行器（有界队列，满则丢最旧）。
             // 拾取线程只保留 O(1) 帧哈希去重与任务投递，采样节奏不再被分词拖慢。
             val snapshot = text
@@ -304,7 +323,39 @@ class RecallService : AccessibilityService() {
 
     override fun onInterrupt() = Unit
 
+    /**
+     * MBM v1.0.58：解绑时请求系统重新绑定。
+     * 无障碍服务被系统临时解绑（而非用户手动关闭）时返回 true，系统会在可重连时再次
+     * onServiceConnected，避免长时间停留在「已开启未连接」灰色态（用户体感为「九离」）。
+     * 注意：不在此清空 instance——它由 onDestroy 统一清空，保证 isServiceRunning() 在重连间隙稳定。
+     */
+    override fun onUnbind(intent: Intent?): Boolean = true
+
+    /** 常驻通知渠道（API≥26 必须显式创建，低优先级避免打扰）。 */
+    private fun ensureKeepAliveChannel() {
+        if (Build.VERSION.SDK_INT >= VERSION_CODES.O) {
+            val ch = NotificationChannel(
+                KEEPALIVE_CHANNEL_ID,
+                getString(R.string.recall),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = getString(R.string.recall_service_description) }
+            notificationManager.createNotificationChannel(ch)
+        }
+    }
+
+    /** 保活常驻通知：ongoing + 低优先级，仅用于提升进程优先级防止被回收。 */
+    private fun buildKeepAliveNotification(): Notification =
+        NotificationCompat.Builder(this, KEEPALIVE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_baseline_sync_24)
+            .setContentTitle(getString(R.string.recall))
+            .setContentText("屏幕记忆常驻运行中 · 关闭请在系统无障碍设置中关闭本服务")
+            .setOngoing(true)
+            .setShowWhen(false)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
     override fun onDestroy() {
+        runCatching { stopForeground(android.app.Service.STOP_FOREGROUND_REMOVE) } // 退出前台、移除常驻通知（用户手动关闭或进程终止）
         instance = null
         runCatching { RecallReloader.flushNow() } // 销毁前确保最新词条 reload 生效
         runCatching { picker.dispose() } // 彻底释放拾取线程（服务销毁，不再重启）

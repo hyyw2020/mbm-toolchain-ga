@@ -932,8 +932,12 @@ class RecallActivity : FragmentActivity() {
         val connected = RecallService.isServiceRunning()
         val sysEnabled = isA11yServiceEnabledInSystem()
         val (text, color) = when {
-            connected -> "✓ 无障碍服务已连接，正在待命：切到其他应用即自动捕获" to 0xFF3FB950.toInt()
-            sysEnabled -> "⚠ 系统里已开启本服务但尚未连接：请重新关闭再打开一次，或重启手机" to 0xFFD29922.toInt()
+            // MBM v1.0.58：以「系统是否真开启」为权威判定，杜绝「没开却显示已连接」的假阳性。
+            // 旧逻辑仅凭静态 instance != null 判「已连接」，一旦服务被系统回收但 instance 未清，
+            // onResume 仍渲染「已连接」，与用户「根本没开」的体感矛盾。现仅当系统确已开启
+            // 且实例存活才显示已连接；系统未开启则一律判「未开启」。
+            sysEnabled && connected -> "✓ 无障碍服务已连接，正在常驻待命：切到其他应用即自动捕获" to 0xFF3FB950.toInt()
+            sysEnabled -> "⚠ 系统里已开启本服务但尚未连接：正在自动重连，或重启手机" to 0xFFD29922.toInt()
             else -> "✗ 系统无障碍里还未开启本服务：点上方「打开系统无障碍设置」找到 MBM 并开启" to 0xFFE5534B.toInt()
         }
         serviceStatus?.text = text
@@ -942,14 +946,21 @@ class RecallActivity : FragmentActivity() {
 
     /** 系统设置里这个 AccessibilityService 是否处于启用状态 */
     private fun isA11yServiceEnabledInSystem(): Boolean {
-        val expected = android.content.ComponentName(packageName, RecallService::class.java.name)
         // API 37 stubs 起废弃包 android.accessibility.* 已从编译类路径移除，
-        //  canonical 服务类在 android.view.accessibility（getSystemService 实际返回的也是它）
+        // canonical 服务类在 android.view.accessibility（getSystemService 实际返回的也是它）
         val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as? android.view.accessibility.AccessibilityManager
             ?: return false
+        val cls = RecallService::class.java.name // org.fcitx.fcitx5.android.recall.RecallService
         return runCatching {
             am.getEnabledAccessibilityServiceList(android.view.accessibility.AccessibilityEvent.TYPES_ALL_MASK)
-                .any { android.content.ComponentName.unflattenFromString(it.id) == expected }
+                .any { info ->
+                    val id = info.id ?: return@any false
+                    // 优先精确匹配组件名；退化匹配：同包且类名以 recall.RecallService 结尾，
+                    // 抵御 unflattenFromString 在不同 Android 版本上的解析差异（v1.0.26 同款坑的兜底）。
+                    android.content.ComponentName.unflattenFromString(id)
+                        ?.let { it == android.content.ComponentName(packageName, cls) }
+                        ?: (id.startsWith("$packageName/") && id.endsWith("recall.RecallService"))
+                }
         }.getOrDefault(false)
     }
 

@@ -13,6 +13,9 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- MBM v1.0.58：屏幕记忆无障碍服务常驻前台（保活）所需的前台服务类型权限（normal，安装即授予） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- MBM: 全离线应用，移除 onnxruntime-android 等依赖注入的网络权限 -->
     <uses-permission
@@ -233,6 +236,7 @@
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:label="@string/recall"
             android:description="@string/recall_service_description"
+            android:foregroundServiceType="dataSync"
             tools:ignore="DeviceConfigAccessible">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
