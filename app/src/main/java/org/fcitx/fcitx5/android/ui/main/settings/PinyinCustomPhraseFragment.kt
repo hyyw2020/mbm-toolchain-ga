@@ -12,6 +12,8 @@ package org.fcitx.fcitx5.android.ui.main.settings
 import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
@@ -320,14 +322,14 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
                     !enabled -> "应用名快捷输入：已关闭"
                     apps == 0 -> "⚠ 读到 0 个应用：本 ROM 可能限制了包可见性，将在下次启动自动重试"
                     !imported -> "⚠ 已读到 $apps 个应用 / $entries 条候选，但尚未写入词库（下次启动自动重试）"
-                    else -> "✓ 已导入 $apps 个应用 / $entries 条候选（在「搜索应用」等界面输入首字母即出）"
+                    else -> "✓ 已导入 $apps 个应用 / $entries 条候选（在「搜索应用」界面输入首字母 m、或完整缩写 qmqz 即出）"
                 }
                 withContext(Dispatchers.Main) { appPhraseStats.text = msg }
             }
         }
         refreshAppStats()
         val appPhraseSwitch = SwitchMaterial(ctx).apply {
-            text = "应用名快捷输入：输入首字母直接出应用名（如 qmqz→全民枪战2）"
+            text = "应用名快捷输入：输入首字母直接出应用名（搜索应用框输入 m→MT管理器、qmqz→全民枪战2）"
             textSize = 13f
             isChecked = AppPhraseImporter.isEnabled(ctx)
             setOnCheckedChangeListener { _, checked ->
@@ -346,7 +348,14 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
                     Toast.makeText(ctx, "正在刷新应用名单…", Toast.LENGTH_SHORT).show()
                     AppPhraseImporter.refresh(ctx, viewModel.fcitx)
                     refreshAppStats()
-                    Toast.makeText(ctx, "应用名单已刷新", Toast.LENGTH_SHORT).show()
+                    // v1.0.62：toast 带上真实条数，刷新是否成功一目了然（不再只有一句「已刷新」）
+                    val (apps, entries) = AppPhraseImporter.stats(ctx)
+                    Toast.makeText(
+                        ctx,
+                        "应用名单已刷新：$apps 个应用 / $entries 条候选" +
+                            if (apps == 0) "（读到 0 个：ROM 限制了包可见性，将自动重试）" else "",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -505,6 +514,10 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         }
         applyPinIcon(btn, entry)
         applyFilter()
+        // MBM v1.0.62：置顶/锁定/增删改不再等 onStop 才落盘 —— 去抖 250ms 后立即
+        // 保存 + reload 引擎，否则用户点完置顶切到输入框，候选顺序依旧是旧的
+        //（用户反馈「置顶+锁定按钮没有实时生效」）。
+        scheduleSave()
     }
 
     private fun applyPinIcon(btn: ImageButton, entry: PinyinCustomPhrase) {
@@ -525,6 +538,24 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         if (idx >= 0) ui.notifyItemChanged(idx)
         // 若当前正处于「已锁定 / 未锁定」筛选，锁定状态变化后即时刷新列表
         applyFilter()
+        // v1.0.62：即时保存 + reload（见 togglePin 注释）
+        scheduleSave()
+    }
+
+    // ============ 即时保存（v1.0.62）============
+
+    /**
+     * 增删改/置顶/锁定 → 去抖 250ms 落盘并 reload 引擎。
+     * 旧实现只在 onStop 保存：用户点完置顶/锁定直接切输入框时，短时间内候选仍是
+     * 旧顺序（甚至旧词组），表现为「按钮没有实时生效」。去抖合并连续点击，避免
+     * 每次点击都全量落盘大词库。
+     */
+    private val saveHandler = Handler(Looper.getMainLooper())
+    private val saveRunnable = Runnable { saveConfig() }
+
+    private fun scheduleSave() {
+        saveHandler.removeCallbacks(saveRunnable)
+        saveHandler.postDelayed(saveRunnable, SAVE_DEBOUNCE_MS)
     }
 
     private fun applyLockIcon(btn: ImageButton, entry: PinyinCustomPhrase) {
@@ -774,24 +805,31 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
 
     override fun onItemAdded(idx: Int, item: PinyinCustomPhrase) {
         dustman.addOrUpdate(item.serialize(), item)
+        scheduleSave()
     }
 
     override fun onItemRemoved(idx: Int, item: PinyinCustomPhrase) {
         dustman.remove(item.serialize())
+        scheduleSave()
     }
 
     override fun onItemRemovedBatch(indexed: List<Pair<Int, PinyinCustomPhrase>>) {
         batchRemove(indexed)
+        scheduleSave()
     }
 
     override fun onItemUpdated(idx: Int, old: PinyinCustomPhrase, new: PinyinCustomPhrase) {
         dustman.remove(old.serialize())
         dustman.addOrUpdate(new.serialize(), new)
+        scheduleSave()
     }
 
     override fun onDestroyView() {
         // MBM v1.0.24：离开页面取消进行中的分帧渲染，协程内已用 isAdded/context 双保险
         smartRenderJob?.cancel()
+        // v1.0.62：视图销毁前把挂起的即时保存直接执行掉，避免去抖窗口内丢改动
+        saveHandler.removeCallbacks(saveRunnable)
+        if (dustman.dirty) saveConfig()
         super.onDestroyView()
     }
 
@@ -864,6 +902,8 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         const val MANAGE_CUSTOM_PHRASE = "Manage Custom Phrase"
         // 用户自定义词组未置顶时的默认排序档（高于 Recall 冷词/应用名普通档，低于应用名搜索档）
         const val USER_DEFAULT_ORDER = 5
+        // v1.0.62：即时保存去抖窗口（ms）
+        private const val SAVE_DEBOUNCE_MS = 250L
         // 三段切换高亮配色（深色，固定值避免主题属性解析风险）
         private val SEG_ON_BG = 0xFF2F81F7.toInt()
         private val SEG_OFF_BG = 0xFF21262D.toInt()

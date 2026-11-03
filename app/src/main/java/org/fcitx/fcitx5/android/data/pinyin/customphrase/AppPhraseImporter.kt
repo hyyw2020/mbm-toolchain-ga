@@ -117,16 +117,25 @@ object AppPhraseImporter {
     // ---------- 条目生成 ----------
 
     /**
-     * 应用名 → 拼音键集合。
-     * - 首字母缩写：「全民枪战2」→ qmqz / qmqz2
-     * - 全拼：「全民枪战2」→ quanminqiangzhan / quanminqiangzhan2
+     * 应用名 / 捕获词组 → 拼音键集合。
+     *
+     * MBM v1.0.62 键去重：同一个名字只生成**一个首字母缩写主键**（± 英文/数字原文后缀），
+     * 不再额外生成全拼键，也绝不再生成含汉字的兜底键 —— 旧方案一个名字产出 3~4 个键
+     * （首字母 / 全拼 / 原文汉字串），词库列表里同值条目排成一串（用户反馈「识别出来
+     * 三个海一耶哇，重复了」）。全拼键去除后，输入全拼不再命中自动条目，但首字母缩写
+     * （界面宣传的标准输入方式）不受影响。
+     *
+     * - 首字母缩写：「全民枪战2」→ qmqz / qmqz2；「海一耶哇」→ hyyw（仅 1 键）
      * - 纯英文/数字名：「Salt Player」→ saltplayer / sp
+     * - [includeSingleLetter]：「搜索应用」场景专用 —— native 对自定义词组是
+     *   **键精确匹配**（CustomPhraseDict::lookup → exactMatchSearch），输入 "m" 永远
+     *   匹配不上 "mtglq"，必须补一个单字母键（如 MT管理器 → m）才能「输入首字母即出」。
+     *   仅在该场景生成、切回普通场景时随 rebuild 移除，不污染日常输入。
      */
-    fun keysForName(name: String): Set<String> {
+    fun keysForName(name: String, includeSingleLetter: Boolean = false): Set<String> {
         val keys = mutableSetOf<String>()
         val ini = PinyinUtils.initials(name)
-        val full = PinyinUtils.fullPinyin(name)
-        // 名字中的非汉字片段（英文词、数字），按原顺序拼接为后缀/前缀
+        // 名字中的非汉字片段（英文词、数字），按原顺序拼接为后缀
         val extras = Regex("[A-Za-z0-9]+").findAll(name)
             .map { it.value.lowercase() }
             .toList()
@@ -134,22 +143,19 @@ object AppPhraseImporter {
             keys += it
             if (extras.isNotEmpty()) keys += it + extras.joinToString("")
         }
-        full?.let {
-            keys += it
-            if (extras.isNotEmpty()) keys += it + extras.joinToString("")
-        }
-        // 数字前缀名（4399游戏盒 / 12306）：用户习惯「数字+首字母」（4399yxh）
-        val digitPrefix = name.takeWhile { it.isDigit() }
-        if (digitPrefix.isNotEmpty()) {
-            ini?.let { keys += digitPrefix + it }
-            full?.let { keys += digitPrefix + it }
-        }
-        // 纯非汉字名（ICU 转换可能失败/失真）：直接用原名小写去空格 + 首字母
-        val ascii = name.lowercase().filter { it.isLetterOrDigit() }
-        if (ascii.isNotEmpty()) {
-            keys += ascii
+        // 纯 ASCII 名（英文/数字应用名，ICU 转写无增益）：原名小写去分隔符 + 单词首字母
+        // 注意只保留纯 ASCII 结果 —— 旧实现用 isLetterOrDigit 过滤，汉字也算 letter，
+        // 会把「MT管理器」原样当成键写进词组表（永远无法输入的死条目，纯占行）。
+        val asciiName = name.filter { it.code < 128 && it.isLetterOrDigit() }
+        if (asciiName.isNotEmpty()) {
+            keys += asciiName.lowercase()
             val words = name.split(Regex("[^A-Za-z0-9]+")).filter { it.isNotEmpty() }
             if (words.size > 1) keys += words.map { it.first().lowercaseChar() }.joinToString("")
+        }
+        if (includeSingleLetter) {
+            val first = ini?.firstOrNull()?.lowercaseChar()
+                ?: asciiName.lowercase().firstOrNull()
+            if (first != null) keys += first.toString()
         }
         return keys.filter { it.length in 1..32 }.toSet()
     }
@@ -188,10 +194,14 @@ object AppPhraseImporter {
         return fallback
     }
 
-    private fun generateEntries(ctx: Context, order: Int): List<PinyinCustomPhrase> {
+    private fun generateEntries(
+        ctx: Context,
+        order: Int,
+        includeSingleLetter: Boolean = false
+    ): List<PinyinCustomPhrase> {
         if (!isEnabled(ctx)) return emptyList()
         return queryLauncherApps(ctx).flatMap { name ->
-            keysForName(name).map { key -> PinyinCustomPhrase(key, order, name) }
+            keysForName(name, includeSingleLetter).map { key -> PinyinCustomPhrase(key, order, name) }
         }
     }
 
@@ -227,14 +237,19 @@ object AppPhraseImporter {
 
     private fun rebuildLocked(ctx: Context, scene: Int) {
         val order = if (scene == SCENE_APP_SEARCH) ORDER_APP_SEARCH else ORDER_NORMAL
-        val fresh = generateEntries(ctx, order)
+        // v1.0.62：单字母键仅在「搜索应用」场景生成（native 键精确匹配，见 keysForName）
+        val fresh = generateEntries(ctx, order, includeSingleLetter = scene == SCENE_APP_SEARCH)
         val managedKeys = fresh.map { managedKeyOf(it) }.toSet()
         // MBM v1.0.31：缓存版 load/save（词库无上限 + 大词库免重复全量 JNI load）
         val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull() ?: emptyArray()
         val oldManaged = prefs(ctx).getStringSet(KEY_MANAGED, emptySet()) ?: emptySet()
-        // 只剔除本模块自己写过的条目（order ∈ {1, 8}），见 [isOwnEntry] 注释。
+        // 只剔除本模块自己写过的条目（order ∈ {2, 8}），见 [isOwnEntry] 注释。
         val kept = existing.filterNot { isOwnEntry(it) && oldManaged.contains(managedKeyOf(it)) }
-        val merged = kept + fresh
+        // v1.0.62 同键同值去重：native 对 (key,value) 完全相同的条目只取 order 最小者，
+        // 落盘前合并为一行（列表不再出现同键同值的重复行）；用户置顶（order=1）必然保留。
+        val merged = (kept + fresh)
+            .groupBy { "${it.key}=${it.value}" }
+            .map { g -> g.value.minByOrNull { it.order }!! }
         runCatching { CustomPhraseManager.saveCached(merged.toTypedArray()) }
             .onFailure { Timber.w(it, "MBM: save app phrase entries failed") }
         prefs(ctx).edit()

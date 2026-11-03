@@ -36,11 +36,15 @@ object RecallConfig {
 
     // ---- 生效层（C1/C2/C3：逐词写 + 批量 reload + ack 闭环）----
 
-    /** 批量 reload 去抖窗口（ms）：落盘后在此窗口内合并多次请求。 */
-    const val RELOAD_DEBOUNCE_MS = 400L
+    /**
+     * 批量 reload 去抖窗口（ms）：落盘后在此窗口内合并多次请求。
+     * v1.0.62：400 → 100 —— 用户硬要求「捕获后立即可打出」（0.1 秒级识别语义）；
+     * reload 是进程内 re-parse（千级条目 <10ms），100ms 去抖已足够合并同帧多次写入。
+     */
+    const val RELOAD_DEBOUNCE_MS = 100L
 
     /** 两次 reload 的最小间隔（ms），防止高频抖动刷 reload。 */
-    const val RELOAD_MIN_INTERVAL_MS = 300L
+    const val RELOAD_MIN_INTERVAL_MS = 250L
 
     // ---- 分词层（B1/B3/B4：双通道 + 专名模型 + 三层过滤）----
 

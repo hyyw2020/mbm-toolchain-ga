@@ -22,6 +22,7 @@ import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PinyinCustomPhrase
 import org.fcitx.fcitx5.android.recall.RecallConfig
+import org.fcitx.fcitx5.android.recall.data.RecallAuditLog
 import org.fcitx.fcitx5.android.recall.segment.CandidateSource
 import org.fcitx.fcitx5.android.recall.segment.RecallCandidate
 import org.fcitx.fcitx5.android.utils.appContext
@@ -78,6 +79,9 @@ object RecallWordStore {
         if (candidates.isEmpty()) return
         val batch = if (candidates.size > RecallConfig.CANDIDATE_BATCH_CAP)
             candidates.take(RecallConfig.CANDIDATE_BATCH_CAP) else candidates
+        val managedBeforeCommit = managed.toSet()
+        // v1.0.62 可观测：锁内算出「本次新增」词条，锁外写审计日志
+        var addedValues: List<String> = emptyList()
         lock.withLock {
             val now = System.currentTimeMillis()
             // 冷热分层修复：order 必须基于「本次出现之前」的 seen 计算。
@@ -93,6 +97,8 @@ object RecallWordStore {
             for (p in freshPhrases) seen[p] = now
 
             val freshEntries = batch.flatMap { cand ->
+                // v1.0.62 键去重：keysForName 现在只产出首字母缩写主键（纯汉字词 1 键），
+                // 同一词组不再生成 全拼键/汉字原文键 等 2~3 行重复条目。
                 val keys = AppPhraseImporter.keysForName(cand.phrase)
                 val order = orders[cand.phrase] ?: RecallConfig.COLD_ORDER
                 keys.map { PinyinCustomPhrase(it, order, cand.phrase) }
@@ -103,10 +109,16 @@ object RecallWordStore {
             val nextManaged = CustomPhraseManager.withWriteLock {
                 val existing = runCatching { CustomPhraseManager.loadCached() }
                     .getOrNull() ?: emptyArray()
-                // 只剔除本模块写过的旧条目：应用名条目（order ∈ {1,8}）与用户自造词组保留
+                // 只剔除本模块写过的旧条目：应用名条目（order ∈ {2,8}）与用户自造词组保留
                 val kept = existing.filterNot { isOwnEntry(it) && it.value in managed }
 
-                var merged = (kept + freshEntries).toMutableList()
+                // v1.0.62 同键同值去重：与 AppPhraseImporter.rebuildLocked 同范式 ——
+                // native 对 (key,value) 相同的条目只取 order 最小者，落盘前合并为一行，
+                // 词库列表不再出现「同一词组多行重复」（用户反馈的三个海一耶哇）。
+                var merged = (kept + freshEntries)
+                    .groupBy { "${it.key}=${it.value}" }
+                    .map { g -> g.value.minByOrNull { it.order }!! }
+                    .toMutableList()
                 val managed2 = (managed + freshPhrases).toMutableSet()
 
                 // 超过硬上限 → 按最久未出现 LRU 淘汰最冷
@@ -133,6 +145,17 @@ object RecallWordStore {
             trimSeenLocked()
             managed = nextManaged
             persistManaged()
+            addedValues = freshPhrases.filterNot { managedBeforeCommit.contains(it) }
+        }
+        // v1.0.62 可观测：注入结果写审计日志 —— 用户排障「屏幕上明明有、打字却出不来」时，
+        // Recall 面板的审计列表能直接看到注入了哪些词条（键=首字母），链路不再黑盒。
+        if (addedValues.isNotEmpty()) {
+            RecallAuditLog.log(
+                RecallAuditLog.ACTION_AUTO_PHRASE,
+                "自动注入 ${addedValues.size} 词条（键=首字母缩写）：" +
+                    addedValues.take(5).joinToString("、") +
+                    if (addedValues.size > 5) " 等" else ""
+            )
         }
         RecallReloader.scheduleReload()
     }

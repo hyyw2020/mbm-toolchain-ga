@@ -18,6 +18,7 @@ import android.os.Looper
 import org.fcitx.fcitx5.android.core.reloadPinyinCustomPhrase
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.recall.RecallConfig
+import org.fcitx.fcitx5.android.recall.data.RecallAuditLog
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -29,12 +30,16 @@ object RecallReloader {
     @Volatile
     private var lastReloadAt = 0L
 
+    /** v1.0.62：上次 reload 是否失败（用于审计日志只在状态翻转时记一条）。 */
+    @Volatile
+    private var lastFailed = false
+
     /** ack 回调：reload 已排期执行时通知上层（用于验收「<2s 候选可用」）。 */
     @Volatile
     var onAck: ((success: Boolean) -> Unit)? = null
 
     /** fcitx 未就绪时的最大重试次数：超过即放弃本次排期，避免永久空转轮询耗电。 */
-    private const val MAX_RETRY = 10
+    private const val MAX_RETRY = 240
 
     @Volatile
     private var retryCount = 0
@@ -59,10 +64,14 @@ object RecallReloader {
         val conn = FcitxDaemon.getFirstConnectionOrNull()
         if (conn == null) {
             // fcitx 尚未就绪（输入法进程刚起 / 未连）：稍后重试，不丢词条。
-            // 但有上限——旧实现无上限重试，输入法未启用时会永久每 300ms 空转一次。
+            // v1.0.62：10 次 × 250ms = 2.5s 就放弃是「捕获了却打不出」的直接原因之一 ——
+            // 捕获常发生在键盘未弹起时（刚切到别的应用），2.5s 内引擎往往还没就绪，
+            // 放弃后引擎永远不会 reload。放宽到 240 次（60s）：postDelayed 空转开销可忽略；
+            // 用户开键盘后引擎就绪，随即补上 reload，词条必然生效。
             if (++retryCount > MAX_RETRY) {
                 Timber.w("MBM Recall: reload abandoned, fcitx unavailable after $MAX_RETRY retries")
                 retryCount = 0
+                markFailed("引擎 60s 内未就绪，本次 reload 放弃（词条已落盘，下次捕获/保存会补生效）")
                 onAck?.invoke(false)
                 return
             }
@@ -80,16 +89,35 @@ object RecallReloader {
             conn.lifecycleScope.launch {
                 // 失败在协程内捕获（runOnReady 若在连接断开后执行会抛 IllegalStateException）
                 runCatching { conn.runOnReady { reloadPinyinCustomPhrase() } }
-                    .onSuccess { Timber.d("MBM Recall: reloadPinyinCustomPhrase done") }
-                    .onFailure { Timber.w(it, "MBM Recall: reload failed") }
+                    .onSuccess {
+                        Timber.d("MBM Recall: reloadPinyinCustomPhrase done")
+                        // v1.0.62 可观测：失败恢复后补一条成功记录（审计面板可见链路闭合）
+                        if (lastFailed) {
+                            lastFailed = false
+                            RecallAuditLog.log(
+                                RecallAuditLog.ACTION_AUTO_PHRASE, "引擎 reload 恢复成功，词组候选已生效"
+                            )
+                        }
+                    }
+                    .onFailure {
+                        Timber.w(it, "MBM Recall: reload failed")
+                        markFailed("引擎 reload 失败：${it.message ?: it.javaClass.simpleName}")
+                    }
             }
         }.onSuccess {
             Timber.d("MBM Recall: reloadPinyinCustomPhrase scheduled")
             onAck?.invoke(true)
         }.onFailure {
             Timber.w(it, "MBM Recall: reload failed")
-            onAck?.invoke(false)
+            markFailed("引擎 reload 排期失败：${it.message ?: it.javaClass.simpleName}")
         }
+    }
+
+    /** v1.0.62：reload 失败落审计日志（仅状态翻转时记一条，避免刷屏）。 */
+    private fun markFailed(reason: String) {
+        if (lastFailed) return
+        lastFailed = true
+        RecallAuditLog.log(RecallAuditLog.ACTION_AUTO_PHRASE, reason)
     }
 
     /** 立即触发一次 reload（服务销毁前确保最新词条生效）。 */

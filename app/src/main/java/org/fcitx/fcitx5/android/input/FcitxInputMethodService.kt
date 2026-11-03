@@ -70,6 +70,7 @@ import org.fcitx.fcitx5.android.core.KeyStates
 import org.fcitx.fcitx5.android.core.KeySym
 import org.fcitx.fcitx5.android.core.ScancodeMapping
 import org.fcitx.fcitx5.android.core.SubtypeManager
+import org.fcitx.fcitx5.android.core.reloadPinyinCustomPhrase
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.InputFeedbacks
@@ -268,6 +269,10 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             withContext(Dispatchers.IO) {
                 AppPhraseImporter.ensureImported(this@FcitxInputMethodService, fcitx)
             }
+            // MBM v1.0.62：引擎就绪后立即补一次 Recall 词组 reload —— 捕获常发生在
+            // 键盘未弹起时（fcitx 未就绪，reload 只能重试等待）；这里兜底保证
+            // 「键盘一弹出，已捕获词组立刻可打」，补齐 0.1s 级生效链路的最后一环。
+            runCatching { fcitx.runOnReady { reloadPinyinCustomPhrase() } }
         }
         // MBM v1.0.46：个人学习 → 候选预测闭环。
         //  - 启动后先把历史高频个人词同步进候选（首屏即用）；
