@@ -228,7 +228,7 @@ class RecallActivity : FragmentActivity() {
             text = "这些数据怎么用？勾选下方记录 → " +
                 "①「导入到输入法」写入输入法剪贴板候选，打字时点剪贴板按钮一键上屏；" +
                 "②「导出为词组」把文本里的中文词组智能提炼成自定义词组（键=拼音首字母，" +
-                "如“玩机技巧”→wjjq，顺序 2，输入 wjjq 时出现在候选第 2 位）；" +
+                "如“玩机技巧”→wjjq，顺序 3，输入 wjjq 时出现在候选第 3 位）；" +
                 "③「导出为文本」留存到本机文件。所有数据不出本机，下方「数据去向」记录每一次去向。" +
                 "开启「捕获后自动写入自定义词组」后，屏幕捕获到的中文会无需任何手动操作、自动提炼成词组并立即可用；" +
                 "开启「捕获后自动写入剪贴板」后，捕获到的文本会直接进入输入法剪贴板候选（只写剪贴板库、" +
@@ -337,7 +337,7 @@ class RecallActivity : FragmentActivity() {
             setOnClickListener { exportSelected() }
         }
         // 智能组词：把捕获文本里提炼出的 2~4 字中文词组写入 fcitx 自定义词组，
-        // 键 = 拼音首字母（"玩机技巧" → wjjq），顺序 = 2（输入 wjjq 后候选第 2 位出现该词组）。
+        // 键 = 拼音首字母（"玩机技巧" → wjjq），顺序 = 3（输入 wjjq 后候选第 3 位出现该词组）。
         phraseButton = MaterialButton(this).apply {
             text = "导出为词组"
             layoutParams = linearParams(1f)
@@ -976,8 +976,6 @@ class RecallActivity : FragmentActivity() {
         /** MBM v1.0.31：分页加载的每页条数（keyset 分页，历史无上限） */
         private const val PAGE_SIZE = 300
 
-        /** 自定义词组默认顺序：order-1 即候选位置，2 = 候选第 2 位 */
-        private const val PHRASE_ORDER = 2
         private const val MIN_PHRASE_LEN = 2
         /** ≤ 该长度的连续汉字段直接整段成词（应用名/短词场景，如 5 字的「快手极速版」） */
         private const val MAX_WHOLE_PHRASE_LEN = 6
@@ -989,6 +987,9 @@ class RecallActivity : FragmentActivity() {
         private const val COLOR_PANEL = 0xFF161B22.toInt()
         private const val COLOR_FG = 0xFFE6EDF3.toInt()
         private const val COLOR_DIM = 0xFF7D8590.toInt()
+
+        /** 自定义词组默认顺序：order-1 即候选位置，3 = 候选第 3 位（1 预留给用户「置顶」档）。 */
+        private const val PHRASE_ORDER = 3
 
         /**
          * MBM 冻结方案（同进程内嵌）：RecallActivity 现为主输入法 APK 内的一个 Activity，

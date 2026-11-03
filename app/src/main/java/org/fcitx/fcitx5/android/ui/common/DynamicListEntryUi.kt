@@ -77,6 +77,14 @@ class DynamicListEntryUi(override val ctx: Context) : Ui {
         }
     }
 
+    /** 置顶按钮（置顶/取消置顶，最高优先级档）。默认 GONE，由调用方按需启用。 */
+    val pinButton = imageButton {
+        background = styledDrawable(android.R.attr.selectableItemBackground)
+        imageDrawable = drawable(R.drawable.ic_baseline_arrow_upward_24)!!.apply {
+            setTint(styledColor(android.R.attr.colorControlNormal))
+        }
+    }
+
     override val root: View = constraintLayout {
         layoutParams = ViewGroup.LayoutParams(matchParent, wrapContent)
         backgroundColor = styledColor(android.R.attr.colorBackground)
@@ -124,6 +132,13 @@ class DynamicListEntryUi(override val ctx: Context) : Ui {
         })
 
         add(editButton, lParams {
+            width = dp(53)
+            height = matchConstraints
+            centerVertically()
+            before(pinButton)
+        })
+
+        add(pinButton, lParams {
             width = dp(53)
             height = matchConstraints
             centerVertically()

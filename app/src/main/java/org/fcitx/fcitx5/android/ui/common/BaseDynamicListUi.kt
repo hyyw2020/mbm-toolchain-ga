@@ -61,6 +61,7 @@ abstract class BaseDynamicListUi<T>(
     enableOrder: Boolean = false,
     initCheckBox: (CheckBox.(T) -> Unit) = { visibility = View.GONE },
     initSettingsButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE },
+    initPinButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE },
 ) : Ui,
     DynamicListAdapter<T>(
         initialEntries,
@@ -68,7 +69,8 @@ abstract class BaseDynamicListUi<T>(
         enableOrder,
         initCheckBox,
         initEditButton = {},
-        initSettingsButton
+        initSettingsButton,
+        initPinButton
     ) {
 
     protected var shouldShowFab = false

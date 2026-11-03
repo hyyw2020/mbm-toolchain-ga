@@ -14,7 +14,7 @@
  *  - key = 应用名首字母缩写（qmqz）/ 全拼（quanminqiangzhan）/ 纯英文原名（saltplayer）
  *  - value = 完整应用名（「全民枪战2」，上屏即可被搜索界面命中）
  *  - order 按输入场景动态切换（见 [onSceneChanged]）：
- *      应用搜索场景（hint「搜索应用」/ 桌面类包名）→ order=1 置顶，第一候选即应用名；
+ *      应用搜索场景（hint「搜索应用」/ 桌面类包名）→ order=2 置顶（用户手动置顶档 order=1 更高），第一候选即应用名；
  *      普通场景 → order=8 靠后不打扰常用词，用户选过一次后可在设置里手动置顶。
  *
  * 写入条目全部登记在 SharedPreferences 的 managed 集合中（key=value 为管理键），
@@ -49,8 +49,12 @@ object AppPhraseImporter {
     /** 普通输入场景：应用候选排第 8 位左右（第一页内，不挤占常用词） */
     private const val ORDER_NORMAL = 8
 
-    /** 应用搜索场景：order=1 置顶，第一候选即应用名 */
-    private const val ORDER_APP_SEARCH = 1
+    /**
+     * 应用搜索场景：order=2 —— 第一候选即应用名。
+     * 注意：order=1 已预留给用户「置顶」档（PIN_ORDER=1），故应用搜索场景从 2 起，
+     * 保证用户置顶的词永远压过应用名（见 PinyinCustomPhraseFragment / RecallConfig）。
+     */
+    private const val ORDER_APP_SEARCH = 2
 
     const val SCENE_NORMAL = 0
     const val SCENE_APP_SEARCH = 1
@@ -192,7 +196,7 @@ object AppPhraseImporter {
     }
 
     /**
-     * 本模块写过的条目判定（order ∈ {ORDER_APP_SEARCH=1, ORDER_NORMAL=8}）。
+     * 本模块写过的条目判定（order ∈ {ORDER_APP_SEARCH=2, ORDER_NORMAL=8}）。
      *
      * 关键背景（v1.0.41 修复）：应用名与 Recall 屏幕记忆捕获的新词经常是同一个 value
      * （「芝士录屏」既是已安装应用名，也会被屏幕记忆捕获），两者 key=value 完全同形。
@@ -202,7 +206,8 @@ object AppPhraseImporter {
      * 表现为「桌面搜索框能出、其它输入框出不来」的即时性失效。
      *
      * 按 order 归属剔除后两者可以共存：同一 key 的多条目由 native 取 order 最小者，
-     * 应用搜索场景 order=1 置顶，普通场景 Recall 的 order=2 靠前 —— 全场景即时可见。
+     * 应用搜索场景 order=2 置顶（用户置顶档 order=1 更高，仅在用户主动置顶时让位），
+     * 普通场景 Recall 的 order=3 靠前 —— 全场景即时可见。
      */
     private fun isOwnEntry(p: PinyinCustomPhrase): Boolean =
         p.order == ORDER_APP_SEARCH || p.order == ORDER_NORMAL

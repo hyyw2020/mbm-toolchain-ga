@@ -43,6 +43,8 @@ import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PinyinCustomPhrase
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PhraseLockStore
+import org.fcitx.fcitx5.android.data.pinyin.customphrase.PhrasePinStore
+import org.fcitx.fcitx5.android.recall.RecallConfig
 import org.fcitx.fcitx5.android.ui.common.BaseDynamicListUi
 import org.fcitx.fcitx5.android.ui.common.OnItemChangedListener
 import org.fcitx.fcitx5.android.ui.main.EditDeleteMenuProvider
@@ -73,9 +75,11 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
 
     private lateinit var ui: BaseDynamicListUi<PinyinCustomPhrase>
 
-    private lateinit var searchListView: ViewGroup
-
     private var searchQuery: String = ""
+
+    // MBM（词库 UI 统一）：锁定筛选（0=全部 1=已锁定 2=未锁定）+ 筛选按钮引用
+    private var lockFilter: Int = 0
+    private lateinit var lockFilterButtons: List<AppCompatButton>
 
     // MBM v1.0.22：统一「用户词库」屏的附属状态
     private lateinit var smartListView: LinearLayout
@@ -83,25 +87,8 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
     private var dictEntries: List<SmartDictManager.DictEntry> = emptyList()
     private val dictSelection = mutableSetOf<Int>()
 
-    // MBM v1.0.23：视觉去重开关（同词组只出现一次；重复识别/统计不受影响）
-    private lateinit var dedupListView: LinearLayout
-    private lateinit var dedupScrollView: ScrollView
-    private var dedupVisual: Boolean = true
-
     // MBM v1.0.24：分帧渲染防 OOM/ANR（与 RecallActivity 同源策略，pitfalls #38/#40）。
-    // 无上限化后词库可达数千~数万条，主线程一次性构建全部 View 会直接崩溃。
-    private var dedupRenderJob: Job? = null
     private var smartRenderJob: Job? = null
-    // 批量转存期间抑制逐条刷新去重视图，结束后统一刷一次
-    private var suppressDedupRefresh = false
-
-    private fun loadDedupPref(): Boolean =
-        requireContext().getSharedPreferences(PREF_USER_VOCAB, Context.MODE_PRIVATE)
-            .getBoolean(KEY_DEDUP_VISUAL, true)
-
-    private fun saveDedupPref(v: Boolean) =
-        requireContext().getSharedPreferences(PREF_USER_VOCAB, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_DEDUP_VISUAL, v).apply()
 
     private val dustman = NaiveDustman<PinyinCustomPhrase>()
 
@@ -147,6 +134,11 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
                 // 锁定/解锁按钮：显示当前锁状态，点击切换
                 applyLockIcon(this, entry)
                 setOnClickListener { toggleLock(entry, this) }
+            },
+            initPinButton = { entry ->
+                // 置顶/取消置顶按钮：显示当前置顶状态，点击切换（最高优先级档，order=1）
+                applyPinIcon(this, entry)
+                setOnClickListener { togglePin(entry, this) }
             }
         ) {
             override fun showEntry(x: PinyinCustomPhrase): String {
@@ -155,15 +147,19 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
             }
 
             override fun showSubEntry(x: PinyinCustomPhrase): String? {
-                // 副文本：键 + 拼音首字母 + 全拼，便于核对与搜索
+                // 副文本：键 + 拼音首字母 + 全拼 + 排序值 + 状态，统一展示，便于核对/搜索/排序
                 val ini = PinyinUtils.initials(x.value).orEmpty()
                 val full = PinyinUtils.fullPinyin(x.value).orEmpty()
+                val pinned = PhrasePinStore.isPinned(requireContext(), x)
                 return buildString {
                     append("键 ")
                     append(x.key)
                     if (ini.isNotBlank()) append(" · 首字母 $ini")
                     if (full.isNotBlank() && full != ini) append(" · 全拼 $full")
+                    append(" · 排序 ${x.order}")
+                    if (pinned) append(" · 已置顶")
                     if (!x.enabled) append(" · 已禁用")
+                    if (PhraseLockStore.isLocked(requireContext(), x)) append(" · 已锁定")
                 }.takeIf { it.isNotBlank() }
             }
 
@@ -279,7 +275,7 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
             textSize = 14f
             addTextChangedListener { s ->
                 searchQuery = s?.toString().orEmpty()
-                applySearch()
+                applyFilter()
             }
         }
         val delUnlockedBtn = AppCompatButton(ctx).apply {
@@ -287,29 +283,25 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
             textSize = 13f
             setOnClickListener { deleteUnlocked() }
         }
-        // MBM v1.0.23：视觉去重开关（默认开）——重复识别写入的相同词组只显示一次，
-        // 数据与统计不受影响；关闭开关即可查看/编辑全部重复条目。
-        dedupVisual = loadDedupPref()
-        val dedupSwitch = SwitchMaterial(ctx).apply {
-            text = "优化视觉：同词组只出现一次"
-            textSize = 13f
-            isChecked = dedupVisual
-            setOnCheckedChangeListener { _, checked ->
-                dedupVisual = checked
-                saveDedupPref(checked)
-                applySearch()
-            }
-        }
-        val dedupSwitchRow = LinearLayout(ctx).apply {
+        // MBM（词库 UI 统一）：锁定筛选（全部 / 已锁定 / 未锁定）+ 排序说明
+        val filterAll = AppCompatButton(ctx).apply { text = "全部"; textSize = 13f }
+        val filterLocked = AppCompatButton(ctx).apply { text = "已锁定"; textSize = 13f }
+        val filterUnlocked = AppCompatButton(ctx).apply { text = "未锁定"; textSize = 13f }
+        lockFilterButtons = listOf(filterAll, filterLocked, filterUnlocked)
+        val lockFilterRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            add(dedupSwitch, lParams(matchParent, wrapContent) {
-                leftMargin = dp(8); rightMargin = dp(8)
-            })
+            listOf(filterAll to 0, filterLocked to 1, filterUnlocked to 2).forEach { (b, v) ->
+                add(b, lParams(0, wrapContent) { weight = 1f; marginStart = dp(4); marginEnd = dp(4) })
+                b.setOnClickListener { setLockFilter(v) }
+            }
         }
-        dedupListView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        dedupScrollView = ScrollView(ctx).apply { add(dedupListView, lParams(matchParent)) }
-        dedupScrollView.visibility = View.GONE
+        val sortHint = android.widget.TextView(ctx).apply {
+            text = "排序：数字越小越靠前，置顶=1（最高优先级，压过应用名与 Recall 词）；点 ⬆ 置顶，点 🔒 锁定防误删"
+            textSize = 11f
+            setTextColor(ctx.styledColor(android.R.attr.textColorSecondary))
+            setPadding(dp(8), dp(2), dp(8), dp(2))
+        }
         // MBM v0.0.05：应用名快捷输入开关 + 手动刷新（pitfalls #56）
         // MBM v0.0.06 自检行：用户反馈「qmqz 完全不出全民枪战」时，先让用户能自己确认
         // 到底读到了几个应用、有没有真的写进词库，避免黑盒排障。
@@ -380,14 +372,13 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
             add(appPhraseStats, lParams(matchParent) {
                 leftMargin = dp(8); rightMargin = dp(8); bottomMargin = dp(4)
             })
-            add(dedupSwitchRow, lParams(matchParent) {
+            add(lockFilterRow, lParams(matchParent) {
+                leftMargin = dp(8); rightMargin = dp(8); bottomMargin = dp(4)
+            })
+            add(sortHint, lParams(matchParent) {
                 leftMargin = dp(8); rightMargin = dp(8); bottomMargin = dp(4)
             })
             add(ui.root, lParams(matchParent, 0) { weight = 1f })
-            add(dedupScrollView, lParams(matchParent, 0) { weight = 1f })
-            searchListView = verticalLayout { }
-            add(searchListView, lParams(matchParent, 0) { weight = 1f })
-            searchListView.visibility = View.GONE
         }
 
         // ---- 智能候选词容器（本地统计生成，可转存为自定义词组）----
@@ -465,154 +456,64 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         // 预拉取另两段数据，切换时无需等待
         loadSmartWords()
         loadDicts()
-        renderDedup()
         return root
     }
 
-    /** 根据搜索词与去重开关，在 原列表 / 去重视图 / 搜索结果 三者间切换可见性 */
-    private fun applySearch() {
-        val q = searchQuery.trim()
-        if (q.isBlank()) {
-            searchListView.visibility = View.GONE
-            if (dedupVisual) {
-                renderDedup()
-                dedupScrollView.visibility = View.VISIBLE
-                ui.root.visibility = View.GONE
-            } else {
-                dedupScrollView.visibility = View.GONE
-                ui.root.visibility = View.VISIBLE
-            }
-            return
-        }
-        // MBM: 匹配三个维度 —— 键、词组原文、以及词组拼音首字母（"玩机技巧" 可用 wjjq 搜到）。
-        // 之前只匹配 serialize() 整行（且 value 含空格会被转义加引号），导致搜词组内容搜不到。
-        val matches = ui.entries.filter { entry ->
-            entry.key.contains(q, ignoreCase = true) ||
-                entry.value.contains(q, ignoreCase = true) ||
-                PinyinUtils.initials(entry.value)?.contains(q, ignoreCase = true) == true
-        }
-        searchListView.removeAllViews()
-        if (matches.isEmpty()) {
-            searchListView.addView(TextView(requireContext()).apply {
-                text = "无匹配结果（可试词组内容或拼音首字母，如 wjjq）"
-                setPadding(0, dp(16), 0, dp(16))
-            })
-        } else {
-            matches.forEach { entry ->
-                searchListView.addView(TextView(requireContext()).apply {
-                    text = ui.showEntry(entry)
-                    textSize = 15f
-                    setPadding(dp(8), dp(10), dp(8), dp(10))
-                    isClickable = true
-                    isFocusable = true
-                    setOnClickListener { openEditFromSearch(entry) }
-                })
-            }
-        }
-        dedupScrollView.visibility = View.GONE
-        ui.root.visibility = View.GONE
-        searchListView.visibility = View.VISIBLE
-    }
-
     /**
-     * MBM v1.0.23：视觉去重视图 —— 同 value 词组只显示一行（带 ×N 角标）。
-     * 重复识别/自动写入的条目在数据层原样保留（可反复识别），仅显示层折叠。
-     * MBM v1.0.24：协程分帧渲染（快照 + 后台分组 + chunked(300) + yield），
-     * 修复大词库点进页面即 OOM/ANR 崩溃；重复调用先取消旧任务防并发重建。
+     * MBM（词库 UI 统一）：用「单一列表 + 过滤器」取代原先的 去重视图 / 搜索结果 三套渲染。
+     * 搜索与锁定筛选都只是对同一个 ui.root 列表的过滤——绝不会因切视图而让锁/删/排序按钮消失，
+     * 也绝不会丢数据（过滤器只影响 _shown 视图，保存始终以 _all 为准）。
      */
-    private fun renderDedup() {
-        if (!::dedupListView.isInitialized) return
-        dedupRenderJob?.cancel()
-        val snapshot = ui.entries.toList()
-        dedupRenderJob = lifecycleScope.launch {
-            val ctx = context ?: return@launch
-            // 分组统计移到后台线程，大词库不在主线程做全量哈希分组
-            val groups: List<Pair<String, List<PinyinCustomPhrase>>> =
-                withContext(Dispatchers.Default) {
-                    val m = LinkedHashMap<String, MutableList<PinyinCustomPhrase>>()
-                    snapshot.forEach { e -> m.getOrPut(e.value) { mutableListOf() }.add(e) }
-                    m.map { it.key to it.value.toList() }
+    private fun applyFilter() {
+        val q = searchQuery.trim()
+        val ctx = requireContext()
+        val pred: (PinyinCustomPhrase) -> Boolean = { e ->
+            (q.isBlank() || e.key.contains(q, ignoreCase = true) ||
+                e.value.contains(q, ignoreCase = true) ||
+                PinyinUtils.initials(e.value)?.contains(q, ignoreCase = true) == true) &&
+                when (lockFilter) {
+                    1 -> PhraseLockStore.isLocked(ctx, e)
+                    2 -> !PhraseLockStore.isLocked(ctx, e)
+                    else -> true
                 }
-            if (!isAdded) return@launch
-            dedupListView.removeAllViews()
-            dedupListView.addView(TextView(ctx).apply {
-                text = "共 ${snapshot.size} 条 · 去重显示 ${groups.size} 组（关闭上方开关可查看全部条目）"
-                textSize = 12f
-                setTextColor(DIM)
-                setPadding(dp(10), dp(6), dp(10), dp(2))
-            })
-            if (groups.isEmpty()) {
-                dedupListView.addView(TextView(ctx).apply {
-                    text = "暂无自定义词组（点右下角 + 新增，或在「智能候选词」一键转存）"
-                    textSize = 13f
-                    setTextColor(DIM)
-                    setPadding(dp(10), dp(16), dp(10), dp(16))
-                })
-                return@launch
-            }
-            // 分帧构建，块间让出主线程，避免数千行一次性建 View 卡死/OOM
-            groups.chunked(300).forEach { chunk ->
-                if (!isAdded) return@launch
-                chunk.forEach { (value, list) -> dedupListView.addView(buildDedupRow(ctx, value, list)) }
-                yield()
-            }
         }
+        ui.setFilter(pred)
     }
 
-    private fun buildDedupRow(
-        ctx: Context,
-        value: String,
-        list: List<PinyinCustomPhrase>
-    ): LinearLayout {
-        val first = list.first()
-        val dup = list.size > 1
-        val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(PANEL_BG)
-            setPadding(dp(10), dp(8), dp(10), dp(8))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(6) }
+    /** 切换「全部 / 已锁定 / 未锁定」筛选并高亮当前选项 */
+    private fun setLockFilter(mode: Int) {
+        lockFilter = mode
+        lockFilterButtons.forEachIndexed { i, b ->
+            b.setBackgroundColor(if (i == mode) SEG_ON_BG else SEG_OFF_BG)
+            b.setTextColor(SEG_FG)
         }
-        val host = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-        }
-        host.addView(TextView(ctx).apply {
-            text = if (dup) "$value  ×${list.size}" else value
-            textSize = 15f
-            setTextColor(FG)
-        })
-        host.addView(TextView(ctx).apply {
-            text = buildString {
-                append("键 ")
-                append(first.key)
-                if (!first.enabled) append(" · 已禁用")
-                if (dup) append(" · ${list.size} 条重复（数据全保留）")
-            }
-            textSize = 11f
-            setTextColor(DIM)
-        })
-        row.addView(host)
-        row.addView(AppCompatButton(ctx).apply {
-            text = "编辑"
-            textSize = 12f
-            setOnClickListener { openEditFromSearch(first) }
-        })
-        return row
+        applyFilter()
     }
 
-    /** 搜索结果中点按某条 -> 复用原编辑对话框修改；改完刷新搜索列表 */
-    private fun openEditFromSearch(entry: PinyinCustomPhrase) {
-        ui.showEditDialog(requireContext().getString(R.string.edit), entry) { new ->
-            val idx = ui.indexItem(entry)
-            if (idx >= 0) ui.updateItem(idx, new)
-            applySearch()
+    /** 置顶/取消置顶（最高优先级档 order=1，稳定压过应用名与 Recall 热/冷词） */
+    private fun togglePin(entry: PinyinCustomPhrase, btn: ImageButton) {
+        val ctx = requireContext()
+        val idx = ui.indexItem(entry)
+        if (idx < 0) return
+        if (PhrasePinStore.isPinned(ctx, entry)) {
+            val orig = PhrasePinStore.getOriginalOrder(ctx, entry, USER_DEFAULT_ORDER)
+            PhrasePinStore.unpin(ctx, entry)
+            ui.updateItem(idx, entry.copy(order = orig))
+        } else {
+            PhrasePinStore.pin(ctx, entry, entry.order)
+            ui.updateItem(idx, entry.copy(order = RecallConfig.PIN_ORDER))
         }
+        applyPinIcon(btn, entry)
+        applyFilter()
+    }
+
+    private fun applyPinIcon(btn: ImageButton, entry: PinyinCustomPhrase) {
+        val pinned = PhrasePinStore.isPinned(requireContext(), entry)
+        btn.setImageResource(R.drawable.ic_baseline_arrow_upward_24)
+        val color = if (pinned) 0xFF2F81F7.toInt()
+        else requireContext().styledColor(android.R.attr.colorControlNormal)
+        btn.imageTintList = android.content.res.ColorStateList.valueOf(color)
+        btn.contentDescription = if (pinned) "已置顶，点击取消置顶" else "未置顶，点击置顶"
     }
 
     /** 切换锁定并更新该行图标与可删状态 */
@@ -622,6 +523,8 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         // 重新绑定该行，使 removable 立即生效（锁定后不可被多选删除）
         val idx = ui.indexItem(entry)
         if (idx >= 0) ui.notifyItemChanged(idx)
+        // 若当前正处于「已锁定 / 未锁定」筛选，锁定状态变化后即时刷新列表
+        applyFilter()
     }
 
     private fun applyLockIcon(btn: ImageButton, entry: PinyinCustomPhrase) {
@@ -636,9 +539,12 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
     /** 批量删除未锁定的词组（保留锁定项），支持 snackbar 撤销 */
     private fun deleteUnlocked() {
         val ctx = requireContext()
+        // 在「全部」视图下计算待删集合，确保筛选状态下也不会漏删/受搜索过滤影响
+        ui.clearFilter()
         val unlocked = ui.entries.filter { !PhraseLockStore.isLocked(ctx, it) }
         if (unlocked.isEmpty()) {
             Toast.makeText(ctx, "没有可删除的未锁定词组", Toast.LENGTH_SHORT).show()
+            applyFilter()
             return
         }
         AlertDialog.Builder(ctx)
@@ -651,8 +557,9 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
                 unlocked.mapNotNull { ui.indexItem(it).takeIf { i -> i >= 0 } }
                     .sortedDescending()
                     .forEach { ui.removeItem(it) }
+                applyFilter()
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(android.R.string.cancel) { _, _ -> applyFilter() }
             .show()
     }
 
@@ -733,7 +640,7 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
 
     /** 将一条本地统计词转存为自定义词组（与手动词组共享同一 100MB 词典） */
     private fun promoteWord(word: String) {
-        if (ui.entries.any { it.value == word }) {
+        if (ui.allItems().any { it.value == word }) {
             Toast.makeText(requireContext(), "「$word」已在自定义词组中", Toast.LENGTH_SHORT).show()
             return
         }
@@ -747,24 +654,17 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
     private fun promoteAll() {
         lifecycleScope.launch {
             val words = withContext(Dispatchers.IO) { SmartDictManager.topWords() }
-            // MBM v1.0.24：批量转存期间抑制逐条触发去重视图重建（此前每条 addItem
-            // 都会 cancel+重启 renderDedup，几千条时主线程被反复打断）
-            suppressDedupRefresh = true
+            val initialCount = ui.allItems().size
             var added = 0
-            try {
-                words.forEach { (w, _) ->
-                    if (ui.entries.any { it.value == w }) return@forEach
-                    val key = PinyinUtils.fullPinyin(w)?.takeIf { it.isNotBlank() }
-                        ?: PinyinUtils.initials(w)?.takeIf { it.isNotBlank() } ?: w
-                    ui.addItem(item = PinyinCustomPhrase(key, 1, w))
-                    added++
-                }
-            } finally {
-                suppressDedupRefresh = false
+            words.forEach { (w, _) ->
+                if (ui.allItems().any { it.value == w }) return@forEach
+                val key = PinyinUtils.fullPinyin(w)?.takeIf { it.isNotBlank() }
+                    ?: PinyinUtils.initials(w)?.takeIf { it.isNotBlank() } ?: w
+                ui.addItem(item = PinyinCustomPhrase(key, 1, w))
+                added++
             }
             saveConfig()
             loadSmartWords()
-            renderDedup()
             Toast.makeText(requireContext(), "已转存 $added 条到自定义词组", Toast.LENGTH_SHORT).show()
         }
     }
@@ -858,7 +758,7 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         // smartdict 入口进入本页后收集，验证「用户词库」功能可达）
         MbmDebug.markFeature(view, "pinyin.phrase")
         viewModel.toolbarButton.value =
-            if (ui.entries.isNotEmpty()) ButtonMode.EDIT else ButtonMode.NONE
+            if (ui.allItems().isNotEmpty()) ButtonMode.EDIT else ButtonMode.NONE
         requireActivity().addMenuProvider(
             EditDeleteMenuProvider(
                 buttonMode = viewModel.toolbarButton,
@@ -874,43 +774,30 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
 
     override fun onItemAdded(idx: Int, item: PinyinCustomPhrase) {
         dustman.addOrUpdate(item.serialize(), item)
-        refreshDedupIfShowing()
     }
 
     override fun onItemRemoved(idx: Int, item: PinyinCustomPhrase) {
         dustman.remove(item.serialize())
-        refreshDedupIfShowing()
     }
 
     override fun onItemRemovedBatch(indexed: List<Pair<Int, PinyinCustomPhrase>>) {
         batchRemove(indexed)
-        refreshDedupIfShowing()
     }
 
     override fun onItemUpdated(idx: Int, old: PinyinCustomPhrase, new: PinyinCustomPhrase) {
         dustman.remove(old.serialize())
         dustman.addOrUpdate(new.serialize(), new)
-        refreshDedupIfShowing()
-    }
-
-    /** 去重开关打开且未在搜索时，词条变化后同步刷新去重视图 */
-    private fun refreshDedupIfShowing() {
-        if (suppressDedupRefresh) return
-        if (dedupVisual && searchQuery.isBlank() && ::dedupListView.isInitialized) {
-            renderDedup()
-        }
     }
 
     override fun onDestroyView() {
         // MBM v1.0.24：离开页面取消进行中的分帧渲染，协程内已用 isAdded/context 双保险
-        dedupRenderJob?.cancel()
         smartRenderJob?.cancel()
         super.onDestroyView()
     }
 
     private fun saveConfig() {
         if (!dustman.dirty) return
-        val items = ui.entries.toTypedArray()
+        val items = ui.allItems().toTypedArray()
         // MBM v1.0.31「词库大小无上限」：移除 100MB 落盘裁剪（pitfalls #70）。
         // 估算值只用于**告警**（超过历史风险区时提示），不再裁剪、不丢用户数据；
         // 保存失败要精确可观测（条目数/字节数），不静默、不崩溃。
@@ -949,7 +836,7 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
     }
 
     private fun resetDustman() {
-        dustman.reset(ui.entries.associateBy { it.serialize() })
+        dustman.reset(ui.allItems().associateBy { it.serialize() })
     }
 
     override fun onStart() {
@@ -975,9 +862,8 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         const val ORDER = "Order"
         const val PHRASE = "Phrase"
         const val MANAGE_CUSTOM_PHRASE = "Manage Custom Phrase"
-        // MBM v1.0.23：视觉去重开关持久化
-        private const val PREF_USER_VOCAB = "user_vocab_prefs"
-        private const val KEY_DEDUP_VISUAL = "dedup_visual"
+        // 用户自定义词组未置顶时的默认排序档（高于 Recall 冷词/应用名普通档，低于应用名搜索档）
+        const val USER_DEFAULT_ORDER = 5
         // 三段切换高亮配色（深色，固定值避免主题属性解析风险）
         private val SEG_ON_BG = 0xFF2F81F7.toInt()
         private val SEG_OFF_BG = 0xFF21262D.toInt()

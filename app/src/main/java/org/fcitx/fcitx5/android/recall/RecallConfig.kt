@@ -78,11 +78,23 @@ object RecallConfig {
     const val MANAGED_HARD_CAP = 5000
 
     /**
-     * 热词条顺序（最近活跃 → 候选靠前，输入拼音首字母即出现在第 2 位）。
+     * 用户「置顶」最高优先级档（Order）。
+     *
+     * 用户把某词组置顶后，其 order 被强制设为 1，稳定压过所有自动导入词组、
+     * 应用名快捷输入（order 2/8）与 Recall 热/冷词（order 3/9），输入对应拼音
+     * 即出现在候选首位。tier 排布（order 越小越靠前）：
+     *   置顶=1 > 应用名搜索场景=2 > Recall 热词=3 > 用户默认=5 > 应用名普通=8 > Recall 冷词=9。
+     * 详见 PinyinCustomPhraseFragment 的置顶实现与 AppPhraseImporter / RecallWordStore 的 order 约定。
+     */
+    const val PIN_ORDER = 1
+
+    /**
+     * 热词条顺序（最近活跃 → 候选靠前，输入拼音首字母即出现在第 3 位）。
      *
      * native 语义：自定义词组 order=n 落在第 n 个候选位（order 越小越靠前）。
+     * 注意：1 已预留给「用户置顶」档（PIN_ORDER），故热词从 2 之后取 3。
      */
-    const val HOT_ORDER = 2
+    const val HOT_ORDER = 3
 
     /**
      * 冷词条顺序（衰减后降级，不打扰常用词）。
@@ -91,8 +103,9 @@ object RecallConfig {
      * 与本类注释（「不出候选首位」「不打扰常用词」）完全相反，也挤掉了真正该靠前的
      * 热词。冷词应显著靠后，故取 9（明显晚于键盘可见候选条）。
      *
-     * 取值同时要避开应用名条目的 order（应用搜索 1 / 普通 8），
-     * 否则词库合并时无法按 order 区分条目归属（见 RecallWordStore.isOwnEntry）。
+     * 取值同时要避开应用名条目的 order（应用搜索 2 / 普通 8）与用户置顶档（1）、
+     * Recall 热词（3）、用户默认（5），否则词库合并时无法按 order 区分条目归属
+     * （见 RecallWordStore.isOwnEntry）。
      */
     const val COLD_ORDER = 9
 

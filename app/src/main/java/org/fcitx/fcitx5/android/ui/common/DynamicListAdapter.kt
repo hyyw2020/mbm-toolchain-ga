@@ -24,14 +24,42 @@ abstract class DynamicListAdapter<T>(
     val enableOrder: Boolean = false,
     val initCheckBox: (CheckBox.(T) -> Unit) = { visibility = View.GONE },
     var initEditButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE },
-    var initSettingsButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE }
+    var initSettingsButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE },
+    var initPinButton: (ImageButton.(T) -> Unit) = { visibility = View.GONE }
 ) :
     RecyclerView.Adapter<DynamicListAdapter<T>.ViewHolder>() {
 
-    private val _entries = initialEntries.toMutableList()
+    /**
+     * 真源数据（所有增删改都先落这里）。
+     * _shown 是其「经过滤器后的视图」——过滤为空时二者恒等，因此对未使用过滤的界面行为完全不变。
+     * 这样实现搜索/筛选时绝不会丢数据（保存时永远以 _all 为准）。
+     */
+    private val _all = initialEntries.toMutableList()
+    private val _shown = _all.toMutableList()
+
+    private var filter: ((T) -> Boolean)? = null
 
     val entries: List<T>
-        get() = _entries
+        get() = _shown
+
+    /** 全部条目（不受过滤影响），保存词库等场景必须用这个，避免只存了过滤后的子集。 */
+    fun allItems(): List<T> = _all.toList()
+
+    /** 设置过滤谓词：null = 显示全部。切换会重算 _shown 并刷新。 */
+    fun setFilter(predicate: ((T) -> Boolean)?) {
+        filter = predicate
+        recomputeShown()
+        notifyDataSetChanged()
+    }
+
+    fun clearFilter() = setFilter(null)
+
+    private fun recomputeShown() {
+        _shown.clear()
+        val pred = filter
+        if (pred == null) _shown.addAll(_all)
+        else _shown.addAll(_all.filter(pred))
+    }
 
     var multiselect = false
         private set
@@ -76,6 +104,7 @@ abstract class DynamicListAdapter<T>(
         val subText = entryUi.subText
         val editButton = entryUi.editButton
         val settingsButton = entryUi.settingsButton
+        val pinButton = entryUi.pinButton
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder =
@@ -108,15 +137,18 @@ abstract class DynamicListAdapter<T>(
                 checkBox.visibility = View.GONE
                 settingsButton.visibility = View.GONE
                 editButton.visibility = View.GONE
+                pinButton.visibility = View.GONE
             } else {
                 handleImage.visibility = if (enableOrder) View.VISIBLE else View.GONE
                 multiselectCheckBox.visibility = View.GONE
                 checkBox.visibility = View.VISIBLE
                 settingsButton.visibility = View.VISIBLE
                 editButton.visibility = View.VISIBLE
+                pinButton.visibility = View.VISIBLE
                 initCheckBox(checkBox, item)
                 initSettingsButton(settingsButton, item)
                 initEditButton(editButton, item)
+                initPinButton(pinButton, item)
             }
 
             multiselectCheckBox.isChecked = item in selected
@@ -152,6 +184,7 @@ abstract class DynamicListAdapter<T>(
             nameText.setOnClickListener(null)
             settingsButton.setOnClickListener(null)
             editButton.setOnClickListener(null)
+            pinButton.setOnClickListener(null)
         }
     }
 
@@ -190,10 +223,12 @@ abstract class DynamicListAdapter<T>(
         val indexed = selected.mapNotNull { entry ->
             indexItem(entry).takeIf { it != -1 }?.let { it to entry }
         }.sortedByDescending { it.first }
-        indexed.forEach { (index, _) ->
-            _entries.removeAt(index)
-            notifyItemRemoved(index)
+        indexed.forEach { (_, entry) ->
+            _all.remove(entry)
         }
+        selected.clear()
+        recomputeShown()
+        notifyDataSetChanged()
         listener?.onItemRemovedBatch(indexed)
     }
 
@@ -211,40 +246,50 @@ abstract class DynamicListAdapter<T>(
         }
     }
 
-    override fun getItemCount(): Int = entries.size
+    override fun getItemCount(): Int = _shown.size
 
     @CallSuper
-    open fun addItem(idx: Int = _entries.size, item: T) {
-        _entries.add(idx, item)
-        notifyItemInserted(idx)
-        listener?.onItemAdded(idx, item)
+    open fun addItem(idx: Int = _all.size, item: T) {
+        val realIdx = idx.coerceIn(0, _all.size)
+        _all.add(realIdx, item)
+        recomputeShown()
+        notifyDataSetChanged()
+        listener?.onItemAdded(realIdx, item)
         mainViewModel?.toolbarButton?.value = ButtonMode.EDIT
     }
 
     @CallSuper
     open fun removeItem(idx: Int): T {
-        val item = _entries.removeAt(idx)
-        notifyItemRemoved(idx)
+        val item = _shown.getOrNull(idx) ?: _all.first()
+        _all.remove(item)
+        recomputeShown()
+        notifyDataSetChanged()
         listener?.onItemRemoved(idx, item)
-        if (entries.isEmpty())
+        if (_all.isEmpty())
             mainViewModel?.toolbarButton?.value = ButtonMode.NONE
         return item
     }
 
     @CallSuper
     open fun swapItem(fromIdx: Int, toIdx: Int) {
-        Collections.swap(_entries, fromIdx, toIdx)
-        notifyItemMoved(fromIdx, toIdx)
-        listener?.onItemSwapped(fromIdx, toIdx, _entries[toIdx])
+        if (fromIdx in _all.indices && toIdx in _all.indices) {
+            Collections.swap(_all, fromIdx, toIdx)
+        }
+        recomputeShown()
+        notifyDataSetChanged()
+        val item = _all.getOrNull(toIdx) ?: return
+        listener?.onItemSwapped(fromIdx, toIdx, item)
     }
 
     @CallSuper
     open fun updateItem(idx: Int, item: T) {
-        val old = _entries[idx]
-        _entries[idx] = item
-        notifyItemChanged(idx)
+        val old = _shown.getOrNull(idx) ?: return
+        val allIdx = _all.indexOf(old)
+        if (allIdx != -1) _all[allIdx] = item else _all.add(item)
+        recomputeShown()
+        notifyDataSetChanged()
         listener?.onItemUpdated(idx, old, item)
     }
 
-    fun indexItem(item: T): Int = _entries.indexOf(item)
+    fun indexItem(item: T): Int = _shown.indexOf(item)
 }

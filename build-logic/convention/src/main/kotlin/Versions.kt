@@ -130,8 +130,9 @@ object Versions {
     //          细胞词库导入（scel）类由专名重构为中性命名（见 docs/ 合规说明）。
     // N85：原恒为 1 → arm64 versionCode 恒为 12，升级无法覆盖安装、用户须卸载重装丢全部数据。
     // 每次发版必须 +1（arm64 = baseVersionCode*10 + 2）。
-    const val baseVersionCode = 14
-    const val baseVersionName = "0.1.4"
+    // v1.0.61：词库（自定义词组）UI 三视图合一 + 锁定/删除/排序/置顶按钮常驻 + 用户置顶最高优先级档（PIN_ORDER=1）。
+    const val baseVersionCode = 15
+    const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     const val fallbackABI = "arm64-v8a"
