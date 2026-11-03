@@ -6,6 +6,8 @@ package org.fcitx.fcitx5.android.data.clipboard.db
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -68,7 +70,16 @@ data class ClipboardEntry(
             val desc = clipData.description
             // TODO: handle multiple items (when does this happen?)
             val item = clipData.getItemAt(0) ?: return null
-            val str = item.text?.toString() ?: return null
+            val raw = item.text?.toString()
+            // MBM v1.0.59：多数文件管理器（MT 管理器等）复制文件/路径时，把内容放进 URI 或
+            // Intent 型 ClipData 而非 text 项，旧实现 item.text 为 null 直接返回 null，
+            // 表现为「应用显示复制成功，但输入法剪贴板毫无痕迹」。兜底：从 URI / Intent 抽取可读文本。
+            val (str, type) = if (raw != null && raw.isNotBlank()) {
+                raw to desc.getMimeType(0)
+            } else {
+                val derived = deriveTextFromClipItem(item) ?: return null
+                derived to ClipDescription.MIMETYPE_TEXT_PLAIN
+            }
             val sensitive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 desc.extras?.getBoolean(IS_SENSITIVE) ?: false
             } else {
@@ -80,9 +91,36 @@ data class ClipboardEntry(
                 // 否则插件开启期间所有剪贴板历史录入都会静默失效。
                 text = if (transformer != null) runCatching { transformer(str) }.getOrDefault(str) else str,
                 timestamp = clipData.timestamp(),
-                type = desc.getMimeType(0),
+                type = type,
                 sensitive = sensitive
             )
+        }
+
+        /**
+         * 当 [ClipData.Item.text] 为空时，从 URI / Intent 抽取可读文本，使非文本型复制
+         * （文件管理器复制文件/路径）也能在输入法剪贴板历史里留下痕迹。
+         *  - URI：优先完整文件路径（file://），否则末段（content:// 的 id / 文件名），再否则退回完整 URI；
+         *    长度截断到 512，避免 content:// 长查询参数撑爆条目。
+         *  - Intent：取 data 字符串或 action。
+         */
+        private fun deriveTextFromClipItem(item: ClipData.Item): String? {
+            runCatching {
+                val uri: Uri? = item.uri
+                if (uri != null) {
+                    val s = uri.path ?: uri.lastPathSegment ?: uri.toString()
+                    if (s.isNotBlank()) return s.take(512)
+                }
+            }.onFailure { /* uri 解析异常不影响其它分支 */ }
+
+            runCatching {
+                val intent: Intent? = item.intent
+                if (intent != null) {
+                    val s = intent.dataString ?: intent.action
+                    if (!s.isNullOrBlank()) return s.take(512)
+                }
+            }.onFailure { /* intent 解析异常不影响结果 */ }
+
+            return null
         }
     }
 }

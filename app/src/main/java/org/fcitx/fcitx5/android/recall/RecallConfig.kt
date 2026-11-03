@@ -48,6 +48,13 @@ object RecallConfig {
     const val MAX_WHOLE_PHRASE_LEN = 6
     const val WINDOW_PHRASE_LEN = 4
 
+    /**
+     * 混合中英文专名（应用名 / 游戏名，含 · 分隔符或英文版本号）的最大长度。
+     * 此类专名常超出普通短语的 6 字上限（如「云·战双帕弥什」7 字、带英文版本号的应用名），
+     * 故在通道 D（混合专名抽取）里放宽到本上限后写库（见 [RecallSegmenter]）。
+     */
+    const val MAX_PROPERNOUN_LEN = 16
+
     /** 单批次提交给词库的候选上限（有界队列：超出丢弃最旧）。 */
     const val CANDIDATE_BATCH_CAP = 200
 
@@ -97,12 +104,18 @@ object RecallConfig {
     const val OCR_MIN_INTERVAL_MS = 100L
 
     /**
-     * MBM v1.0.58：训练/屏幕记忆文字是否注入输入法候选栏。
-     * 用户硬性约束「所有训练文字数据不得出现在输入法之中」——捕获到的屏幕/OCR 文字
-     * 只进剪贴板与屏幕记忆库（RecallActivity 面板可回溯），**默认不**写入 fcitx 自定义词组，
-     * 因此不会作为候选污染正常打字。已安装应用名（AppPhraseImporter）不属于训练文字，照常置顶。
+     * 屏幕记忆（Recall）捕获文字是否注入输入法候选栏 / 自定义词组词库。
+     *
+     * v1.0.59 改回 true：Recall 的核心价值就是「屏幕所见 → 自动拆词 → 导入词库 → 可一键输入」，
+     * v1.0.58 为响应「训练文字不出现在输入法」而误把整条导入链路关死，导致 OCR 识别到的
+     * 应用名 / 游戏名等专名「拆词失败、且完全没导入词库」。自动导入由既有开关
+     * `autoAddEnabled`（设置页「自动添加词组」）独立控制，此处只做总闸门。
+     *
+     * 用户约束「所有训练内容和文字都不要出现在任何的代码里」= 不把训练语料 / 特定词硬编码进源码；
+     * 本开关与动态捕获导入是两回事，动态捕获不违反该约束。如需「只进屏幕记忆库、不出候选首位」，
+     * 由 [RecallWordStore] 的冷热分层（HOT_ORDER/COLD_ORDER）控制，不改此处。
      */
-    const val INJECT_INTO_IME = false
+    const val INJECT_INTO_IME = true
 
     // ---- 隐私与过滤（E1/E2/E3）----
 

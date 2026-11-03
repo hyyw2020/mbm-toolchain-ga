@@ -122,6 +122,15 @@ class RecallSegmenter {
                 emit(best, e.text, CandidateSource.NER, e.confidence)
             }
 
+            // —— 通道 D：混合中英文专名（应用名 / 游戏名，含 · 或英文版本号）——
+            // 原分词只产出纯汉字段，hanRuns 在任意非汉字处切分，导致「云·战双帕弥什」
+            // 「雨见cBeta」这类真实专名被切碎后整条丢弃。此处补齐混合 token，
+            // 放行（allowMixed）使其能越过第二层 isAllHan 门控写库。forceLength 放宽到
+            // MAX_PROPERNOUN_LEN（专名常超 6 字上限）。
+            for (tok in RecallTextUtils.properNounTokens(line)) {
+                emit(best, tok, CandidateSource.NER, 0.65f, forceLength = true, allowMixed = true)
+            }
+
             // —— 通道 C：敏感数字串（卡号/身份证/验证码）显式召回并降权（P1-2 修复）——
             // 这些串不在 hanRuns 内（非汉字），旧实现因第二层 isAllHan 门控整条丢弃，
             // 导致「敏感打标降权」机制从未生效（纯汉字永远无法命中数字类正则）。
@@ -138,7 +147,11 @@ class RecallSegmenter {
     /**
      * 三层过滤 + 去重合并：满足条件则写入 best（同 phrase 取更优者）。
      * @param forceSensitive 敏感数字串通道（C）专用：命中敏感模式即强制打标，绕过汉字门控。
-     * @param forceLength    敏感数字串可能超出常规短语长度上限（如 16~19 位卡号），允许绕过长度门控。
+     * @param forceLength    敏感数字串可能超出常规短语长度上限（如 16~19 位卡号），或混合专名
+     *                       超出 6 字上限（如「云·战双帕弥什」）——允许绕过长度上限门控
+     *                       （下限 MIN_PHRASE_LEN 仍生效，避免单字噪声）。
+     * @param allowMixed     允许非纯汉字词条（通道 D 混合中英文专名）。[RecallWordStore.commit]
+     *                       经 keysForName 派生拼音键，混合名（含 · / 英文）本就能生成可用键。
      */
     private fun emit(
         best: MutableMap<String, RecallCandidate>,
@@ -146,18 +159,19 @@ class RecallSegmenter {
         source: CandidateSource,
         confidence: Float,
         forceSensitive: Boolean = false,
-        forceLength: Boolean = false
+        forceLength: Boolean = false,
+        allowMixed: Boolean = false
     ) {
-        // 第一层：长度过滤（敏感串可绕过）
-        if (!forceLength &&
-            (phrase.length < RecallConfig.MIN_PHRASE_LEN ||
-                phrase.length > RecallConfig.MAX_WHOLE_PHRASE_LEN)
-        ) return
+        // 第一层：长度过滤（下限恒定；上限仅在 forceLength 时放宽到 MAX_PROPERNOUN_LEN）
+        if (phrase.length < RecallConfig.MIN_PHRASE_LEN) return
+        if (!forceLength && phrase.length > RecallConfig.MAX_WHOLE_PHRASE_LEN) return
+        if (forceLength && phrase.length > RecallConfig.MAX_PROPERNOUN_LEN) return
         // 第二层：拼音键可用性 —— 普通非全汉字词条若无拼音键价值则丢弃；
-        // 但命中敏感正则的串（卡号/身份证/验证码）仍收录并强制降权（不出首位）。
+        // 但命中敏感正则的串（卡号/身份证/验证码）仍收录并强制降权（不出首位）；
+        // 通道 D 的混合专名（allowMixed）亦放行——其拼音键由 keysForName 正常派生。
         // 注：keysForName 已支持英文/数字 ascii 兜底键，故「含字母或数字」本身不再构成丢弃理由。
         val sensitive = forceSensitive || RecallPolicy.findSensitiveTokens(phrase).isNotEmpty()
-        if (!sensitive && !RecallTextUtils.isAllHan(phrase)) return
+        if (!sensitive && !RecallTextUtils.isAllHan(phrase) && !allowMixed) return
         // 第三层：敏感打标降权（不丢弃整屏，仅标记）
         val prev = best[phrase]
         if (prev == null) {
