@@ -32,6 +32,7 @@ import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.utils.notificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
