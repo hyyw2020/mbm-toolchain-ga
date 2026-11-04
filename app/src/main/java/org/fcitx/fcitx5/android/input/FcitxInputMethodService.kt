@@ -55,6 +55,7 @@ import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter
 import org.fcitx.fcitx5.android.recall.RecallService
+import org.fcitx.fcitx5.android.recall.store.UserChoiceStore
 import org.fcitx.fcitx5.android.utils.imeExceptionHandler
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.data.password.PasswordFillBridge
@@ -333,6 +334,8 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     private fun handleFcitxEvent(event: FcitxEvent<*>) {
         when (event) {
             is FcitxEvent.CommitStringEvent -> {
+                // 用户选择驱动的个性化：上屏中文即记一次「主动选择」，用于提升该拼音码的候选优先级
+                UserChoiceStore.recordCommit(event.data.text)
                 commitText(event.data.text, event.data.cursor)
             }
             is FcitxEvent.KeyEvent -> event.data.let event@{

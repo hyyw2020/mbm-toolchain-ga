@@ -133,7 +133,10 @@ object Versions {
     // v1.0.61：词库（自定义词组）UI 三视图合一 + 锁定/删除/排序/置顶按钮常驻 + 用户置顶最高优先级档（PIN_ORDER=1）。
     // v1.0.62：自动词组键去重（一词组一行，修「三个海一耶哇」）+ 应用搜索单字母键（修「输入 m 不出 MT管理器」）
     //          + 置顶/锁定即时保存生效 + Recall 注入链路提速与可观测（reload 去抖 100ms / 引擎就绪兜底 reload）。
-    const val baseVersionCode = 16
+    // v1.0.63：用户选择驱动的个性化优先级（预判增强）—— CommitStringEvent 捕获上屏中文候选，复用 keysForName 反推首字母键，
+    //          (键=>词) 维护选择计数+时间衰减+上下文，同键 Top-3 写入自定义词组 order 4/6/7（与 1/2/3/5/8/9 档位隔离互不误删），
+    //          选过的词下次输入该拼音即靠前；纯离线、不写原文日志、敏感串跳过。
+    const val baseVersionCode = 17
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
