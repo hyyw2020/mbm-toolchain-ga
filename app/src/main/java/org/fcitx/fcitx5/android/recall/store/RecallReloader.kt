@@ -52,10 +52,21 @@ object RecallReloader {
         handler.postDelayed(reloadTask, RecallConfig.RELOAD_DEBOUNCE_MS)
     }
 
-    private fun doReload() {
+    /**
+     * v1.0.67：用户「主动选择候选上屏」是低频强信号（不是高频 OCR/打字写入），
+     * 无需去抖与最小间隔保护。落盘后立即重载自定义词组，保证「选完抬手、下一次
+     * 输入该拼音码即第一候选」。绕过 RELOAD_MIN_INTERVAL_MS，但不丢任何请求。
+     */
+    fun reloadNow() {
+        retryCount = 0
+        handler.removeCallbacks(reloadTask)
+        doReload(force = true)
+    }
+
+    private fun doReload(force: Boolean = false) {
         val now = System.currentTimeMillis()
         val since = now - lastReloadAt
-        if (since < RecallConfig.RELOAD_MIN_INTERVAL_MS) {
+        if (!force && since < RecallConfig.RELOAD_MIN_INTERVAL_MS) {
             // 距上次 reload 过近，补一个最小间隔后重试（不丢请求）
             handler.postDelayed(reloadTask, RecallConfig.RELOAD_MIN_INTERVAL_MS - since)
             return

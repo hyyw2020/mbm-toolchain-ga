@@ -577,9 +577,10 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         // 在独立 IO 协程里做文件读写，绝阻塞输入法主线程；异常被 imeExceptionHandler 吞掉，
         // 不影响输入。record=false 用于下方递归提交，避免重复统计。
         if (record && !PrivacyController.inPrivacyMode) {
-            // MBM v1.0.66：用户「主动选择上屏」的个性化优先级记录，与 SmartDictManager
+            // MBM v1.0.67：用户「主动选择上屏」的个性化优先级记录，与 SmartDictManager
             // 同一入口（commitText），保证每次真实上屏都捕获且仅记一次；隐私模式下同样不记录。
-            // 只统计中文 2 字词并反推首字母键，落盘经 debounce 合并 + reload 生效。
+            // 只统计中文 2 字词并反推首字母键：一次选择即把该键 winner 置为本次词，
+            // 60ms 落盘 + 立即 reload，下一次输入该拼音码即第一候选（不再需要输好几遍）。
             runCatching { UserChoiceStore.recordCommit(text) }
             val t = text
             imeFallbackScope.launch(Dispatchers.IO) {

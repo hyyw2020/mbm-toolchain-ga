@@ -151,7 +151,14 @@ object Versions {
     //          (不再靠 order 区间，避免与 PersonalPhrase 3..7 / 置顶 1 互删)，跳过用户手动置顶。
     //          另修 PersonalPhrase 接续/双向/三连拼接词挂前词短键(aq)污染：改挂整短语键；
     //          migrateLegacy v3 清旧档残留并全量重算，升级后历史记忆立即按 order=1 生效。
-    const val baseVersionCode = 20
+    // v1.0.67：修「1.0.66 仍要输好几遍才把词组提到第一」。根因：flush 按 score=ln(1+count)*decay*ctx
+    //          排序取 Top-1 写 order=1，主动选一次的词 count=1 分数低，永远抢不过同键反复被默认
+    //          上屏的高频词（aq 的「爱情」）；且 kept 用全量 managedKeys 剔除、fresh 只含脏键，
+    //          每次 flush 会误删非脏键已学到的置顶，用户只得反复重选。
+    //          改为 last-commit-wins：每键只记「最近一次主动选择上屏的词」(winner_v4)，
+    //          选一次即无条件写 order=1；精确只清理脏键名下旧行；落盘 400→60ms + reloadNow 立即重载；
+    //          migrate v4 从历史 records 按最近上屏重建 winner，升级后历史记忆立即生效、无需重输。
+    const val baseVersionCode = 21
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

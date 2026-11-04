@@ -173,6 +173,11 @@ object RecallConfig {
      * 靠 order 区间识别自己的条目；PhrasePinStore 的手动置顶虽也是 1，但按 key|value 判定、
      * 不看 order。本模块改用「持久化 managed key=value 集合」识别自己的条目（不靠 order 区间），
      * 且 flush 时主动跳过已置顶条目，保证「手动置顶 > 自动学习」不冲突。
+     *
+     * v1.0.67：置顶归属改为「last-commit-wins」——每个键只记最近一次主动选择上屏的词，
+     * 选一次即无条件写 order=1，不再按分数排序取 Top-1（详见 UserChoiceStore）。
+     * 用户反馈「v1.0.66 还是要输好几遍才提高」的根因即旧打分竞争：同键下反复被默认
+     * 上屏的高频词 count 领先，主动选一次的词 score 太低永远抢不到 order=1。
      */
     val CHOICE_ORDER_TIERS = listOf(1)
 
@@ -191,13 +196,15 @@ object RecallConfig {
      */
     const val CHOICE_CTX_BOOST = 1.5
 
-    /** 低于此分数的 boost 词条移出自定义词组，交还 libime 词频（避免冷词占坑）。 */
+    /**
+     * v1.0.67 起**不再参与置顶决策**（last-commit-wins 无条件写 order=1）。
+     * 保留供历史统计 / 兼容旧版读取：原语义为「低于此分数的 boost 词条移出自定义词组」。
+     */
     const val CHOICE_MIN_SCORE = 0.6
 
     /**
-     * 单键 boost 候选数：v1.0.66 改为 1 —— 只把该码下分数最高的词提到第一候选，
-     * 其余候选顺序完全不变（不挤占一整页，对应「不要无限迭代联想候选」）。
-     * 这也精确匹配用户需求：「(aq)(安全) 下一次输入往前提高为 1」。
+     * v1.0.67 起**不再参与置顶决策**（每键恒有唯一 winner）。
+     * 保留供兼容：v1.0.66 曾用于「只把该码下分数最高的词提到第一候选」。
      */
     const val CHOICE_TOP_N = 1
 
