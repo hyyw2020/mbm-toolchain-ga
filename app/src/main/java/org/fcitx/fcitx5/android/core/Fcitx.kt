@@ -410,8 +410,11 @@ class Fcitx(private val context: Context) : FcitxAPI, FcitxLifecycleOwner {
         @Suppress("unused")
         @JvmStatic
         fun handleFcitxEvent(type: Int, params: Array<Any>) {
-            val event = FcitxEvent.create(type, params)
-            Timber.d("Handling $event")
+            // MBM v1.0.65：候选事件统一在此净化（尾部 emoji/装饰候选抑制），保证所有消费方
+            // （CandidatesView / KawaiiBar / 展开候选窗口）拿到同一份干净列表，且索引一致。
+            val event = MbmCandidateSanitizer.sanitize(FcitxEvent.create(type, params))
+            // 不打印事件内容：候选列表/预编辑可能含用户输入，隐私要求「输入内容与候选词不写日志」。
+            Timber.d("Handling ${event.eventType}")
             fcitxEventHandlers.forEach { it.invoke(event) }
             eventFlow_.tryEmit(event)
         }

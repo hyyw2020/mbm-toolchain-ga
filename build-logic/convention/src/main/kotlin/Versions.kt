@@ -139,7 +139,12 @@ object Versions {
     // v1.0.64：修 v1.0.63 个性化优先级 bug——长键拼接垃圾污染候选（输入 aq 冒出「安庆安全/爱情安庆/安全爱情安庆」等）。
     //          根因：HANZI_RE 把最长 6 连汉字当一词、键取其首字母，fcitx 自定义词组前缀匹配使长键(如 aqaqaq)被短输入(aq)命中。
     //          改为只提升「用户选过的两字词」(键长恒 2)、更长上屏串切相邻 2 字窗口学到可复用短词；升级遗留清理清掉旧长键垃圾。
-    const val baseVersionCode = 18
+    // v1.0.65：修输入单字母 a 时候选栏尾部冒出 4~5 个惊恐脸 emoji 挤占汉字候选（fcitx5 quickphrase
+    //          emoji 别名表 :fearful:/:anguished:/:open_mouth:/:astonished: 被单字母前缀成组命中）。
+    //          新增 MbmCandidateSanitizer：候选事件进入 UI 前仅从尾部截掉纯 emoji/重复候选，
+    //          前面汉字候选顺序与 native 索引完全不变（点击不错位）；emoji 面板能力保留。
+    //          顺带把事件日志改为只打事件类型，不再输出候选内容（隐私：输入/候选不写日志）。
+    const val baseVersionCode = 19
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
