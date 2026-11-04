@@ -144,7 +144,14 @@ object Versions {
     //          新增 MbmCandidateSanitizer：候选事件进入 UI 前仅从尾部截掉纯 emoji/重复候选，
     //          前面汉字候选顺序与 native 索引完全不变（点击不错位）；emoji 面板能力保留。
     //          顺带把事件日志改为只打事件类型，不再输出候选内容（隐私：输入/候选不写日志）。
-    const val baseVersionCode = 19
+    // v1.0.66：修「选择驱动优先级」根本失效——native 自定义词组 order 是「候选位」不是「权重」
+    //          (pinyin.cpp: CandidateOrder{order-1,...}, order=1 才是第一候选, <=0 跳过)。
+    //          旧档位 [4,6,7] 把「安全」永远钉在第 4 位后，选多少次都压不过原生首候选「爱情」。
+    //          改为 order=1 + 只 boost Top-1；归属判定改用持久化精确 key=value 托管集合
+    //          (不再靠 order 区间，避免与 PersonalPhrase 3..7 / 置顶 1 互删)，跳过用户手动置顶。
+    //          另修 PersonalPhrase 接续/双向/三连拼接词挂前词短键(aq)污染：改挂整短语键；
+    //          migrateLegacy v3 清旧档残留并全量重算，升级后历史记忆立即按 order=1 生效。
+    const val baseVersionCode = 20
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

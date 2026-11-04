@@ -158,14 +158,26 @@ object RecallConfig {
     // ---- 用户选择驱动的个性化优先级（预判 / 联想增强层，UserChoiceStore）----
 
     /**
-     * 用户「主动选择候选上屏」驱动的个性化优先级档位（order 越小越靠前）。
-     * 与既有档位隔离：置顶=1 / 应用搜索=2 / Recall 热词=3 / 用户默认=5 / 应用普通=8 / Recall 冷词=9。
-     * 空闲档 4/6/7 专用于本模块，保证各模块 isOwnEntry 互不误删：
-     *   - 用户最常选的词 → 4（紧跟热词，键盘可见候选区内）
-     *   - 同码第二顺位 → 6
-     *   - 同码第三顺位 → 7
+     * 用户「主动选择候选上屏」驱动的个性化优先级档位。
+     *
+     * v1.0.66 关键修正：fcitx5 自定义词组的 order **不是权重，而是绝对候选位**。
+     * 见 fcitx5-chinese-addons/pinyin.cpp：
+     *   `CandidateOrder{result.order() - 1, ...}` —— order=1 才是第一候选；
+     *   `if (result.order() <= 0) continue;` —— <=0 的条目直接被丢弃；
+     *   自定义候选按 sortOrder 归一化后插到拼音候选流的第 (order-1) 个位置。
+     * 因此 v1.0.63~65 用的 [4,6,7] 会把「安全」永远钉在第 4 位以后，无论用户选多少次
+     * 都压不过 aq 的原生第一候选「爱情」（用户反馈「输入好几遍还是没到第一」）。
+     *
+     * 现改为 order=1：选中的词下次输入该码即第一候选。
+     * 为何可用 1：其他模块 isOwnEntry 覆盖 2/8（应用名）、3/9（Recall）、3..7（个人短语），
+     * 靠 order 区间识别自己的条目；PhrasePinStore 的手动置顶虽也是 1，但按 key|value 判定、
+     * 不看 order。本模块改用「持久化 managed key=value 集合」识别自己的条目（不靠 order 区间），
+     * 且 flush 时主动跳过已置顶条目，保证「手动置顶 > 自动学习」不冲突。
      */
-    val CHOICE_ORDER_TIERS = listOf(4, 6, 7)
+    val CHOICE_ORDER_TIERS = listOf(1)
+
+    /** v1.0.63~65 写入的旧档位，升级时由 UserChoiceStore.migrateLegacy 精确清理。 */
+    val CHOICE_LEGACY_ORDER_TIERS = setOf(4, 6, 7)
 
     /**
      * 选择计数时间衰减半衰期（ms）：约 30 天。期间不被选，权重按 exp 自然回落到 1/e，
@@ -182,8 +194,12 @@ object RecallConfig {
     /** 低于此分数的 boost 词条移出自定义词组，交还 libime 词频（避免冷词占坑）。 */
     const val CHOICE_MIN_SCORE = 0.6
 
-    /** 单键最大 boost 候选数（取分数 Top-N 写入词组，对应「不要无限迭代联想候选」）。 */
-    const val CHOICE_TOP_N = 3
+    /**
+     * 单键 boost 候选数：v1.0.66 改为 1 —— 只把该码下分数最高的词提到第一候选，
+     * 其余候选顺序完全不变（不挤占一整页，对应「不要无限迭代联想候选」）。
+     * 这也精确匹配用户需求：「(aq)(安全) 下一次输入往前提高为 1」。
+     */
+    const val CHOICE_TOP_N = 1
 
     /** 持久选择记录硬上限（内存/落盘双控，超出按最弱分数淘汰）。 */
     const val CHOICE_RECORD_CAP = 5000

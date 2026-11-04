@@ -175,7 +175,11 @@ object PersonalPhraseImporter {
                 // 接续短语顺序按置信度落在 [4,6]；上下文命中（最近刚打过该前词）封顶到最高档
                 var order = contOrder(cnt)
                 if (phrase in contextPhrases) order = order.coerceAtMost(PERSONAL_CONT_HOT_ORDER)
-                AppPhraseImporter.keysForName(w1).forEach { key ->
+                // v1.0.66：拼接短语挂到「整短语键」而非前词键。native 自定义词组是
+                // exactMatchSearch（键精确匹配），旧版挂 keysForName(w1)（如「安全」→aq）会让
+                // 输入 aq 时把「安全deepfy」「安庆安全」等 3~12 字拼接垃圾全抖出来，淹没真正想要的词。
+                // 改挂整短语键后仍可联想，但需打到整短语缩写才命中，短码候选栏恢复干净。
+                AppPhraseImporter.keysForName(phrase).forEach { key ->
                     entries += PinyinCustomPhrase(key, order, phrase)
                 }
                 contCount++
@@ -198,7 +202,8 @@ object PersonalPhraseImporter {
                     if (phrase.length in 3..12) {
                         var order = revOrder(2)
                         if (phrase in contextPhrases) order = order.coerceAtMost(PERSONAL_REV_HOT_ORDER)
-                        AppPhraseImporter.keysForName(w2).forEach { key ->
+                        // v1.0.66：同接续词，拼接短语改挂整短语键（避免短键污染，见上方注释）
+                        AppPhraseImporter.keysForName(phrase).forEach { key ->
                             entries += PinyinCustomPhrase(key, order, phrase)
                         }
                         revCount++
@@ -211,7 +216,8 @@ object PersonalPhraseImporter {
                         if (tri.length !in 4..14) continue
                         var order = triOrder(cnt)
                         if (tri in contextPhrases) order = order.coerceAtMost(PERSONAL_TRI_HOT_ORDER)
-                        AppPhraseImporter.keysForName(w1).forEach { key ->
+                        // v1.0.66：同接续词，拼接短语改挂整短语键（避免短键污染，见上方注释）
+                        AppPhraseImporter.keysForName(tri).forEach { key ->
                             entries += PinyinCustomPhrase(key, order, tri)
                         }
                         triCount++

@@ -337,8 +337,9 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     private fun handleFcitxEvent(event: FcitxEvent<*>) {
         when (event) {
             is FcitxEvent.CommitStringEvent -> {
-                // 用户选择驱动的个性化：上屏中文即记一次「主动选择」，用于提升该拼音码的候选优先级
-                UserChoiceStore.recordCommit(event.data.text)
+                // MBM v1.0.66：用户选择驱动的个性化记录统一在 commitText() 内完成
+                //（与 SmartDictManager.recordUsage 同一入口，覆盖所有上屏路径、遵守隐私模式与
+                //  record 去重，只记一次）。此前挂在事件分支，与已验证有效的学习入口不一致。
                 commitText(event.data.text, event.data.cursor)
             }
             is FcitxEvent.KeyEvent -> event.data.let event@{
@@ -576,6 +577,10 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         // 在独立 IO 协程里做文件读写，绝阻塞输入法主线程；异常被 imeExceptionHandler 吞掉，
         // 不影响输入。record=false 用于下方递归提交，避免重复统计。
         if (record && !PrivacyController.inPrivacyMode) {
+            // MBM v1.0.66：用户「主动选择上屏」的个性化优先级记录，与 SmartDictManager
+            // 同一入口（commitText），保证每次真实上屏都捕获且仅记一次；隐私模式下同样不记录。
+            // 只统计中文 2 字词并反推首字母键，落盘经 debounce 合并 + reload 生效。
+            runCatching { UserChoiceStore.recordCommit(text) }
             val t = text
             imeFallbackScope.launch(Dispatchers.IO) {
                 runCatching { SmartDictManager.recordUsage(t) }
