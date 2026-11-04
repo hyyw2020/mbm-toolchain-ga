@@ -36,8 +36,10 @@ import kotlin.math.ln
 object UserChoiceStore {
 
     private const val PREFS = "mbm_choice_boost"
-    private const val KEY_RECORDS = "records"
+    private const val KEY_RECORDS = "records_v2"
     private const val KEY_ENABLED = "enabled"
+    /** v1.0.64 遗留清理标记：仅执行一次，清掉 v1.0.63 写入的长键拼接垃圾词组 */
+    private const val KEY_MIGRATED_V2 = "migrated_v2"
 
     private val lock = ReentrantLock()
 
@@ -59,9 +61,22 @@ object UserChoiceStore {
     private var saveTask: Runnable? = null
     private const val SAVE_DEBOUNCE_MS = 400L
 
-    /** 提取 2~MAX_WHOLE_PHRASE_LEN 连续汉字串（与 Recall 分词长度上限对齐）。 */
-    private val HANZI_RE =
-        Regex("[\\u4e00-\\u9fff]{2,${RecallConfig.MAX_WHOLE_PHRASE_LEN}}")
+    /** 提取连续汉字「串」（≥2 字）作为原始上屏片段；真正 boost 词条由 [decomposeRun] 切成 2 字词。 */
+    private val HANZI_RUN_RE = Regex("[\\u4e00-\\u9fff]{2,}")
+
+    /**
+     * 单条 boost 词条最大字数。固定 2：只提升「用户选过的两字词」，键长恒为 2（如 安全→aq），
+     * 不可能因键前缀命中而冒出长拼接词；更长的上屏串切成相邻 2 字窗口（安全爱情安庆→安全/爱情/安庆）
+     * 学到可复用短词，而非一个 aqaqaq 长键垃圾（v1.0.63 已知 bug）。
+     */
+    private const val CHOICE_BOOST_MAX_LEN = 2
+
+    /** 把一段连续汉字切成 boost 词条：≤2 字整段保留；>2 字切相邻 2 字窗口并去重。 */
+    private fun decomposeRun(run: String): List<String> {
+        val n = run.length
+        if (n <= CHOICE_BOOST_MAX_LEN) return listOf(run)
+        return (0..n - CHOICE_BOOST_MAX_LEN).map { run.substring(it, it + CHOICE_BOOST_MAX_LEN) }.distinct()
+    }
 
     private data class ChoiceRecord(
         val count: Int,
@@ -87,7 +102,8 @@ object UserChoiceStore {
         if (!isEnabled()) return
         // 敏感串（卡号/身份证/验证码）整体跳过：不学习、不写库（隐私 E2/E3 降权原则）
         if (RecallConfig.SENSITIVE_PATTERNS.any { it.containsMatchIn(text) }) return
-        val words = HANZI_RE.findAll(text).map { it.value }.toList()
+        // 先切出连续汉字串，再切成 2 字词（见 [decomposeRun]：杜绝长键前缀污染候选）
+        val words = HANZI_RUN_RE.findAll(text).flatMap { decomposeRun(it.value) }.toList()
         if (words.isEmpty()) return
         val ctxWord = lastWord
         val affected = mutableSetOf<String>()
@@ -204,11 +220,32 @@ object UserChoiceStore {
             val obj = JSONObject(json)
             val map = mutableMapOf<String, ChoiceRecord>()
             obj.keys().forEach { k ->
+                // 防御：丢弃超长词条（v1.0.63 长键拼接垃圾或异常数据，键长>2 会前缀污染候选）
+                if (k.substringAfter("=>").length > CHOICE_BOOST_MAX_LEN) return@forEach
                 val r = obj.getJSONObject(k)
                 map[k] = ChoiceRecord(r.getInt("c"), r.getLong("t"), r.optString("p", ""))
             }
             map
         }.getOrDefault(emptyMap())
+    }
+
+    /**
+     * 一次性遗留清理（v1.0.63→v1.0.64）：清掉旧版 UserChoiceStore 写入的「长键拼接垃圾」自定义词组
+     * （order ∈ 4/6/7 且键长>2，如 aqaqaq=>安全爱情安庆）。升级后若不清，旧垃圾会残留在词库持续冒出。
+     * 用 SP 标记保证仅执行一次；幂等、失败不抛。
+     */
+    fun migrateLegacy() {
+        val sp = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (sp.getBoolean(KEY_MIGRATED_V2, false)) return
+        runCatching {
+            CustomPhraseManager.withWriteLock {
+                val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull()
+                    ?: emptyArray()
+                val kept = existing.filterNot { isOwnEntry(it) }
+                runCatching { CustomPhraseManager.saveCached(kept.toTypedArray()) }
+            }
+        }.onFailure { Timber.w(it, "MBM Choice: migrateLegacy failed") }
+        sp.edit().putBoolean(KEY_MIGRATED_V2, true).apply()
     }
 
     private fun persistRecords() {

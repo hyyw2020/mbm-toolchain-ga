@@ -270,6 +270,9 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             withContext(Dispatchers.IO) {
                 AppPhraseImporter.ensureImported(this@FcitxInputMethodService, fcitx)
             }
+            // MBM v1.0.63→v1.0.64 遗留清理：清掉旧版长键拼接垃圾自定义词组（order 4/6/7），
+            // 避免升级后旧垃圾残留冒出；随后 reload 让清理生效。
+            runCatching { fcitx.runOnReady { UserChoiceStore.migrateLegacy() } }
             // MBM v1.0.62：引擎就绪后立即补一次 Recall 词组 reload —— 捕获常发生在
             // 键盘未弹起时（fcitx 未就绪，reload 只能重试等待）；这里兜底保证
             // 「键盘一弹出，已捕获词组立刻可打」，补齐 0.1s 级生效链路的最后一环。

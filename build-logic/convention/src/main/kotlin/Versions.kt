@@ -136,7 +136,10 @@ object Versions {
     // v1.0.63：用户选择驱动的个性化优先级（预判增强）—— CommitStringEvent 捕获上屏中文候选，复用 keysForName 反推首字母键，
     //          (键=>词) 维护选择计数+时间衰减+上下文，同键 Top-3 写入自定义词组 order 4/6/7（与 1/2/3/5/8/9 档位隔离互不误删），
     //          选过的词下次输入该拼音即靠前；纯离线、不写原文日志、敏感串跳过。
-    const val baseVersionCode = 17
+    // v1.0.64：修 v1.0.63 个性化优先级 bug——长键拼接垃圾污染候选（输入 aq 冒出「安庆安全/爱情安庆/安全爱情安庆」等）。
+    //          根因：HANZI_RE 把最长 6 连汉字当一词、键取其首字母，fcitx 自定义词组前缀匹配使长键(如 aqaqaq)被短输入(aq)命中。
+    //          改为只提升「用户选过的两字词」(键长恒 2)、更长上屏串切相邻 2 字窗口学到可复用短词；升级遗留清理清掉旧长键垃圾。
+    const val baseVersionCode = 18
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
