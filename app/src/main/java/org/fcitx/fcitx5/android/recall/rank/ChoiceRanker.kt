@@ -18,7 +18,13 @@
  *     样本攒够 ⇒ 次数/衰减/上下文主导。冠军不受 β 影响，仍即时生效。
  *  3. 局部性：所有状态以精确键 key 分片；同词在不同 key 下独立统计。
  *  4. 防污染：去抖计数、连续选择加成封顶、次数 log 封顶、误选惩罚、
- *     粘贴/长文本/敏感串/非 2 字词/非法键过滤、稳定排序、LRU 容量护栏。
+ *     粘贴/长文本/敏感串/非法键过滤、稳定排序、LRU 容量护栏。
+ *  5. v1.0.70 覆盖扩展：单次上屏为「单一连续汉字段」时，整段视为用户主动选中的
+ *     一个完整词（2 字词「安全」、4 字应用名「哔哩哔哩」、多字 OCR 捕获词皆然），
+ *     键放宽到多字母首字母缩写（blbl / qmqz）。此前硬层只认「2 字词 + 2 字母键」，
+ *     导致这些词永远拿不到 order=1，只能吃 OCR/应用名自动模块的 order=2/3，
+ *     即用户反馈「哔哩哔哩总是因为 OCR 被排为顺序 2」。仍不做任何窗口切片，
+ *     单字母键仍排除，粘贴/整句/敏感/隐私过滤全部保留。
  *
  * 本类不含 IO、不含 Android API、不含协程：调用方(UserChoiceStore)负责持久化、
  * 去抖落盘与 reload。所有时间通过可注入 clock 获取，便于时间衰减单测。
@@ -57,10 +63,18 @@ data class ChoiceConfig(
     val maxCommitLen: Int = 16,
     /** 单次上屏最多处理的连续汉字段数。 */
     val maxRuns: Int = 8,
-    /** 只学习独立成段的 2 字词。 */
+    /** 多段上屏（整句/粘贴）时，只学的「独立成段 2 字词」长度（v1.0.69 兼容通道）。 */
     val wordLen: Int = 2,
-    /** 键长度：当前只支持 2 字母首字母缩写键（26×26=676，与 aq 场景及 exactMatchSearch 对齐）。 */
+    /**
+     * 单次上屏为「单一连续汉字段」时，允许把整段当成一个完整词学习的最大字数。
+     * 覆盖「哔哩哔哩」等 4 字应用名 / 多字 OCR 捕获词；不做窗口切片，故不产生
+     * 「安全爱情 -> 全爱」这类跨词垃圾（v1.0.68 修复 7 的初衷完整保留）。
+     */
+    val phraseLenMax: Int = 8,
+    /** 键长度下限：2 排除单字母键（防 v1.0.65 的单字母 a 下 emoji 污染）。 */
     val keyLen: Int = 2,
+    /** 键长度上限：容纳多字词首字母缩写键（blbl / qmqz ...，native exactMatchSearch 精确匹配）。 */
+    val keyLenMax: Int = 12,
     /** 选词后在此窗口内改选别的词，视为疑似误选。 */
     val misclickMs: Long = 1500L,
     val enabled: Boolean = true,
@@ -129,9 +143,17 @@ class ChoiceRanker(
         if (text.length > config.maxCommitLen) return emptySet()
         val runs = hanziRun.findAll(text).map { it.value }.toList()
         if (runs.isEmpty() || runs.size > config.maxRuns) return emptySet()
-        // 只有「独立成段的 2 字词」是用户真正从候选栏选的词；
-        // 长串切出的跨词窗口(安全爱情 -> 全爱)不是，绝不入栈(v1.0.68 已确证)。
-        val words = runs.filter { it.length == config.wordLen }.distinct()
+        // v1.0.70 词提取：
+        //  - 单次上屏是「单一连续汉字段」且长度 <= phraseLenMax ⇒ 整段视为用户从候选栏
+        //    主动选中的一个完整词：2 字词「安全」、4 字应用名「哔哩哔哩」、多字 OCR 词皆然。
+        //    绝不切窗口，杜绝「安全爱情 -> 全爱」跨词垃圾（v1.0.68 修复 7 完整保留）。
+        //  - 多段上屏（整句/粘贴）⇒ 退化为只学其中独立成段的 2 字词，保持 v1.0.69 兼容。
+        //  - 超长仍由 maxCommitLen / maxRuns 拦截；敏感串 / 隐私模式在更前面已过滤。
+        val words: List<String> = if (runs.size == 1 && runs[0].length in 2..config.phraseLenMax) {
+            listOf(runs[0])
+        } else {
+            runs.filter { it.length == config.wordLen }.distinct()
+        }
         if (words.isEmpty()) return emptySet()
 
         val now = clock()
@@ -243,7 +265,7 @@ class ChoiceRanker(
     // ---------------------------------------------------------------- 内部实现
 
     private fun validKey(key: String): Boolean =
-        key.length == config.keyLen && key.all { it in 'a'..'z' }
+        key.length in config.keyLen..config.keyLenMax && key.all { it in 'a'..'z' }
 
     private fun entryId(key: String, word: String) = "$key=>$word"
 

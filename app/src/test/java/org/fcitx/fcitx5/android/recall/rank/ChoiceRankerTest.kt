@@ -346,4 +346,79 @@ class ChoiceRankerTest {
         val ms = (System.nanoTime() - t0) / 1_000_000.0
         assertTrue("1000 次耗时 %.2f ms".format(ms), ms < 1000.0)
     }
+
+    // ---------------------------------------------------------------- v1.0.70 多字词 / 长键
+
+    /**
+     * 复现用户反馈「哔哩哔哩输入优先级顺序有问题，总是因为 OCR 而被排为顺序 2」：
+     * 「哔哩哔哩」是 4 字词、首字母键 blbl 是 4 字母，v1.0.69 硬层只收
+     * 「2 字词 + 2 字母键」，两道过滤把它彻底挡在门外 ⇒ 用户主动选它也不写 order=1，
+     * 只能吃 OCR/应用名自动模块的 order=2/3 ⇒ 永远第 2 候选位。
+     */
+    @Test
+    fun `复现 4字词应用名与长键应进入硬层并锁定 order=1`() {
+        val r = ranker()
+        val blbl: (String) -> Collection<String> = { listOf("blbl") }
+        r.onCommit("哔哩哔哩", blbl)
+        assertTrue("4 字词「哔哩哔哩」应进入硬层栈", r.hasHistory("blbl"))
+        val order = r.buildOrder("blbl")
+        assertTrue("应产出冠军条目", order.isNotEmpty())
+        assertEquals(1, order.first().order)
+        assertEquals("哔哩哔哩", order.first().word)
+    }
+
+    @Test
+    fun `多字词长键同样满足 最近一次第1 前一次第2`() {
+        val r = ranker()
+        val blbl: (String) -> Collection<String> = { listOf("blbl") }
+        r.onCommit("哔哩哔哩", blbl); now += 1000
+        r.onCommit("哔哩啪啦", blbl)
+        val o = r.buildOrder("blbl")
+        assertEquals("哔哩啪啦", o[0].word)
+        assertEquals(1, o[0].order)
+        assertEquals("哔哩哔哩", o[1].word)
+        assertEquals(2, o[1].order)
+        assertEquals("blbl", o[0].key)
+    }
+
+    @Test
+    fun `单字母键仍被排除 不污染 a 候选栏`() {
+        val r = ranker()
+        r.onCommit("安全", resolveKeys = { listOf("a") })
+        assertFalse(r.hasHistory("a"))
+        assertTrue(r.buildOrder("a").isEmpty())
+    }
+
+    @Test
+    fun `长串上屏整段成词 绝不产生跨词窗口切片垃圾`() {
+        val r = ranker()
+        r.onCommit("安全爱情安庆", resolveKeys = { listOf("aqaqaq") })
+        val st = r.exportState()
+        val learned = st.records.keys.map { it.substringAfter("=>") }
+        assertEquals("只学一个整段词，不做任何窗口切片", listOf("安全爱情安庆"), learned)
+        assertFalse("不得出现「全爱」这类独立跨词切片", learned.contains("全爱"))
+    }
+
+    @Test
+    fun `多段上屏仍只学独立 2 字词 保持 v1_0_69 兼容`() {
+        val r = ranker()
+        r.onCommit("安全 爱情", resolveKeys = keys)
+        assertTrue(r.hasHistory("aq"))
+        assertTrue(
+            "多段上屏不产生长词",
+            r.exportState().records.keys.none { it.substringAfter("=>").length > 2 }
+        )
+    }
+
+    @Test
+    fun `状态往返保留多字词与长键`() {
+        val a = ranker()
+        val blbl: (String) -> Collection<String> = { listOf("blbl") }
+        a.onCommit("哔哩哔哩", blbl)
+        val b = ranker()
+        b.importState(a.exportState())
+        assertEquals(a.buildOrder("blbl"), b.buildOrder("blbl"))
+        assertTrue(b.hasHistory("blbl"))
+        assertEquals("哔哩哔哩", b.buildOrder("blbl").first().word)
+    }
 }

@@ -253,4 +253,22 @@ object RecallConfig {
     /** 单次上屏最大长度 / 最多连续汉字段数：超长按粘贴处理，不学习。 */
     const val CHOICE_MAX_COMMIT_LEN = 16
     const val CHOICE_MAX_RUNS = 8
+
+    // ---- v1.0.70：硬层覆盖扩展到多字词 / 多字母键 ----
+    //
+    // 背景：用户反馈「哔哩哔哩输入优先级顺序有问题，总是因为 OCR 而被排为顺序 2」。
+    // v1.0.69 硬层只认「2 字词 + 2 字母键」，而「哔哩哔哩」是 4 字词、首字母键 blbl
+    // 是 4 字母，被 wordLen=2 / keyLen=2 两道过滤彻底挡在门外 ⇒ 用户主动选它也不写
+    // order=1，只能吃 AppPhraseImporter(2) / PhraseAutoWriter(2) / RecallWordStore(3,9) /
+    // PersonalPhraseImporter(3..7) 给的 order>=2；native `CandidateOrder{order-1,...}`
+    // 下 order=2 即第 2 候选位 ⇒ 永远第 2。放宽后用户选一次即锁定 order=1 压过 OCR。
+
+    /** 单次上屏为单一连续汉字段时，允许整段作为完整词学习的最大字数（覆盖 4 字应用名）。 */
+    const val CHOICE_PHRASE_LEN_MAX = 8
+
+    /** 键长度下限：2 排除单字母键（防 a 下 emoji 污染）。 */
+    const val CHOICE_KEY_LEN_MIN = 2
+
+    /** 键长度上限：容纳多字词首字母缩写键（blbl / qmqz ...）。 */
+    const val CHOICE_KEY_LEN_MAX = 12
 }

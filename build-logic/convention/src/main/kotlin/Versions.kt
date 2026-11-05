@@ -173,7 +173,16 @@ object Versions {
     //          修正确定性次位：aq 选安全后选爱情 => 爱情 order=1、安全 order=2（旧版只保证第1）。
     //          融合打分只作用于次位重排/衰减退役/淘汰，永不推翻「最近一次选择即第一」硬规则；
     //          不做「同键短时改选⇒误选」的自动推断，避免误伤核心示例（详见设计文档 2.3）。
-    const val baseVersionCode = 23
+    // v1.0.70：修「哔哩哔哩输入优先级总被 OCR 排为顺序 2」。根因是 v1.0.69 硬层只认
+    //          「2 字词 + 2 字母键」，4 字词「哔哩哔哩」/ 4 字母键 blbl 被 wordLen/keyLen
+    //          两道过滤挡在门外，用户主动选也不写 order=1，只能吃 OCR/应用名自动模块的
+    //          order=2/3（native `CandidateOrder{order-1}` 下即第 2 候选位）。
+    //          扩展：单次上屏为单一连续汉字段时整段视为一个完整词（phraseLenMax=8），
+    //          键放宽到 2..12 字母；UserChoiceStore.loadState 同步放宽 length==2 硬编码，
+    //          否则重启即丢状态。仍不做窗口切片、仍排除单字母键，v1.0.66~69 全部防御保留。
+    //          AppPhraseImporter/RecallWordStore 的 minByOrNull{order} 保证用户 order=1
+    //          不会被 OCR 的 order=2/3 覆盖。新增多字词/长键/防污染 JVM 单测。
+    const val baseVersionCode = 24
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

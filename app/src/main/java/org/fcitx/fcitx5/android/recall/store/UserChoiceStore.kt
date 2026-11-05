@@ -14,6 +14,13 @@
  *     最近一次必为第 1」冲突，且本仓库 v1.0.63~66 已实测证伪；详见
  *     /workspace/candidate-priority-design.md。
  *
+ * v1.0.70 覆盖扩展：硬层不再局限于「2 字词 + 2 字母键」。单次上屏为单一连续
+ * 汉字段时把整段视为一个完整词（覆盖「哔哩哔哩」等 4 字应用名 / 多字 OCR 词），
+ * 键放宽到 2..12 字母。这些词此前只能吃 OCR/应用名自动模块的 order=2/3，
+ * 用户选多少次都排第 2；现在选一次即写 order=1 压过之。持久化层同步放宽
+ * length==2 硬编码，避免重启丢状态。所有防御（隐私/敏感/粘贴/跨词切片/
+ * 单字母键/写锁/失败重试/迁移/60ms+reloadNow）完整保留。
+ *
  * 保留 v1.0.66~68 的全部防御性修复（不得因本次重构丢失）：
  *  1. native order 是绝对候选插入位，不是权重（order=1 才是第一候选）。
  *  2. 归属判定用「持久化精确 key=value 托管集合」，不用 order 区间（避免与
@@ -23,7 +30,7 @@
  *     且保留 dirtyKeys 并补最多 3 次 1s 重试。
  *  5. scheduleSave 加 @Synchronized（IME 主线程与 fcitx runOnReady 线程并发）。
  *  6. 状态持久化与词库落盘解耦：无论成败都持久化 ranker 状态，进程被杀不丢学习。
- *  7. 隐私模式 / 敏感串 / 粘贴长文本 / 非独立 2 字词 / 非法键过滤（算法层内建）。
+ *  7. 隐私模式 / 敏感串 / 粘贴长文本 / 跨词窗口切片 / 单字母非法键过滤（算法层内建）。
  *  8. 跳过用户手动置顶条目，保证「手动置顶 > 自动学习」。
  *  9. 60ms 去抖落盘 + RecallReloader.reloadNow() 立即生效（0.1 秒级）。
  *
@@ -84,6 +91,10 @@ object UserChoiceStore {
             maxCommitLen = RecallConfig.CHOICE_MAX_COMMIT_LEN,
             maxRuns = RecallConfig.CHOICE_MAX_RUNS,
             misclickMs = RecallConfig.CHOICE_MISCLICK_MS,
+            // v1.0.70：硬层覆盖多字词（哔哩哔哩）与多字母键（blbl），详见 RecallConfig。
+            phraseLenMax = RecallConfig.CHOICE_PHRASE_LEN_MAX,
+            keyLen = RecallConfig.CHOICE_KEY_LEN_MIN,
+            keyLenMax = RecallConfig.CHOICE_KEY_LEN_MAX,
         )
     ).also { it.importState(loadState()) }
 
@@ -253,9 +264,14 @@ object UserChoiceStore {
                     val arr = s.optJSONArray(k) ?: return@forEach
                     val words = mutableListOf<String>()
                     for (i in 0 until arr.length()) {
-                        arr.optString(i, "").takeIf { it.length == 2 }?.let(words::add)
+                        // v1.0.70：不再硬性只留 2 字词，否则「哔哩哔哩」等整词重启即丢
+                        arr.optString(i, "")
+                            .takeIf { it.length in 2..RecallConfig.CHOICE_PHRASE_LEN_MAX }
+                            ?.let(words::add)
                     }
-                    if (k.length == 2 && k.all { it in 'a'..'z' } && words.isNotEmpty()) {
+                    if (k.length in RecallConfig.CHOICE_KEY_LEN_MIN..RecallConfig.CHOICE_KEY_LEN_MAX &&
+                        k.all { it in 'a'..'z' } && words.isNotEmpty()
+                    ) {
                         stacks[k] = words.distinct().take(RecallConfig.CHOICE_TOP_K)
                     }
                 }
@@ -263,8 +279,9 @@ object UserChoiceStore {
             val records = mutableMapOf<String, ChoiceRecord>()
             obj.optJSONObject("records")?.let { r ->
                 r.keys().forEach { id ->
-                    // 丢弃超长词条（v1.0.63 长键拼接垃圾），逐条容错
-                    if (id.substringAfter("=>").length > 2) return@forEach
+                    // 丢弃超长词条（v1.0.63 长键拼接垃圾），逐条容错。
+                    // v1.0.70 上限放宽到 CHOICE_PHRASE_LEN_MAX，与算法层一致。
+                    if (id.substringAfter("=>").length > RecallConfig.CHOICE_PHRASE_LEN_MAX) return@forEach
                     val v = r.optJSONObject(id) ?: return@forEach
                     records[id] = ChoiceRecord(
                         n = v.optInt("n", 1).coerceAtLeast(0),
@@ -278,7 +295,9 @@ object UserChoiceStore {
             val samples = mutableMapOf<String, Int>()
             obj.optJSONObject("samples")?.let { m ->
                 m.keys().forEach { k ->
-                    if (k.length == 2 && k.all { it in 'a'..'z' }) {
+                    if (k.length in RecallConfig.CHOICE_KEY_LEN_MIN..RecallConfig.CHOICE_KEY_LEN_MAX &&
+                        k.all { it in 'a'..'z' }
+                    ) {
                         samples[k] = m.optInt(k, 0).coerceAtLeast(0)
                     }
                 }
@@ -358,7 +377,13 @@ object UserChoiceStore {
         }
     }
 
-    /** 从 v1.0.67/68 的 winner_v4 + records_v2 重建 ChoiceState。 */
+    /**
+     * 从 v1.0.67/68 的 winner_v4 + records_v2 重建 ChoiceState。
+     *
+     * 此处保留 length==2 过滤是**有意的**：这些历史数据本身就只含 2 字词 / 2 字母键
+     *（旧版硬层只认这两类），既精确还原，也不会把 v1.0.63 遗留的长键拼接垃圾捞回来。
+     * v1.0.70 新学的多字词/长键存于 state_v5，由 [loadState] 按新范围读取，不经过本函数。
+     */
     private fun loadLegacyState(sp: android.content.SharedPreferences): ChoiceState {
         val winner = mutableMapOf<String, String>()
         sp.getString(KEY_WINNER_LEGACY, null)?.let { json ->
