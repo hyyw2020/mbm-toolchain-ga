@@ -158,7 +158,16 @@ object Versions {
     //          改为 last-commit-wins：每键只记「最近一次主动选择上屏的词」(winner_v4)，
     //          选一次即无条件写 order=1；精确只清理脏键名下旧行；落盘 400→60ms + reloadNow 立即重载；
     //          migrate v4 从历史 records 按最近上屏重建 winner，升级后历史记忆立即生效、无需重输。
-    const val baseVersionCode = 21
+    // v1.0.68：全量代码审查修复多处确证缺陷（跨 7 个文件，含 1 处档位注释校正），功能语义不变（修 bug 不新增/裁减功能）：
+    //          MbmCandidateSanitizer 改按 Unicode code point 识别 emoji（原逐 UTF-16 Char 遍历，
+    //          U+1F6xx 代理对永远匹配不到 ⇒ v1.0.65 的尾部 emoji 抑制实际从未生效）+ 全 emoji 栏保底
+    //          + CandidateListEvent.total 随截短同步；
+    //          UserChoiceStore 落盘失败不再误提交托管状态、无 winner 脏键不再误删置顶、
+    //          粘贴/长文本不再冒充主动选词、winner 只收独立 2 字词、scheduleSave 加同步、
+    //          loadRecords 逐条容错（原单条脏数据会吞掉全部历史记忆）；
+    //          PinyinCustomPhraseFragment.saveConfig 补 CustomPhraseManager.writeLock（防并发 lost update）；
+    //          PhrasePinStore / PhraseLockStore 懒加载缓存补线程同步；RecallWordStore 档位注释校正。
+    const val baseVersionCode = 22
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

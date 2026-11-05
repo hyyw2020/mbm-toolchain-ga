@@ -848,7 +848,14 @@ class PinyinCustomPhraseFragment : Fragment(), OnItemChangedListener<PinyinCusto
         val finalItems = merged.toTypedArray()
         lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) {
-                runCatching { CustomPhraseManager.saveCached(finalItems) }.isSuccess
+                // MBM v1.0.68：设置页保存也是「读 UI 快照 → 落盘」，必须与后台自动学习
+                //（UserChoiceStore / RecallWordStore / PersonalPhraseImporter / AppPhraseImporter
+                // 的 loadCached→filter→saveCached）共用 CustomPhraseManager.writeLock，
+                // 否则并发时会发生 lost update：后台基于旧快照算出的 merged 后写，
+                // 把用户刚保存的编辑整批覆盖掉。见 CustomPhraseManager.writeLock 约定。
+                CustomPhraseManager.withWriteLock {
+                    runCatching { CustomPhraseManager.saveCached(finalItems) }.isSuccess
+                }
             }
             // 保存失败不 reset dirty：留在页面里的内容仍标记未保存，下次 onStop 会重试
             if (ok) {

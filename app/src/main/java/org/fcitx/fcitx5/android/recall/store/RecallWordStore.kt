@@ -48,15 +48,16 @@ object RecallWordStore {
     private val lock = ReentrantLock()
 
     /**
-     * 本模块写过的条目判定（order ∈ {HOT_ORDER, COLD_ORDER}）。
+     * 本模块写过的条目判定（order ∈ {HOT_ORDER=3, COLD_ORDER=9}）。
      *
      * 与 AppPhraseImporter 对称：两边都只删自己写过的条目，互不越界。
-     * **关键约束：本判定绝不能包含 order=1。** AppPhraseImporter 的「应用搜索场景置顶」
-     * 条目正是 order=1（ORDER_APP_SEARCH），旧实现曾误带 LEGACY_COLD_ORDER=1 与之冲突：
-     * Recall 火力全开必然捕获应用名（如桌面「搜索应用」时看到的 WorkBuddy），其 commit()
-     * 合并自定义词组时会把 AppPhraseImporter 的 order=1 置顶条目当成「自己的旧冷词」误删，
-     * 导致「搜索应用」场景应用名不再置顶（降级到 order=2/8）。
-     * Recall 当前只写入 {HOT_ORDER=2, COLD_ORDER=9}，与应用名的 {1, 8} 完全错开，互不越界。
+     * **关键约束：本判定绝不能包含 order=1。** 旧实现曾误带 LEGACY_COLD_ORDER=1，
+     * 把 order=1 的条目当成「自己的旧冷词」误删；而 order=1 现由用户手动置顶
+     *（RecallConfig.PIN_ORDER）与 UserChoiceStore 的 last-commit-wins 占位。
+     * 当前档位（v1.0.68 核对代码后的准确值）：
+     *   置顶/用户选择 = 1 > 应用名搜索场景 = 2 > Recall 热词/个人热词 = 3
+     *   > 个人短语 4~7 > 应用名普通 = 8 > Recall 冷词 = 9。
+     * 各模块 isOwnEntry 区间互不重叠，合并时不会互相误删。
      */
     private fun isOwnEntry(p: PinyinCustomPhrase): Boolean =
         p.order == RecallConfig.HOT_ORDER || p.order == RecallConfig.COLD_ORDER

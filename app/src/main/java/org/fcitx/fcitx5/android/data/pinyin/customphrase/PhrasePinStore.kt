@@ -33,18 +33,26 @@ object PhrasePinStore {
     /** 规范化键：去掉 order 影响，只认 key 与 value */
     private fun keyOf(p: PinyinCustomPhrase): String = "${p.key}|${p.value}"
 
+    // MBM v1.0.68：本缓存会被 IME 线程（UserChoiceStore.flush 在 writeLock 内调 isPinned）
+    // 与设置页主线程（pin/unpin）并发访问。原实现 cache/initialized 均无同步，首次懒加载
+    // 可能被两个线程同时执行 mutableMap 写入，或读到半初始化状态。所有公开方法加
+    // @Synchronized（object 监视器，可重入），零行为变化；不与 CustomPhraseManager.writeLock
+    // 嵌套持有（调用方都是方法返回后才去拿 writeLock），无死锁风险。
+    @Synchronized
     fun isPinned(ctx: Context, phrase: PinyinCustomPhrase): Boolean {
         ensure(ctx)
         return cache.containsKey(keyOf(phrase))
     }
 
     /** 置顶时记录原 order，便于取消时恢复 */
+    @Synchronized
     fun pin(ctx: Context, phrase: PinyinCustomPhrase, originalOrder: Int) {
         ensure(ctx)
         cache[keyOf(phrase)] = originalOrder
         persist(ctx)
     }
 
+    @Synchronized
     fun unpin(ctx: Context, phrase: PinyinCustomPhrase) {
         ensure(ctx)
         cache.remove(keyOf(phrase))
@@ -52,6 +60,7 @@ object PhrasePinStore {
     }
 
     /** 取回置顶前记录的原 order；未记录时返回默认 5 */
+    @Synchronized
     fun getOriginalOrder(ctx: Context, phrase: PinyinCustomPhrase, fallback: Int = 5): Int {
         ensure(ctx)
         return cache[keyOf(phrase)] ?: fallback

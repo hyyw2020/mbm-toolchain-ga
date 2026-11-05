@@ -25,6 +25,18 @@
  * 改为持久化「精确 key=value 托管集合」；flush 只删自己写过的行，并跳过用户手动置顶条目
  *（保证「手动置顶 > 自动学习」），绝不触碰其它模块条目。
  *
+ * v1.0.68 全量审查修复（5 个确证缺陷）：
+ *  1. 落盘失败仍更新 managedKeys ⇒ 词库里的旧行永久脱离托管、成为删不掉的孤儿；
+ *     改为「仅 saveCached 成功才提交托管状态」，且与词库落盘解耦地持久化 winner/records。
+ *  2. 无 winner 的脏键（migrate v3 会把 records 全键标脏）仍被剔除旧行却不写回 ⇒
+ *     已学置顶被无声删除；改为只对「有 winner 的键」做剔除/重写。
+ *  3. 粘贴 / 整段文本上屏被当成「主动选词」⇒ 一次粘贴覆盖用户已学置顶；
+ *     加单次上屏长度上限，超长按非选择文本跳过（不动 SmartDictManager 既有统计）。
+ *  4. decomposeRun 的跨词 2 字切片（「安全爱情」→「全爱」）会被写进 winner 当置顶词；
+ *     改为 winner 只由「独立成段的 2 字词」产生，窗口切片仅保留给历史统计。
+ *  5. scheduleSave 在 IME 主线程与 fcitx runOnReady 线程并发调用非原子 ⇒ 可能丢 flush；
+ *     加 @Synchronized。
+ *
  * 纯离线：数据仅存本机 SharedPreferences，不联网、不写输入原文日志（仅可记「本次记录 N 词」计数，
  * 不含任何候选词明文），隐私模型与 Trime「全部输入逻辑本地执行、断网可完整工作」一致。
  */
@@ -88,6 +100,9 @@ object UserChoiceStore {
     /** 脏键累积（debounce 窗口内合并多次提交的 key，flush 一次性重算）。 */
     private val dirtyKeys = mutableSetOf<String>()
 
+    /** v1.0.68：落盘失败后的有限重试计数（仅在失败分支递增，成功即清零）。 */
+    private var flushRetry = 0
+
     private val handler = Handler(Looper.getMainLooper())
     private var saveTask: Runnable? = null
     /**
@@ -105,6 +120,17 @@ object UserChoiceStore {
      * 学到可复用短词，而非一个 aqaqaq 长键垃圾（v1.0.63 已知 bug）。
      */
     private const val CHOICE_BOOST_MAX_LEN = 2
+
+    /**
+     * v1.0.68：单次上屏被认定为「一次主动候选选择」的最大文本长度。
+     * 超过即按粘贴 / 整段文本处理，不改写 winner —— 否则用户在别处复制一段中文再粘贴，
+     * 末尾的 2 字词就会把 aq,1=安全 之类已学到的置顶覆盖掉。正常选词 2~4 字远低于此。
+     * 仅约束本模块的个性化学习，SmartDictManager / PersonalPhrase 的统计行为完全不变。
+     */
+    private const val CHOICE_MAX_COMMIT_LEN = 16
+
+    /** v1.0.68：单次上屏最多处理的连续汉字段数，防御异常长文本。 */
+    private const val CHOICE_MAX_RUNS = 8
 
     /** 把一段连续汉字切成 boost 词条：≤2 字整段保留；>2 字切相邻 2 字窗口并去重。 */
     private fun decomposeRun(run: String): List<String> {
@@ -140,17 +166,24 @@ object UserChoiceStore {
         if (!isEnabled()) return
         // 敏感串（卡号/身份证/验证码）整体跳过：不学习、不写库（隐私 E2/E3 降权原则）
         if (RecallConfig.SENSITIVE_PATTERNS.any { it.containsMatchIn(text) }) return
-        // 先切出连续汉字串，再切成 2 字词（见 [decomposeRun]：杜绝长键前缀污染候选）
-        val words = HANZI_RUN_RE.findAll(text).flatMap { decomposeRun(it.value) }.toList()
-        if (words.isEmpty()) return
+        // v1.0.68：粘贴 / 整段文本上屏不是「用户从候选栏主动选词」，不能据此改写 winner。
+        // 只处理短上屏；SmartDictManager.recordUsage 仍在 commitText 里照常统计，不受影响。
+        if (text.length > CHOICE_MAX_COMMIT_LEN) return
+        val runs = HANZI_RUN_RE.findAll(text).map { it.value }.toList()
+        if (runs.isEmpty() || runs.size > CHOICE_MAX_RUNS) return
+        // 历史统计仍按原逻辑切成 2 字窗口（行为不变）；winner 另用「独立 2 字词」。
+        val words = runs.flatMap { decomposeRun(it) }
+        // v1.0.68：只有独立成段的 2 字词才是用户真正选的词。长串切出来的跨词窗口
+        //（如「安全爱情」→「全爱」）不是用户选的，绝不能成为置顶词。
+        val winnerWords = runs.filter { it.length == CHOICE_BOOST_MAX_LEN }
         val ctxWord = lastWord
         val now = System.currentTimeMillis()
         val affected = mutableSetOf<String>()
+        var changed = false
         lock.withLock {
             for (w in words) {
-                val keys = AppPhraseImporter.keysForName(w)
-                for (k in keys) {
-                    // 只接受 2 字纯字母首字母键：杜绝单字母键 / 长键把垃圾带进 winner 表
+                for (k in AppPhraseImporter.keysForName(w)) {
+                    // 只接受 2 字纯字母首字母键：杜绝单字母键 / 长键把垃圾带进记录表
                     if (k.length != CHOICE_BOOST_MAX_LEN || !k.all { it in 'a'..'z' }) continue
                     val id = "$k=>$w"
                     val prev = records[id]
@@ -159,16 +192,24 @@ object UserChoiceStore {
                         lastAt = now,
                         prevWord = ctxWord
                     )
-                    // 一次主动选择即成为该键唯一置顶词，直接覆盖旧 winner（无需累积次数反超）
+                }
+            }
+            // last-commit-wins：一次主动选择即成为该键唯一置顶词，直接覆盖旧 winner。
+            for (w in winnerWords) {
+                for (k in AppPhraseImporter.keysForName(w)) {
+                    if (k.length != CHOICE_BOOST_MAX_LEN || !k.all { it in 'a'..'z' }) continue
                     winner[k] = w
                     affected.add(k)
                 }
-                lastWord = w
             }
-            dirtyKeys.addAll(affected)
+            if (words.isNotEmpty()) lastWord = words.last()
             trimLocked()
+            if (affected.isNotEmpty()) {
+                dirtyKeys.addAll(affected)
+                changed = true
+            }
         }
-        scheduleSave()
+        if (changed) scheduleSave()
     }
 
     // ---------- 历史统计（v1.0.67 起仅用于容量护栏，不参与置顶决策）----------
@@ -197,6 +238,13 @@ object UserChoiceStore {
 
     // ---------- 落盘（debounce 合并）----------
 
+    /**
+     * v1.0.68：加 @Synchronized。本方法会从 IME 主线程（recordCommit）与 fcitx
+     * runOnReady 回调线程（migrateLegacy）并发调用，saveTask 的「读-取消-赋值-post」
+     * 序列必须原子，否则两个线程各自的 removeCallbacks 会互相取消，导致某次 flush 丢失。
+     * 此处只操作主线程 Handler，不持 [lock]、不调用 [flush]，无死锁风险。
+     */
+    @Synchronized
     private fun scheduleSave() {
         saveTask?.let { handler.removeCallbacks(it) }
         saveTask = Runnable { flush() }
@@ -214,16 +262,20 @@ object UserChoiceStore {
      *  - 跳过用户手动置顶的 key=value，保证「手动置顶 > 自动学习」。
      */
     private fun flush() {
+        var saved = false
         lock.withLock {
             if (dirtyKeys.isEmpty()) return
             val keys = dirtyKeys.toSet()
-            dirtyKeys.clear()
+            // v1.0.68：只对「有 winner 的键」做剔除 + 重写。migrate v3 会把 records 的
+            // 全键标脏，其中不少键在 winner 里没有对应词（历史长词被过滤、winner 校验
+            // 丢弃等）；旧实现对这些键也剔除旧托管行却不写回，等于无声删掉已学置顶。
+            val effectiveKeys = keys.filter { winner.containsKey(it) }.toSet()
             val fresh = mutableListOf<PinyinCustomPhrase>()
-            // 只剔除脏键名下的旧托管条目，其余键的托管关系原样保留
+            // 只剔除有效键名下的旧托管条目，其余键的托管关系原样保留
             val newManaged = managedKeys
-                .filterNot { mk -> keys.any { mk.startsWith("$it=") } }
+                .filterNot { mk -> effectiveKeys.any { mk.startsWith("$it=") } }
                 .toMutableSet()
-            for (k in keys) {
+            for (k in effectiveKeys) {
                 val word = winner[k] ?: continue
                 // order=1 才是第一候选（native 语义）；CHOICE_ORDER_TIERS 恒为 [1]
                 val order = RecallConfig.CHOICE_ORDER_TIERS.first()
@@ -233,32 +285,55 @@ object UserChoiceStore {
                 fresh.add(phrase)
                 newManaged.add(entryKeyOf(phrase))
             }
+            var ok = false
             CustomPhraseManager.withWriteLock {
                 val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull()
                     ?: emptyArray()
-                // 精确剔除「脏键名下」本模块写过的行（不看 order），保留应用名/用户置顶/
-                // Recall/个人短语等其它来源条目，以及非脏键的本模块既有置顶；
+                // 精确剔除「有效键名下」本模块写过的行（不看 order），保留应用名/用户置顶/
+                // Recall/个人短语等其它来源条目，以及非有效键的本模块既有置顶；
                 // 用户手动置顶的条目即便曾由本模块写过也不误删。
                 val kept = existing.filterNot { p ->
                     entryKeyOf(p) in managedKeys &&
-                        keys.any { k -> entryKeyOf(p).startsWith("$k=") } &&
+                        effectiveKeys.any { k -> entryKeyOf(p).startsWith("$k=") } &&
                         !PhrasePinStore.isPinned(appContext, p)
                 }
                 val merged = (kept + fresh)
                     .groupBy { "${it.key}=${it.value}" }
                     .map { g -> g.value.minByOrNull { it.order }!! }
                     .toTypedArray()
-                runCatching { CustomPhraseManager.saveCached(merged) }
+                ok = runCatching { CustomPhraseManager.saveCached(merged) }
                     .onFailure { Timber.w(it, "MBM Choice: save custom phrases failed") }
+                    .isSuccess
             }
-            managedKeys = newManaged
-            persistManagedKeys()
+            // v1.0.68：托管集合描述的是「词库里实际存在的行」，必须只在落盘成功后提交。
+            // 旧实现无论成败都覆盖 managedKeys，词库仍是旧内容时旧行就永久脱离托管、
+            // 变成再也清理不掉的孤儿；同时 dirtyKeys 已被提前清空，本次学习直接丢失。
+            if (ok) {
+                dirtyKeys.clear()
+                managedKeys = newManaged
+                persistManagedKeys()
+                flushRetry = 0
+            } else {
+                Timber.w("MBM Choice: flush failed, keep %d dirty keys for next flush", keys.size)
+                // 落盘失败时 dirtyKeys 仍在，但 saveTask 已被消费，必须补一个重试入口，
+                // 否则在用户不再选词的情况下本次学习永远补写不回词库。最多 3 次、间隔 1s，
+                // 成功路径零额外行为，不产生无限空转。
+                if (flushRetry < 3) {
+                    flushRetry++
+                    handler.postDelayed({ flush() }, 1000L)
+                } else {
+                    flushRetry = 0
+                }
+            }
+            // winner / records 存于独立 SharedPreferences，与词库落盘成败解耦：
+            // 无论成败都持久化，避免进程被杀丢失用户学习；下次 flush 会补写词库。
             persistWinner()
             persistRecords()
+            saved = ok
         }
         // v1.0.67：用户主动选择是低频强信号，立即重载（绕过 250ms 最小间隔），
-        // 保证「选完抬手，下一次输入该码即第一」。
-        RecallReloader.reloadNow()
+        // 保证「选完抬手，下一次输入该码即第一」。落盘失败时不 reload（词库未变）。
+        if (saved) RecallReloader.reloadNow()
     }
 
     private fun entryKeyOf(p: PinyinCustomPhrase): String = "${p.key}=${p.value}"
@@ -309,8 +384,15 @@ object UserChoiceStore {
             obj.keys().forEach { k ->
                 // 防御：丢弃超长词条（v1.0.63 长键拼接垃圾或异常数据，键长>2 会前缀污染候选）
                 if (k.substringAfter("=>").length > CHOICE_BOOST_MAX_LEN) return@forEach
-                val r = obj.getJSONObject(k)
-                map[k] = ChoiceRecord(r.getInt("c"), r.getLong("t"), r.optString("p", ""))
+                // v1.0.68：逐条容错。原 getJSONObject/getInt/getLong 任一条脏数据抛异常，
+                // 会被外层 runCatching 吞掉并让**整个** records 变空（历史记忆全丢）；
+                // 改为跳过坏条目、保留其余，并用 optXxx 给缺字段兜底。
+                val r = obj.optJSONObject(k) ?: return@forEach
+                map[k] = ChoiceRecord(
+                    r.optInt("c", 1),
+                    r.optLong("t", 0L),
+                    r.optString("p", "")
+                )
             }
             map
         }.getOrDefault(emptyMap())

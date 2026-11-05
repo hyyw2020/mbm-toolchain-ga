@@ -30,11 +30,16 @@ object PhraseLockStore {
     /** 规范化键：去掉 order 正负的影响，只认 key 与 value */
     private fun keyOf(p: PinyinCustomPhrase): String = "${p.key}|${p.value}"
 
+    // MBM v1.0.68：同 PhrasePinStore —— 缓存懒加载无同步，且 toggle 的「读-改-写」
+    // 跨两个方法，需整体原子化（否则两个线程同时 toggle 会都基于同一状态跳到同值）。
+    // object 监视器可重入，toggle 内再调 isLocked/setLocked 不会自锁。
+    @Synchronized
     fun isLocked(ctx: Context, phrase: PinyinCustomPhrase): Boolean {
         ensure(ctx)
         return cache.contains(keyOf(phrase))
     }
 
+    @Synchronized
     fun setLocked(ctx: Context, phrase: PinyinCustomPhrase, locked: Boolean) {
         ensure(ctx)
         if (locked) cache.add(keyOf(phrase)) else cache.remove(keyOf(phrase))
@@ -42,6 +47,7 @@ object PhraseLockStore {
     }
 
     /** 切换锁定状态并返回切换后的状态 */
+    @Synchronized
     fun toggle(ctx: Context, phrase: PinyinCustomPhrase): Boolean {
         val next = !isLocked(ctx, phrase)
         setLocked(ctx, phrase, next)
