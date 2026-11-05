@@ -210,4 +210,47 @@ object RecallConfig {
 
     /** 持久选择记录硬上限（内存/落盘双控，超出按最弱分数淘汰）。 */
     const val CHOICE_RECORD_CAP = 5000
+
+    // ---- v1.0.69 分层模型参数（硬层有序 Top-K 栈 + 软层融合打分，见 rank/ChoiceRanker.kt）----
+    //
+    // 设计裁决（详见 /workspace/candidate-priority-design.md）：
+    // 不采用「同拼音全候选 score 降序」——它与用户核心规则「选择 >= 1 次即提高、
+    // 最近一次选择必为第 1」数学上冲突，且本仓库 v1.0.63~66 已用真机视频实测证伪
+    //（用户反馈「输好几遍才提高」）。改为：硬层 last-commit-wins 锁定冠军(order=1)，
+    // 软层打分只作用于次位排序 / 衰减退役 / 淘汰，永不推翻冠军。
+
+    /** 每键硬插入位数：冠军=1，其余历史词=2..K。K>=2 才能表达「爱情第1、安全第2」。 */
+    const val CHOICE_TOP_K = 3
+
+    /** 时间衰减半衰期（5 天，取需求建议 3~7 天中值）。仅软层；冠军永不因分数退役。 */
+    const val CHOICE_DECAY_HALFLIFE_MS_V2 = 5L * 24 * 3600 * 1000
+
+    /** 次数对数平滑封顶点：ln(1+n)/ln(1+N_CAP) 后 clamp 到 1，防热门词垄断。 */
+    const val CHOICE_N_CAP = 20
+
+    /** 冷启动预热样本数：达到后 β=1，软层全力度介入；之前平滑过渡。 */
+    const val CHOICE_WARMUP_SAMPLES = 3
+
+    /** 连续选择加成上限 / 系数（有界，防连点刷分）。 */
+    const val CHOICE_STREAK_CAP = 3
+    const val CHOICE_STREAK_W = 0.15
+
+    /** 上下文共现加成系数：仅当上一条上屏词命中记录 prevWord 时 +ctxW。 */
+    const val CHOICE_CTX_W = 0.5
+
+    /** 一次疑似误选的软层惩罚扣减。 */
+    const val CHOICE_MISCLICK_PENALTY = 0.8
+
+    /** 选词后在此窗口内改选别的词，视为疑似误选。 */
+    const val CHOICE_MISCLICK_MS = 1500L
+
+    /** 同一 key=>word 在此窗口内重复上屏只刷新时间、不累加次数（防连点/长按）。 */
+    const val CHOICE_DEDUP_MS = 800L
+
+    /** 软层退役下限：非冠军且 score 低于此值即从栈移除（时间衰减）。 */
+    const val CHOICE_MIN_SCORE_V2 = 0.15
+
+    /** 单次上屏最大长度 / 最多连续汉字段数：超长按粘贴处理，不学习。 */
+    const val CHOICE_MAX_COMMIT_LEN = 16
+    const val CHOICE_MAX_RUNS = 8
 }

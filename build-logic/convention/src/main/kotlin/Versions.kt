@@ -167,7 +167,13 @@ object Versions {
     //          loadRecords 逐条容错（原单条脏数据会吞掉全部历史记忆）；
     //          PinyinCustomPhraseFragment.saveConfig 补 CustomPhraseManager.writeLock（防并发 lost update）；
     //          PhrasePinStore / PhraseLockStore 懒加载缓存补线程同步；RecallWordStore 档位注释校正。
-    const val baseVersionCode = 22
+    // v1.0.69：候选词优先级优化改分层架构（硬层有序 Top-K 栈 + 软层融合打分），
+    //          新增零 Android 依赖的纯算法层 rank/ChoiceRanker.kt（19 个 JVM 单测全通过），
+    //          UserChoiceStore 改为委托并保留 v1.0.66~68 全部防御（精确托管/写锁/失败重试/迁移/隐私）。
+    //          修正确定性次位：aq 选安全后选爱情 => 爱情 order=1、安全 order=2（旧版只保证第1）。
+    //          融合打分只作用于次位重排/衰减退役/淘汰，永不推翻「最近一次选择即第一」硬规则；
+    //          不做「同键短时改选⇒误选」的自动推断，避免误伤核心示例（详见设计文档 2.3）。
+    const val baseVersionCode = 23
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
