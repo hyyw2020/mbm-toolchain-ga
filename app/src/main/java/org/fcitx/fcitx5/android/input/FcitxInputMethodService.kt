@@ -251,19 +251,29 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
         return job
     }
 
+    /**
+     * v1.0.75：复制侧捕获到图像表情后的轻量提示钩子。
+     * v1.0.76：改为具名字段，才能在 [onDestroy] 判断「仍指向本实例」后解注册。
+     * ClipboardManager 是进程级单例，IME 服务会反复创建/销毁；旧实现每次
+     * onCreate 覆盖一个捕获 `this` 的匿名 lambda 却从不清理，导致已销毁的
+     * Service（连同 lifecycleScope 与 View 树）被全局单例长期持有而泄漏，
+     * 且服务销毁后剪贴板事件仍会触发早已失效的协程。
+     */
+    private val clipboardStickerCapturedHook: () -> Unit = {
+        val enabled = runCatching {
+            AppPrefs.getInstance().symbols.customEmojiCaptureToast.getValue()
+        }.getOrDefault(true)
+        if (enabled) lifecycleScope.launch {
+            pasteToast(getString(R.string.custom_emoji_captured_hint))
+        }
+    }
+
     override fun onCreate() {
         // MBM v1.0.36：注册 adb 调试桥接（MbmDebug）
         MbmDebug.bridge = this
         // v1.0.75：复制侧捕获到图像表情后给一条轻量提示，修复旧版静默无反馈、
         // 用户误以为「表情完全失效」的问题。钩子由 ClipboardManager 在成功入库后触发。
-        ClipboardManager.onClipboardStickerCaptured = {
-            val enabled = runCatching {
-                AppPrefs.getInstance().symbols.customEmojiCaptureToast.getValue()
-            }.getOrDefault(true)
-            if (enabled) lifecycleScope.launch {
-                pasteToast(getString(R.string.custom_emoji_captured_hint))
-            }
-        }
+        ClipboardManager.onClipboardStickerCaptured = clipboardStickerCapturedHook
         fcitx = FcitxDaemon.connect(javaClass.name)
         lifecycleScope.launch {
             jobs.consumeEach { it.join() }
@@ -1644,6 +1654,10 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     override fun onDestroy() {
         // MBM v1.0.36：解除 adb 调试桥接（仅当仍指向本实例）
         if (MbmDebug.bridge === this) MbmDebug.bridge = null
+        // v1.0.76：解除进程级单例对本 Service 的持有，避免 IME 反复重建时泄漏
+        if (ClipboardManager.onClipboardStickerCaptured === clipboardStickerCapturedHook) {
+            ClipboardManager.onClipboardStickerCaptured = null
+        }
         recreateInputViewPrefs.forEach {
             it.unregisterOnChangeListener(recreateInputViewListener)
         }

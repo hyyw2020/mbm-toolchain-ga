@@ -252,7 +252,26 @@ object Versions {
     //  3. 静默无反馈：捕获成功后注册即时提示钩子，告知「已加入表情面板」。
     //     新增 ClipboardStickerExtractorTest；全程不联网、不含任何第三方应用
     //     名称、不内置任何专有素材，不触碰候选排序/词库/预测链路。
-    const val baseVersionCode = 29
+    // v1.0.76：一轮真 bug 修复（不改变任何既有功能）。
+    //  1. 复制侧表情包配额：importClipboardImage 达到 500 条即 return false，
+    //     使尾部 takeLast 淘汰逻辑成为死代码；且文件名用 nanoTime 生成、
+    //     无内容去重，重复复制同一张图会不断新增条目。用户累计复制 500 次
+    //     后新表情永久无法加入 —— 正是「表情支持完全失效」的残留根因。
+    //     改为文件名由内容摘要派生 + ClipboardStickerPackPolicy 纯策略合并
+    //     （重复项刷新为最近、按上限保留最新），配额永不耗尽。
+    //  2. 分块流魔数嗅探：InputStream.read 允许分块返回（ContentProvider 基于
+    //     pipe 时常见）甚至返回 0，旧实现只在第一次 read 后就用「数组长度」
+    //     而非「有效字节数」判定，PNG 8 字节签名被拆开即误判丢弃真图像。
+    //     新增 ImageHeaderSniffer 逐段累积 + sniffImageMime(head, validBytes)。
+    //  3. GIF/BMP 魔数过松：只校验 "GIF8" / "BM" 前缀，普通文本会被误判为
+    //     图像落盘；改为 GIF 完整 6 字节签名、BMP 校验 14 字节文件头规范字段。
+    //  4. 生命周期：FcitxInputMethodService 注册到 ClipboardManager 单例的
+    //     捕获钩子在 onDestroy 未解注册，IME 反复重建会泄漏已销毁 Service。
+    //  5. 一致性：captureImageSticker 的 scheme 比较大小写敏感，与提取器
+    //     ignoreCase 提取出的 "CONTENT://" 候选互相抵消；导入全程串行化并
+    //     过滤清单中指向已删除文件的幽灵条目，修并发覆盖与面板空白格。
+    //  新增 16 个 JVM 单测，全量 159/159 通过；第一方 485 文件带 SPDX、0 缺失。
+    const val baseVersionCode = 30
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

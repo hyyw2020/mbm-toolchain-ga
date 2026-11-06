@@ -93,7 +93,9 @@ v1.0.73 表情功能另引用以下**公开标准**（非第三方库、非专�
 - **Android Clipboard Framework**（AOSP `ClipboardManager` / `ClipData` /
   `ContentResolver`）：v1.0.75 复制侧读取与输出侧写回系统剪贴板的标准通道。
 - **公开图像格式签名**（PNG / JPEG / GIF / WebP / BMP / ISO Base Media File
-  Format）：v1.0.75 用文件头魔数嗅探真实位图类型，不信任剪贴板声明的 MIME
+  Format）：v1.0.75 用文件头魔数嗅探真实位图类型，不信任剪贴板声明的 MIME；
+  v1.0.76 改为按有效字节数逐段累积判定（兼容分块返回的 ContentProvider
+  输入流），并收紧 GIF / BMP 签名校验，避免把普通文本误判为图像
   （`data/emoji/ClipboardStickerExtractor.kt`）。均为公开规范，非第三方库。
 
 上述标准与组件均以公开规范或 SPDX 许可标识表达；本产品**不内置、不分发

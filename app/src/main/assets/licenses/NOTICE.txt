@@ -1,20 +1,21 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.75（versionCode = baseVersionCode(29) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.76（versionCode = baseVersionCode(30) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.75）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.76）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
-v1.0.75 重跑 docs/license_audit.py 的实测分布为
-第一方 481 个文件带 SPDX 头、0 缺失：
+v1.0.76 重跑 docs/license_audit.py 的实测分布为
+第一方 485 个文件带 SPDX 头、0 缺失：
   LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
-  AGPL-3.0-or-later × 116（MBM 新写/新改，含 v1.0.73 新增的表情模块、
-  v1.0.74 新增的 WordSelectMaskPolicy，及 v1.0.75 新增的
-  ClipboardStickerExtractor 与其 JVM 单测）。
+  AGPL-3.0-or-later × 120（MBM 新写/新改，含 v1.0.73 新增的表情模块、
+  v1.0.74 新增的 WordSelectMaskPolicy、v1.0.75 新增的
+  ClipboardStickerExtractor 与其 JVM 单测，及 v1.0.76 新增的
+  ImageHeaderSniffer.kt / ClipboardStickerPackPolicy.kt 与对应 JVM 单测）。
 组合分发依据见第五节。逐文件许可台账为 docs/sbom/license_ledger.txt
 （CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
 
@@ -262,3 +263,11 @@ AOSP 标准剪贴板与 Rich Content API 能力，不依赖、不内置、不适
 文档仍不含任何第三方应用名称；宿主应用若不写入系统剪贴板或仅写私有
 短码/加密素材，则属平台边界，无法取得图像字节。新增文件均为第一方代码，
 沿用上述合规约束。）
+（v1.0.76：一轮真 bug 修复，不改变任何既有功能。修复剪贴板表情包配额
+耗尽后拒绝收录、重复复制同一图像占用配额、ContentProvider 输入流分块
+返回时文件头嗅探失败、GIF/BMP 魔数校验过松、服务销毁后全局回调未解注册、
+URI 方案大小写过滤不一致、并发导入互相覆盖与清单幽灵条目。新增文件
+均为零 Android 依赖的第一方纯算法/策略代码与 JVM 单测，仅使用 Java/Kotlin
+标准库与公开图像格式签名；未引入任何新的第三方组件、依赖、数据处理、
+系统权限或网络访问，不预置/不内置/不下载任何第三方专有表情素材。
+代码、注释与随版本分发的文档仍不含任何第三方应用名称。）

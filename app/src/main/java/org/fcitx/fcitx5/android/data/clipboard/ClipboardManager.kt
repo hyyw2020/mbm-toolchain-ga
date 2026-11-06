@@ -577,8 +577,10 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         }
         if (candidates.isEmpty()) return
         for (uri in candidates.take(ClipboardStickerExtractor.MAX_CANDIDATES)) {
-            if (uri.scheme != "content") continue
-            if (uri.authority == selfAuthority) continue // 防自我复制回环
+            // v1.0.76：extractContentUris 用 ignoreCase 接受 "CONTENT://"，
+            // 这里必须同样忽略大小写，否则大写 scheme 的候选会被「提取出来又过滤掉」。
+            if (!"content".equals(uri.scheme, ignoreCase = true)) continue
+            if (selfAuthority.equals(uri.authority, ignoreCase = true)) continue // 防自我复制回环
             if (CustomEmojiRepository.importClipboardImage(appContext, uri)) {
                 onClipboardStickerCaptured?.invoke()
                 return

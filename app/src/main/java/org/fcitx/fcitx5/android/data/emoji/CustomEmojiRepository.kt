@@ -33,6 +33,7 @@ import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.utils.appContext
 import timber.log.Timber
 import java.io.File
+import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
 object CustomEmojiRepository {
@@ -41,6 +42,14 @@ object CustomEmojiRepository {
     private const val FILE_PROVIDER_SUFFIX = ".fileprovider"
     private const val CLIPBOARD_PACK_ID = "clipboard"
     private const val ZIP_MAGIC_SIZE = 4
+
+    /**
+     * v1.0.76：剪贴板导入串行化。旧实现「读清单 → 写 tmp → 重命名 → 重写清单 →
+     * 删孤儿」全程无同步，用户连续快速复制多个表情时多个 onPrimaryClipChanged
+     * 协程会并发执行，互相覆盖 pack.json 并删掉对方刚落盘的文件，导致条目丢失、
+     * 清单与实际文件不一致（面板出现空白格）。
+     */
+    private val clipboardImportLock = Any()
 
     /** 每次导入/删除自增，供表情面板判断是否需要重建分类页。 */
     @Volatile
@@ -347,59 +356,79 @@ object CustomEmojiRepository {
      *  - 非图像或短码文本 → 直接丢弃，绝不把乱码当表情存进去。
      * 单流读取同时规避 content URI 临时读授权可能只可消费一次的风险。
      * 调用方须已在隐私模式下跳过（见 ClipboardManager）。
+     *
+     * v1.0.76 真 bug 修复（不改变任何既有功能）：
+     *  1. 文件头改为**逐段累积 + 按有效字节数判定**（ImageHeaderSniffer）。
+     *     `InputStream.read` 允许分块返回（ContentProvider 基于 pipe 时常见），
+     *     旧实现只在第一次 read 后就把固定长 16 的数组拿去嗅探，PNG 的 8 字节
+     *     签名只填进 4 字节即被误判为「非图像」，真表情被静默丢弃。
+     *  2. 去掉「达到 500 条就 return false」的硬拒绝：它使尾部 takeLast 淘汰
+     *     逻辑成为死代码，用户累计复制 500 次后新表情**永久无法加入**。
+     *  3. 文件名由内容摘要派生：重复复制同一张图不再新增条目、不消耗配额，
+     *     只把它刷新为「最近使用」；配合 ClipboardStickerPackPolicy 真正保留
+     *     最近 N 条。否则反复复制几张图就会把配额吃光、功能彻底失效。
+     *  4. 全程串行化 + 过滤清单中指向已删除文件的幽灵条目，修并发覆盖与
+     *     面板空白格。
      */
-    fun importClipboardImage(context: Context, uri: Uri): Boolean {
+    fun importClipboardImage(context: Context, uri: Uri): Boolean =
+        synchronized(clipboardImportLock) { importClipboardImageLocked(context, uri) }
+
+    private fun importClipboardImageLocked(context: Context, uri: Uri): Boolean {
         if (PrivacyController.inPrivacyMode) return false
         val dir = packDir(CLIPBOARD_PACK_ID) ?: return false
         if (!dir.mkdirs() && !dir.isDirectory) return false
-        val existing = readPack(dir)
-        if ((existing?.items?.size ?: 0) >= CustomEmojiProtocol.MAX_ITEMS_PER_PACK) return false
 
         val tmp = File(dir, "clip_${System.nanoTime()}.tmp")
-        var detectedMime: String? = null
         var written = 0L
+        val sniffer = ImageHeaderSniffer()
         val ok = runCatching {
             val input = context.contentResolver.openInputStream(uri) ?: return@runCatching false
             input.use { src ->
                 tmp.outputStream().use { dst ->
                     val buf = ByteArray(16 * 1024)
-                    val head = ByteArray(ClipboardStickerExtractor.SNIFF_BYTES)
-                    var first = true
                     while (true) {
                         val n = src.read(buf)
                         if (n < 0) break
-                        if (first) {
-                            val copy = n.coerceAtMost(head.size)
-                            System.arraycopy(buf, 0, head, 0, copy)
-                            detectedMime = ClipboardStickerExtractor.sniffImageMime(head)
-                            first = false
-                        }
+                        // 逐段累积：read 可能只返回几个字节，也可能返回 0
+                        sniffer.accept(buf, 0, n)
                         written += n
                         if (written > CustomEmojiProtocol.MAX_ITEM_BYTES) return@runCatching false
                         dst.write(buf, 0, n)
                     }
                 }
             }
-            written > 0 && detectedMime != null
+            written > 0 && sniffer.result() != null
         }.onFailure { Timber.w(it, "CustomEmoji: clipboard sniff failed") }.getOrDefault(false)
         if (!ok) {
             tmp.delete()
             return false
         }
 
-        val mime = detectedMime ?: return false.also { tmp.delete() }
+        val mime = sniffer.result() ?: return false.also { tmp.delete() }
         val ext = ClipboardStickerExtractor.extensionForMime(mime)
-        val name = "clip_${System.nanoTime()}$ext"
+        val digest = runCatching { sha256Hex(tmp) }.getOrNull()
+            ?: return false.also { tmp.delete() }
+        val name = "clip_$digest$ext"
         val target = File(dir, name)
-        if (!tmp.renameTo(target)) {
+        // 同内容重复复制：renameTo 覆盖同名文件（Linux 语义）；若目标已存在且
+        // rename 失败，内容摘要相同，直接复用已有文件即可，不必报错。
+        if (!tmp.renameTo(target) && !target.isFile) {
             tmp.delete()
             return false
         }
-        val item = CustomEmojiItem(name, CustomEmojiProtocol.labelFromFileName(name), mime, written)
-        val items = ((existing?.items ?: emptyList()) + item)
-            .distinctBy { it.file }
-            .takeLast(CustomEmojiProtocol.MAX_ITEMS_PER_PACK)
-        val keep = items.map { it.file }.toSet()
+        tmp.delete()
+
+        val existing = readPack(dir)
+        // 清单可能残留指向已删除文件的幽灵条目，先过滤，避免面板出现空白格
+        val live = (existing?.items ?: emptyList()).filter { File(dir, it.file).isFile }
+        val item = CustomEmojiItem(
+            file = name,
+            label = CustomEmojiProtocol.labelFromFileName(name),
+            mime = mime,
+            size = target.length()
+        )
+        val items = ClipboardStickerPackPolicy.merge(live, item)
+        val keep = ClipboardStickerPackPolicy.keepFiles(items)
         dir.listFiles { f -> f.isFile && f.name != CustomEmojiProtocol.MANIFEST_NAME && f.name !in keep }
             ?.forEach { it.delete() }
         val pack = CustomEmojiPack(
@@ -413,6 +442,20 @@ object CustomEmojiRepository {
         }
         bumpRevision()
         return true
+    }
+
+    /** 文件内容的 SHA-256 十六进制（用于剪贴板表情按内容去重）。 */
+    private fun sha256Hex(file: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(16 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                md.update(buf, 0, n)
+            }
+        }
+        return md.digest().joinToString("") { "%02x".format(it) }
     }
 
     // ------------------------------------------------------------------ 删除

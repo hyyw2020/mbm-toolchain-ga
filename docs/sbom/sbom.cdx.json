@@ -738,6 +738,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/ClipboardStickerPackPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocol.kt",
       "licenses": [
         {
@@ -751,6 +763,18 @@
     {
       "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiRepository.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/ImageHeaderSniffer.kt",
       "licenses": [
         {
           "license": {
@@ -4998,7 +5022,31 @@
     },
     {
       "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/ClipboardStickerPackPolicyTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocolTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/ImageHeaderSnifferTest.kt",
       "licenses": [
         {
           "license": {

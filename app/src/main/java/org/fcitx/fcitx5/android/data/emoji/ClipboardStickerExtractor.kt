@@ -66,26 +66,53 @@ object ClipboardStickerExtractor {
     /**
      * 用文件头魔数嗅探真实图像 MIME；无法识别返回 null。
      * 只判定公开的位图容器签名，绝不依据扩展名或剪贴板声明。
+     *
+     * 兼容重载：调用方持有完整快照时可直接传数组。
      */
-    fun sniffImageMime(head: ByteArray?): String? {
-        if (head == null || head.size < 4) return null
-        fun b(i: Int): Int = head[i].toInt() and 0xFF
+    fun sniffImageMime(head: ByteArray?): String? = sniffImageMime(head, head?.size ?: 0)
+
+    /**
+     * 用**有效字节数**判定，而不是数组长度。
+     *
+     * 真 bug 背景：调用方常把字节读进固定长 16 的缓冲区，但真实文件可能更短、
+     * 或流分块返回导致只填了前几个字节；旧实现用 `head.size >= 8/12` 判断，
+     * 会把末尾补 0 的字节当成真实文件头参与比较。现在一律只看前 [validBytes]
+     * 个有效字节，越界读取返回 0，任何判据都不会踩到未初始化区域。
+     *
+     * 同时收紧两处过松签名：GIF 必须完整 6 字节 "GIF87a"/"GIF89a"，
+     * BMP 必须有 14 字节 BITMAPFILEHEADER 且 bfSize 合法。旧实现只要以
+     * "GIF8" 或 "BM" 开头就判为图像，纯文本/损坏数据会被误收进表情面板。
+     */
+    fun sniffImageMime(head: ByteArray?, validBytes: Int): String? {
+        if (head == null) return null
+        val n = minOf(validBytes, head.size)
+        if (n < 4) return null
+        fun b(i: Int): Int = if (i in 0 until n) head[i].toInt() and 0xFF else 0
         // PNG: 89 50 4E 47 0D 0A 1A 0A
-        if (head.size >= 8 && b(0) == 0x89 && b(1) == 0x50 && b(2) == 0x4E &&
+        if (n >= 8 && b(0) == 0x89 && b(1) == 0x50 && b(2) == 0x4E &&
             b(3) == 0x47 && b(4) == 0x0D && b(5) == 0x0A && b(6) == 0x1A && b(7) == 0x0A
         ) return "image/png"
         // JPEG: FF D8 FF
         if (b(0) == 0xFF && b(1) == 0xD8 && b(2) == 0xFF) return "image/jpeg"
-        // GIF87a / GIF89a
-        if (b(0) == 0x47 && b(1) == 0x49 && b(2) == 0x46 && b(3) == 0x38) return "image/gif"
-        // BMP: "BM"
-        if (b(0) == 0x42 && b(1) == 0x4D) return "image/bmp"
+        // GIF87a / GIF89a：完整 6 字节签名
+        if (n >= 6 && b(0) == 0x47 && b(1) == 0x49 && b(2) == 0x46 && b(3) == 0x38 &&
+            (b(4) == 0x37 || b(4) == 0x39) && b(5) == 0x61
+        ) return "image/gif"
+        // BMP: "BM" + 14 字节 BITMAPFILEHEADER。除魔数外还校验规范强制字段：
+        // bfReserved1/2 必须为 0、bfSize 至少覆盖文件头+DIB 头、bfOffBits 落在
+        // [14, bfSize] 内。仅凭 "BM" 两字节会把任意以 BM 开头的文本误判为图像。
+        if (n >= 14 && b(0) == 0x42 && b(1) == 0x4D) {
+            val bfSize = b(2) or (b(3) shl 8) or (b(4) shl 16) or (b(5) shl 24)
+            val reservedZero = b(6) == 0 && b(7) == 0 && b(8) == 0 && b(9) == 0
+            val bfOffBits = b(10) or (b(11) shl 8) or (b(12) shl 16) or (b(13) shl 24)
+            if (reservedZero && bfSize >= 26 && bfOffBits in 14..bfSize) return "image/bmp"
+        }
         // WebP: "RIFF"...."WEBP"
-        if (head.size >= 12 && b(0) == 0x52 && b(1) == 0x49 && b(2) == 0x46 &&
+        if (n >= 12 && b(0) == 0x52 && b(1) == 0x49 && b(2) == 0x46 &&
             b(3) == 0x46 && b(8) == 0x57 && b(9) == 0x45 && b(10) == 0x42 && b(11) == 0x50
         ) return "image/webp"
         // ISO Base Media File Format: ...."ftyp" + brand（HEIC / HEIF / AVIF）
-        if (head.size >= 12 && b(4) == 0x66 && b(5) == 0x74 && b(6) == 0x79 && b(7) == 0x70) {
+        if (n >= 12 && b(4) == 0x66 && b(5) == 0x74 && b(6) == 0x79 && b(7) == 0x70) {
             val brand = String(charArrayOf(
                 b(8).toChar(), b(9).toChar(), b(10).toChar(), b(11).toChar()
             ))
