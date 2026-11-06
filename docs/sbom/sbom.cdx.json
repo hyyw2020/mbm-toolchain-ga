@@ -726,6 +726,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/ClipboardStickerExtractor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocol.kt",
       "licenses": [
         {
@@ -4963,6 +4975,18 @@
     {
       "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipherTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/ClipboardStickerExtractorTest.kt",
       "licenses": [
         {
           "license": {

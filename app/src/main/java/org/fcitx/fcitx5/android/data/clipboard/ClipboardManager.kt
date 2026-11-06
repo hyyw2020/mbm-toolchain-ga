@@ -22,6 +22,7 @@ import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardDao
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardDatabase
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.crypto.AppKeyManager
+import org.fcitx.fcitx5.android.data.emoji.ClipboardStickerExtractor
 import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
@@ -539,39 +540,59 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
     }
 
     /**
-     * v1.0.73：复制侧富媒体捕获。
+     * v1.0.75：复制侧富媒体捕获（放宽多形态入口）。
      *
-     * 当系统剪贴板声明 image 类 MIME 且含 content URI 时，把该资产复制进
-     * 自定义表情容器（应用私有目录），使用户在表情面板内能看到并再次以
-     * Rich Content 方式提交。这是「复制表情后能完美显示」的实现路径：
-     * 不依赖 URI 的临时读授权长期有效，落盘后由本应用自己的 FileProvider 授权。
+     * 旧实现只认「剪贴板声明 image 类 MIME + Item.uri」这一种形态，但宿主
+     * 应用复制表情时几乎都不是这样：常见的是 content URI 不带 image 声明、
+     * URI 藏在纯文本 / URI 列表 / HTML img 标签里，或只给 Intent 型 ClipData。
+     * 旧实现第一步就 return，导致「复制表情后输入法毫无反应、完全失效」。
      *
-     * 边界：遵守隐私模式、用户开关、MIME 白名单与体积/条数上限；
-     * 忽略本应用 FileProvider 自身产生的 URI，避免提交→复制→再导入的回环；
-     * 任何失败都只跳过，绝不影响文本剪贴板历史。
+     * 现在枚举所有 ClipData.Item 的 uri / text / htmlText / intent.data，
+     * 用纯函数提取 content URI 候选，逐个交给仓库：由仓库读文件头魔数嗅探
+     * 真实位图格式，非图像（短码、乱码、HTML）自动丢弃。这样「复制表情」
+     * 只要系统剪贴板里能读到图像字节，就一定能落进表情面板可用。
+     *
+     * 边界：遵守隐私模式、用户开关、体积/条数上限；忽略本应用 FileProvider
+     * 自身产生的 URI，避免提交→复制→再导入的回环；任何失败只跳过，绝不
+     * 影响文本剪贴板历史。纯本地、不联网、不解析任何网络链接。
      */
     private fun captureImageSticker(clip: android.content.ClipData) {
         val enabled = runCatching {
             AppPrefs.getInstance().symbols.customEmojiClipboardCapture.getValue()
         }.getOrDefault(true)
         if (!enabled) return
-        val desc = clip.description ?: return
-        var mime: String? = null
-        for (i in 0 until desc.mimeTypeCount) {
-            val m = desc.getMimeType(i)
-            if (m.startsWith("image/")) {
-                mime = m
-                break
+
+        val selfAuthority = appContext.packageName + ".fileprovider"
+        val candidates = LinkedHashSet<Uri>()
+        for (i in 0 until clip.itemCount) {
+            val item = runCatching { clip.getItemAt(i) }.getOrNull() ?: continue
+            runCatching { item.uri }.getOrNull()?.let { candidates.add(it) }
+            runCatching { item.intent?.data }.getOrNull()?.let { candidates.add(it) }
+            val text = runCatching { item.text?.toString() }.getOrNull()
+            val html = runCatching { item.htmlText }.getOrNull()
+            for (u in ClipboardStickerExtractor.extractContentUris(text) +
+                ClipboardStickerExtractor.extractContentUris(html)) {
+                runCatching { candidates.add(Uri.parse(u)) }
             }
         }
-        val imageMime = mime ?: return
-        for (i in 0 until clip.itemCount) {
-            val uri = runCatching { clip.getItemAt(i).uri }.getOrNull() ?: continue
-            // 跳过本应用自己签发的 URI，防止自我复制回环
-            if (uri.authority == appContext.packageName + ".fileprovider") continue
-            if (CustomEmojiRepository.importClipboardImage(appContext, uri, imageMime)) return
+        if (candidates.isEmpty()) return
+        for (uri in candidates.take(ClipboardStickerExtractor.MAX_CANDIDATES)) {
+            if (uri.scheme != "content") continue
+            if (uri.authority == selfAuthority) continue // 防自我复制回环
+            if (CustomEmojiRepository.importClipboardImage(appContext, uri)) {
+                onClipboardStickerCaptured?.invoke()
+                return
+            }
         }
     }
+
+    /**
+     * v1.0.75：复制侧成功入库后的即时反馈钩子。由输入法服务注册，用一条
+     * 轻量提示告诉用户「复制的图像表情已在表情面板可用、可一键上屏」，
+     * 修复旧版静默无反馈、用户误以为功能完全失效的问题。未注册时为空操作。
+     */
+    @Volatile
+    var onClipboardStickerCaptured: (() -> Unit)? = null
 
     /**
      * MBM v1.0.31：条数上限清理（纯 SQL，不再全量拉内存）。

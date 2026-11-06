@@ -90,10 +90,16 @@ v1.0.73 表情功能另引用以下**公开标准**（非第三方库、非专�
 - **Android Rich Content API / Image Keyboard**（AOSP `EditorInfo.contentMimeTypes`
   与 `InputConnection.commitContent`）：图像表情上屏协议。
 - **Android Storage Access Framework**（AOSP）：用户运行时导入图像资产。
+- **Android Clipboard Framework**（AOSP `ClipboardManager` / `ClipData` /
+  `ContentResolver`）：v1.0.75 复制侧读取与输出侧写回系统剪贴板的标准通道。
+- **公开图像格式签名**（PNG / JPEG / GIF / WebP / BMP / ISO Base Media File
+  Format）：v1.0.75 用文件头魔数嗅探真实位图类型，不信任剪贴板声明的 MIME
+  （`data/emoji/ClipboardStickerExtractor.kt`）。均为公开规范，非第三方库。
 
 上述标准与组件均以公开规范或 SPDX 许可标识表达；本产品**不内置、不分发
 任何第三方专有表情包**，图像表情资产 100% 由使用者在运行时自行导入，
-著作权与来源由导入者负责。
+著作权与来源由导入者负责。宿主应用若不写入系统剪贴板、或仅写私有短码/
+加密素材，则受 Android 平台边界限制，无法取得图像字节。
 
 ### 5.1 离线手写模块说明
 

@@ -235,7 +235,24 @@ object Versions {
     //  2. 新增零 Android 依赖的 WordSelectMaskPolicy（打码判定 + 词块展示文本）
     //     与 6 个 JVM 回归单测；普通条目在任何偏好下都显示原文，敏感条目的
     //     隐私保护不回退。不改动候选排序、词库、预测与表情链路。
-    const val baseVersionCode = 28
+    // v1.0.75：修复「复制表情完全失效 / 输出乱码」（不改变任何既有输入功能）。
+    //  1. 真 bug（复制侧窄门）：captureImageSticker 只认「剪贴板声明 image 类
+    //     MIME + ClipData.Item.uri」这一种形态，宿主应用复制表情时几乎都不是
+    //     这样（content URI 不带声明、URI 藏在纯文本/URI 列表/HTML img 标签、
+    //     或 Intent 型 ClipData），第一步就 return，表现为复制后毫无反应。
+    //     改为枚举所有 Item 的 uri/text/htmlText/intent.data，用纯函数提取
+    //     content URI 候选；新增 ClipboardStickerExtractor 以文件头魔数嗅探
+    //     真实位图格式（PNG/JPEG/GIF/WebP/BMP/HEIC/AVIF），仓库单流读取落盘，
+    //     不信任剪贴板声明的 MIME，短码/乱码/HTML 一律不入库。
+    //  2. 真 bug（输出侧）：多数聊天输入框不声明 EditorInfo.contentMimeTypes
+    //     的 image 能力，旧版此时降级提交文本短码 :[label]:，即用户看到的乱码，
+    //     等于输出失效。改为「富媒体直投 → 不支持则把图像以 content URI 写回
+    //     系统剪贴板（ClipData.newUri + image 类 MIME + 临时读授权，任意输入框
+    //     长按粘贴即可贴出原图）→ 文本短码降级默认关」三段式通用输出。
+    //  3. 静默无反馈：捕获成功后注册即时提示钩子，告知「已加入表情面板」。
+    //     新增 ClipboardStickerExtractorTest；全程不联网、不含任何第三方应用
+    //     名称、不内置任何专有素材，不触碰候选排序/词库/预测链路。
+    const val baseVersionCode = 29
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

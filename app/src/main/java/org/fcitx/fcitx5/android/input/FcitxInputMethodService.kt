@@ -67,6 +67,7 @@ import org.fcitx.fcitx5.android.core.FcitxAPI
 import org.fcitx.fcitx5.android.core.FcitxEvent
 import org.fcitx.fcitx5.android.core.FcitxKeyMapping
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardBlobStore
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardPasteChunker
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.core.FormattedText
@@ -253,6 +254,16 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     override fun onCreate() {
         // MBM v1.0.36：注册 adb 调试桥接（MbmDebug）
         MbmDebug.bridge = this
+        // v1.0.75：复制侧捕获到图像表情后给一条轻量提示，修复旧版静默无反馈、
+        // 用户误以为「表情完全失效」的问题。钩子由 ClipboardManager 在成功入库后触发。
+        ClipboardManager.onClipboardStickerCaptured = {
+            val enabled = runCatching {
+                AppPrefs.getInstance().symbols.customEmojiCaptureToast.getValue()
+            }.getOrDefault(true)
+            if (enabled) lifecycleScope.launch {
+                pasteToast(getString(R.string.custom_emoji_captured_hint))
+            }
+        }
         fcitx = FcitxDaemon.connect(javaClass.name)
         lifecycleScope.launch {
             jobs.consumeEach { it.join() }
@@ -640,11 +651,13 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     }
 
     /**
-     * MBM v1.0.73：提交用户自定义图像表情。
+     * MBM v1.0.75：提交用户自定义图像表情。
      *
-     * 资产由用户运行时导入，落在本应用私有目录；通过 Android Rich Content API
-     * 以 FileProvider content:// URI 提交给声明了 image 能力的编辑器。目标不支持
-     * 富媒体时按用户偏好降级为文本短码，避免出现「点了没反应」。
+     * 资产由用户运行时导入，落在本应用私有目录。输出三段式：
+     *  1. 目标编辑器声明 image 能力 → Android Rich Content API 直接上屏；
+     *  2. 否则（多数聊天输入框不声明）→ 把图像以 content URI 写回系统剪贴板，
+     *     用户在任意输入框「长按→粘贴」即可贴出原图，这是最通用的跨应用输出；
+     *  3. 剪贴板也失败且用户显式开启文本降级 → 文本短码（默认关，避免乱码）。
      * 全程异常安全，不触碰学习/Recall 词库（表情不是文本输入，不参与候选排序）。
      */
     fun commitSticker(token: String) {
@@ -658,9 +671,13 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
             return
         }
+        val symbolsPrefs = runCatching { AppPrefs.getInstance().symbols }.getOrNull()
         val fallbackEnabled = runCatching {
-            AppPrefs.getInstance().symbols.customEmojiFallbackText.getValue()
-        }.getOrDefault(true)
+            symbolsPrefs?.customEmojiFallbackText?.getValue()
+        }.getOrDefault(false) ?: false
+        val clipboardOutput = runCatching {
+            symbolsPrefs?.customEmojiClipboardOutput?.getValue()
+        }.getOrDefault(true) ?: true
         val shortCode = ":[${resolved.label}]:"
         val result = EmojiRichContentCommitter.commit(
             context = this,
@@ -669,9 +686,13 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             uri = uri,
             mime = resolved.mime,
             label = resolved.label,
-            fallbackText = if (fallbackEnabled) shortCode else null
+            fallbackText = if (fallbackEnabled) shortCode else null,
+            clipboardFallback = clipboardOutput,
+            targetPackage = currentInputEditorInfo?.packageName
         )
         when (result) {
+            EmojiRichContentCommitter.Result.COPIED_TO_CLIPBOARD ->
+                lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_copied_hint)) }
             EmojiRichContentCommitter.Result.FALLBACK_TEXT ->
                 lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_fallback_hint, shortCode)) }
             EmojiRichContentCommitter.Result.UNAVAILABLE ->

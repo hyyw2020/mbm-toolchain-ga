@@ -378,17 +378,35 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             EmojiModifier.SkinTone.Default,
         )
 
-        /** 目标编辑器未声明 image 富媒体能力时，是否降级提交文本短码。 */
-        val customEmojiFallbackText = switch(
-            R.string.custom_emoji_fallback_text,
-            "custom_emoji_fallback_text",
+        /**
+         * v1.0.75：目标编辑器未声明 image 富媒体能力时，是否把图像写回系统
+         * 剪贴板（通用输出，用户长按粘贴即可贴出原图）。默认开启，替代旧版
+         * 输出文本短码导致的乱码问题。
+         */
+        val customEmojiClipboardOutput = switch(
+            R.string.custom_emoji_clipboard_output,
+            "custom_emoji_clipboard_output",
             true
         )
 
-        /** 系统剪贴板出现 image 资产时，是否纳入自定义表情面板。 */
+        /** 文本短码降级：默认关闭，避免把表情输出成乱码文本。 */
+        val customEmojiFallbackText = switch(
+            R.string.custom_emoji_fallback_text,
+            "custom_emoji_fallback_text",
+            false
+        )
+
+        /** 系统剪贴板出现图像资产时，是否纳入自定义表情面板。 */
         val customEmojiClipboardCapture = switch(
             R.string.custom_emoji_clipboard_capture,
             "custom_emoji_clipboard_capture",
+            true
+        )
+
+        /** 捕获成功后给出轻量提示（修复静默无反馈）。 */
+        val customEmojiCaptureToast = switch(
+            R.string.custom_emoji_capture_toast,
+            "custom_emoji_capture_toast",
             true
         )
     }

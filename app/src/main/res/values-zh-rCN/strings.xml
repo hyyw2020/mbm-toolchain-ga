@@ -355,6 +355,10 @@
     <string name="custom_emoji_import_failed">没有导入任何内容，请确认文件是受支持的图像或 ZIP。</string>
     <string name="custom_emoji_fallback_text">目标不支持富媒体时降级为文本</string>
     <string name="custom_emoji_clipboard_capture">复制图像表情时加入面板</string>
+    <string name="custom_emoji_clipboard_output">目标不支持富媒体时把图像写入剪贴板</string>
+    <string name="custom_emoji_capture_toast">复制图像表情加入面板后给出提示</string>
+    <string name="custom_emoji_captured_hint">已加入图像表情，打开表情面板即可使用</string>
+    <string name="custom_emoji_copied_hint">图像已复制到剪贴板，长按输入框粘贴即可</string>
     <string name="custom_emoji_fallback_hint">已以文本送出：%1$s</string>
     <string name="custom_emoji_unavailable">当前输入框无法接收图像内容</string>
     <string name="custom_emoji_import_title">自定义表情包</string>

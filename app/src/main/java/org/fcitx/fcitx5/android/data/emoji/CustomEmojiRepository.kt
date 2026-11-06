@@ -337,30 +337,68 @@ object CustomEmojiRepository {
     }.getOrNull()
 
     /**
-     * 剪贴板复制侧：把系统剪贴板里 `image/xxx` 的 content:// 资产落到
-     * 专用包，使其在表情面板内可见、可再次以富媒体方式提交。
+     * 剪贴板复制侧：把系统剪贴板里可读取的图像资产落到专用包，使其在
+     * 表情面板内可见、可再次以富媒体方式提交。
+     *
+     * v1.0.75：不再信任剪贴板声明的 MIME（宿主应用经常不声明、声明错误，
+     * 或只给 content URI / 短码文本）。这里**一次打开输入流**，边读边用
+     * 文件头魔数嗅探真实位图格式，再按真实格式选扩展名落盘：
+     *  - 真实图像（PNG/JPEG/GIF/WebP/BMP/HEIC/AVIF）→ 正常入库；
+     *  - 非图像或短码文本 → 直接丢弃，绝不把乱码当表情存进去。
+     * 单流读取同时规避 content URI 临时读授权可能只可消费一次的风险。
      * 调用方须已在隐私模式下跳过（见 ClipboardManager）。
      */
-    fun importClipboardImage(context: Context, uri: Uri, mimeHint: String?): Boolean {
+    fun importClipboardImage(context: Context, uri: Uri): Boolean {
         if (PrivacyController.inPrivacyMode) return false
         val dir = packDir(CLIPBOARD_PACK_ID) ?: return false
         if (!dir.mkdirs() && !dir.isDirectory) return false
         val existing = readPack(dir)
         if ((existing?.items?.size ?: 0) >= CustomEmojiProtocol.MAX_ITEMS_PER_PACK) return false
-        val ext = when (mimeHint) {
-            "image/gif" -> ".gif"
-            "image/webp" -> ".webp"
-            "image/jpeg" -> ".jpg"
-            "image/bmp" -> ".bmp"
-            else -> ".png"
+
+        val tmp = File(dir, "clip_${System.nanoTime()}.tmp")
+        var detectedMime: String? = null
+        var written = 0L
+        val ok = runCatching {
+            val input = context.contentResolver.openInputStream(uri) ?: return@runCatching false
+            input.use { src ->
+                tmp.outputStream().use { dst ->
+                    val buf = ByteArray(16 * 1024)
+                    val head = ByteArray(ClipboardStickerExtractor.SNIFF_BYTES)
+                    var first = true
+                    while (true) {
+                        val n = src.read(buf)
+                        if (n < 0) break
+                        if (first) {
+                            val copy = n.coerceAtMost(head.size)
+                            System.arraycopy(buf, 0, head, 0, copy)
+                            detectedMime = ClipboardStickerExtractor.sniffImageMime(head)
+                            first = false
+                        }
+                        written += n
+                        if (written > CustomEmojiProtocol.MAX_ITEM_BYTES) return@runCatching false
+                        dst.write(buf, 0, n)
+                    }
+                }
+            }
+            written > 0 && detectedMime != null
+        }.onFailure { Timber.w(it, "CustomEmoji: clipboard sniff failed") }.getOrDefault(false)
+        if (!ok) {
+            tmp.delete()
+            return false
         }
+
+        val mime = detectedMime ?: return false.also { tmp.delete() }
+        val ext = ClipboardStickerExtractor.extensionForMime(mime)
         val name = "clip_${System.nanoTime()}$ext"
-        // 剪贴板 URI 通常无 DISPLAY_NAME，按 MIME 推断扩展名后交给 copyOne 净化
-        val item = copyOne(context, uri, dir, name) ?: return false
+        val target = File(dir, name)
+        if (!tmp.renameTo(target)) {
+            tmp.delete()
+            return false
+        }
+        val item = CustomEmojiItem(name, CustomEmojiProtocol.labelFromFileName(name), mime, written)
         val items = ((existing?.items ?: emptyList()) + item)
             .distinctBy { it.file }
             .takeLast(CustomEmojiProtocol.MAX_ITEMS_PER_PACK)
-        // 控制专用包体积，仅保留最近条目
         val keep = items.map { it.file }.toSet()
         dir.listFiles { f -> f.isFile && f.name != CustomEmojiProtocol.MANIFEST_NAME && f.name !in keep }
             ?.forEach { it.delete() }

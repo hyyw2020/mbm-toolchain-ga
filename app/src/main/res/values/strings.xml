@@ -402,6 +402,10 @@
     <string name="custom_emoji_import_failed">Nothing was imported. Check that the files are supported images or a ZIP.</string>
     <string name="custom_emoji_fallback_text">Fallback to text when rich content is unsupported</string>
     <string name="custom_emoji_clipboard_capture">Add copied image stickers to the panel</string>
+    <string name="custom_emoji_clipboard_output">Copy image to clipboard when rich content is unsupported</string>
+    <string name="custom_emoji_capture_toast">Notify when a copied image sticker is added</string>
+    <string name="custom_emoji_captured_hint">Image sticker added — open the sticker panel to use it</string>
+    <string name="custom_emoji_copied_hint">Image copied to clipboard — long-press the input field and paste</string>
     <string name="custom_emoji_fallback_hint">Sent as text: %1$s</string>
     <string name="custom_emoji_unavailable">Current editor cannot accept image content</string>
     <string name="custom_emoji_import_title">Custom sticker packs</string>

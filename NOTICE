@@ -1,19 +1,20 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.74（versionCode = baseVersionCode(28) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.75（versionCode = baseVersionCode(29) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.74）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.75）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
-v1.0.74 重跑 docs/license_audit.py 的实测分布为
-第一方 479 个文件带 SPDX 头、0 缺失：
+v1.0.75 重跑 docs/license_audit.py 的实测分布为
+第一方 481 个文件带 SPDX 头、0 缺失：
   LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
-  AGPL-3.0-or-later × 114（MBM 新写/新改，含 v1.0.73 新增的表情模块及
-  v1.0.74 新增的 WordSelectMaskPolicy 与其 JVM 单测）。
+  AGPL-3.0-or-later × 116（MBM 新写/新改，含 v1.0.73 新增的表情模块、
+  v1.0.74 新增的 WordSelectMaskPolicy，及 v1.0.75 新增的
+  ClipboardStickerExtractor 与其 JVM 单测）。
 组合分发依据见第五节。逐文件许可台账为 docs/sbom/license_ledger.txt
 （CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
 
@@ -253,3 +254,11 @@ SPDX 许可标识。自定义图像表情功能只提供开放容器，不内置
 第三方专有表情素材，资产由使用者在运行时自行导入并自负来源责任。）
 （v1.0.74：仅修复「拆分选词」词块打码判定，未引入任何新的第三方组件、
 依赖、数据处理或系统权限；新增文件均为第一方代码，沿用上述合规约束。）
+（v1.0.75：修复「复制表情完全失效 / 输出乱码」。复制侧改为按公开图像
+格式魔数（PNG / JPEG / GIF / WebP / BMP / ISO-BMFF）嗅探真实位图，输出侧
+在目标编辑器不支持富媒体时把用户自选图像写入系统剪贴板供粘贴；二者均为
+AOSP 标准剪贴板与 Rich Content API 能力，不依赖、不内置、不适配任何第三方
+应用私有协议或素材，不联网、不新增系统权限。代码、注释与随版本分发的
+文档仍不含任何第三方应用名称；宿主应用若不写入系统剪贴板或仅写私有
+短码/加密素材，则属平台边界，无法取得图像字节。新增文件均为第一方代码，
+沿用上述合规约束。）
