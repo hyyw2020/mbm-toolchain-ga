@@ -13,7 +13,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
-import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.input.FcitxInputMethodService
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.dependency.theme
@@ -31,15 +30,20 @@ import timber.log.Timber
  * 「完成」或顶栏返回箭头退出。复制行为不改动原条目。
  *
  * 顶栏标题与返回箭头由 [InputWindow.ExtendedInputWindow] 公共栏提供。
+ *
+ * v1.0.74 真 bug 修复：[maskSensitive] 必须由调用方按
+ * `entry.sensitive && 用户打码偏好` 传入（见 [WordSelectMaskPolicy]），
+ * 不能再直接取全局偏好——后者默认 true，会让所有普通条目的词块整屏变成
+ * `•` 小点点、拆分选词完全不可用。默认值 false 保证新增调用点不会被误打码。
  */
-class WordSelectWindow(private val source: String) :
-    InputWindow.ExtendedInputWindow<WordSelectWindow>() {
+class WordSelectWindow(
+    private val source: String,
+    private val maskSensitive: Boolean = false
+) : InputWindow.ExtendedInputWindow<WordSelectWindow>() {
 
     private val service: FcitxInputMethodService by manager.inputMethodService()
     private val windowManager: InputWindowManager by manager.must()
     private val theme by manager.theme()
-
-    private val maskSensitive by AppPrefs.getInstance().clipboard.clipboardMaskSensitive
 
     private val ui by lazy {
         WordSelectUi(context, theme, source, maskSensitive).apply {

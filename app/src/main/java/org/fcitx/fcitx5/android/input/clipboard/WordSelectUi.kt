@@ -49,7 +49,11 @@ class WordSelectUi(
     private val theme: Theme,
     /** 待拆分的完整原文 */
     private val source: String,
-    /** 面板内文案是否打码（沿用剪贴板「隐藏敏感信息」偏好） */
+    /**
+     * 面板内词块是否遮蔽。v1.0.74 起由调用方按
+     * [WordSelectMaskPolicy.shouldMask] 计算后传入（条目敏感 && 用户偏好），
+     * 不再是全局「隐藏敏感信息」开关本身。
+     */
     private val maskSensitive: Boolean = false
 ) : Ui {
 
@@ -202,7 +206,7 @@ class WordSelectUi(
     }
 
     private fun chipDisplayText(raw: String): String =
-        if (maskSensitive) "•".repeat(raw.length.coerceAtMost(24)) else raw
+        WordSelectMaskPolicy.chipDisplayText(raw, maskSensitive)
 
     val truncationHint = TextView(ctx).apply {
         textSize = 11f

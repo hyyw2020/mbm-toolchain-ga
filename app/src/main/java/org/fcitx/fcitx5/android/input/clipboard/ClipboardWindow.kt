@@ -235,7 +235,13 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                             Timber.w("拆分选词目标已变化，丢弃过期结果")
                             return@launch
                         }
-                        windowManager.attachWindow(WordSelectWindow(text))
+                        // v1.0.74：与剪贴板列表同一语义——只有「条目本身被系统标记为
+                        // 敏感」且「用户开启了打码偏好」才遮蔽词块。此前直接取全局开关
+                        // （默认 true），导致普通条目拆分选词时整屏都是 `•` 小点点。
+                        val mask = WordSelectMaskPolicy.shouldMask(
+                            entry.sensitive, clipboardMaskSensitive
+                        )
+                        windowManager.attachWindow(WordSelectWindow(text, mask))
                     } catch (e: Throwable) {
                         Timber.e(e, "打开拆分选词失败")
                         Toast.makeText(service, R.string.word_select_read_failed, Toast.LENGTH_SHORT).show()

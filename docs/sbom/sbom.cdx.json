@@ -2082,6 +2082,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/WordSelectMaskPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/WordSelectUi.kt",
       "licenses": [
         {
@@ -4963,6 +4975,18 @@
     {
       "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocolTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/input/clipboard/WordSelectMaskPolicyTest.kt",
       "licenses": [
         {
           "license": {

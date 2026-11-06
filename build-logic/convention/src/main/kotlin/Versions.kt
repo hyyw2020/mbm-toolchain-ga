@@ -225,7 +225,17 @@ object Versions {
     //     剪贴板复制侧捕获 image 资产落盘，实现「复制表情后完美显示」。
     //  4. 合规：清除第一方代码/注释/文档中的第三方应用名称，新增文件仅使用
     //     Unicode/CLDR/AndroidX/AOSP 等标准与开源组件名称及 SPDX 许可标识。
-    const val baseVersionCode = 27
+    // v1.0.74：真 bug 修复（不改变任何既有输入功能）。
+    //  1. 用户实测「反复点拆分选词，显示的都是小点点」：v1.0.45~73 的
+    //     WordSelectWindow 直接读取全局偏好 clipboardMaskSensitive（默认 true）
+    //     作为整屏打码开关，未判断被打开的条目本身是否被系统标记为敏感；于是
+    //     任意普通文本进入拆分选词，WordSelectUi 都把每个词块替换成 `•`，
+    //     面板只剩一排小点点、无法辨认也无法选词。改为与剪贴板列表同一语义：
+    //     仅 `entry.sensitive && 用户打码偏好` 时遮蔽。
+    //  2. 新增零 Android 依赖的 WordSelectMaskPolicy（打码判定 + 词块展示文本）
+    //     与 6 个 JVM 回归单测；普通条目在任何偏好下都显示原文，敏感条目的
+    //     隐私保护不回退。不改动候选排序、词库、预测与表情链路。
+    const val baseVersionCode = 28
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

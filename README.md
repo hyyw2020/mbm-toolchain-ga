@@ -1,53 +1,50 @@
-# MBM 输入法（fcitx5-android 分支）v1.0.73
+# MBM 输入法（fcitx5-android 分支）v1.0.74
 
 fcitx5-android 的 MBM 定制分支。发布仓库为私有仓库，仅仓库所有者可访问；
 每个发布版本均附源码快照，以满足自研部分 AGPL-3.0-or-later 的对应源码要求。
 
-> 本 README 以 v1.0.73 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
+> 本 README 以 v1.0.74 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
 > 与 `docs/pitfalls.md`；隐私政策见 `PRIVACY.txt`，许可与第三方组件清单见
 > `LICENSE` / `NOTICE` / `docs/upstream.md`。
 
 ## 下载
 
-进入 Releases 页面下载 `v1.0.73-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
+进入 Releases 页面下载 `v1.0.74-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
 
 | 文件 | 说明 |
 | --- | --- |
-| `org.fcitx.fcitx5.android-1.0.73-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
-| `org.fcitx.fcitx5.android-1.0.73-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
-| `mbm-src-v1.0.73.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
+| `org.fcitx.fcitx5.android-1.0.74-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
+| `org.fcitx.fcitx5.android-1.0.74-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
+| `mbm-src-v1.0.74.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
 | `SHA256SUMS.txt` | SHA-256 校验和 |
 
 另可通过 WorkBuddy 分发 Portal 获取相同文件（下载链接需带 sharecode）。
 
-## 本期变更（v1.0.73）：默认支持全部表情 + 用户自定义图像表情
+## 本期变更（v1.0.74）：修复「拆分选词」整屏小点点
 
-- **默认支持所有 Unicode Emoji 序列**：新增零 Android 依赖的
-  `core/EmojiSequence.kt`，按 Unicode 码点结构判定表情（ZWJ 组合、
-  Fitzpatrick 肤色、VS15/VS16、键帽、Regional Indicator 区旗、TAG 序列，
-  依据 The Unicode Standard / UTS #51 与 CLDR RGI）。`EmojiModifier` 不再用
-  `Paint.hasGlyph(整串)` 裁剪——该调用对多码点序列恒为 false，会把新版
-  复合表情静默丢弃；`hideUnsupportedEmojis` 默认值由 `true` 改为 `false`。
-  文本通道走标准 `commitText` 原样上屏，宿主字体缺字形属渲染层问题。
-- **用户自定义图像表情（开放容器）**：新增 `CustomEmojiProtocol`（纯数据层）、
-  `CustomEmojiRepository`（本机仓库）、`EmojiRichContentCommitter`、
-  `CustomEmojiImportActivity`。资产 100% 由用户运行时通过系统文件选择器
-  （SAF，单图或 ZIP）导入，落在 `filesDir/custom_emoji/` 并附 `pack.json`
-  清单。**APK 不预置、不内置、不下载任何第三方专有表情包**，也不新增
-  系统权限。安全边界：文件名净化、MIME/扩展名白名单、8MiB 单文件 /
-  64MiB 总量 / 500 条上限、Zip Slip 防护、清单逐条容错。
-- **富媒体输入/输出闭环**：目标编辑器声明 `contentMimeTypes` 时，用
-  `InputConnectionCompat.commitContent` + `FileProvider` `content://` URI
-  临时读授权上屏图像；不支持时按开关降级为文本短码，全程异常安全。
-  表情面板动态追加「自定义表情」分类并渲染缩略图；剪贴板复制侧识别
-  `ClipData.Item.uri` 并导入容器，实现「复制表情后也能完美显示」。
-- **合规**：第一方代码、注释与随版本分发文档中不含任何第三方应用名称，
-  仅出现 The Unicode Standard / CLDR / AOSP / AndroidX / JetBrains
-  kotlinx.serialization 等公开标准与开源组件名称及 SPDX 许可标识。
-  `PRIVACY.txt` / `NOTICE` / `LICENSE` / `docs/upstream.md` 同步至 v1.0.73，
-  SBOM 与逐文件许可台账已重跑生成（第一方 477 文件带 SPDX 头、0 缺失）。
-- 全量 JVM 单测 **122/122 通过**（原 100 + 新增 22），`compileDebugKotlin`
-  与 `testDebugUnitTest` 均 BUILD SUCCESSFUL。
+- **真 bug 修复（用户录屏实测反馈）**：反复点「拆分选词」时词块全是一排
+  `•` 小点点，看不出字、也无法选词。根因是 v1.0.45~73 的
+  `WordSelectWindow` 直接把全局偏好 `clipboardMaskSensitive`（`AppPrefs`
+  中默认 `true`）当作「当前条目是否敏感」传给 `WordSelectUi`，后者据此把
+  每个词块整体替换成 `•`；而剪贴板列表的正确语义是
+  `entry.sensitive && 用户打码偏好`——只有系统 `EXTRA_IS_SENSITIVE` 标记为
+  敏感的条目才遮蔽。默认配置下任何普通文本都会被整屏打码，功能等于不可用。
+- **修复方式（零回归）**：新增零 Android 依赖的 `WordSelectMaskPolicy`，
+  由 `ClipboardWindow` 按 `entry.sensitive && clipboardMaskSensitive` 计算后
+  显式传入。普通条目在任何偏好下都显示原文；敏感条目在偏好开启时仍打码，
+  隐私保护不回退。`WordSelectWindow` 构造新增参数（默认 `false`），避免
+  后续调用点漏传再次误打码。
+- **回归单测**：新增 `WordSelectMaskPolicyTest`（6 个 JVM 单测），覆盖
+  「普通条目 + 默认开关 true → 显示原文」这一用户实际场景、与列表一致的
+  真值表、中文/标点/Emoji/换行原样保留、遮蔽长度上限与不泄漏原字符。
+- **一行未动的部分**：候选词排序与置顶、用户词库、上下文预测、表情链路、
+  剪贴板历史与备份规则、权限清单全部保持原样；不新增系统权限、不联网。
+- 全量 JVM 单测 **128/128 通过**（原 122 + 新增 6），`compileDebugKotlin`
+  与 `testDebugUnitTest` 均 BUILD SUCCESSFUL；SBOM 与逐文件许可台账已重跑
+  （第一方 479 文件带 SPDX 头、0 缺失）。
+
+> 上期（v1.0.73）：默认支持全部 Unicode Emoji 序列、用户自定义图像表情
+> 开放容器与 Rich Content 富媒体输入输出闭环，详见该版本 Release Notes。
 
 ## 校验
 
@@ -68,7 +65,7 @@ sha256sum -c SHA256SUMS.txt
 
 ## 安装
 
-Release 附件已签名。证书与 v1.0.70/71/72 一致，覆盖安装无需卸载旧版、
+Release 附件已签名。证书与 v1.0.70~73 一致，覆盖安装无需卸载旧版、
 不丢本机学习数据；换装不同签名版本需先卸载。
 
 ## 构建方式
@@ -76,10 +73,10 @@ Release 附件已签名。证书与 v1.0.70/71/72 一致，覆盖安装无需卸
 ```bash
 cd mbm-gh
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
-export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.73 \
+export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.74 \
   SIGN_KEY_FILE=/path/to/key.jks SIGN_KEY_PWD=... SIGN_KEY_ALIAS=...
 ANDROID_HOME=/opt/android-sdk sh gradlew :app:compileReleaseKotlin :app:assembleRelease \
-  --no-daemon -PbuildVersionName=1.0.73
+  --no-daemon -PbuildVersionName=1.0.74
 ```
 
 不带签名环境变量时产物为未签名 APK，需自行 `zipalign + apksigner` 签名。
