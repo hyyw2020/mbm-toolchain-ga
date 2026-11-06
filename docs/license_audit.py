@@ -94,7 +94,7 @@ UPGRADABLE = {
 # 第一方文件允许出现的 SPDX 许可：
 #   AGPL-3.0-or-later —— MBM 新写/新改文件
 #   LGPL-2.1-or-later / GPL-3.0-or-later —— 继承上游 fcitx5-android 的文件头，
-#      与 AGPL-3.0 经 GPL-3.0 §13 链接条款组合（见 NOTICE 第六节）
+#      与 AGPL-3.0 经 GPL-3.0 §13 链接条款组合（见 NOTICE 第五节）
 # 出现集合外许可（尤其 INCOMPATIBLE 里的）→ 检查不通过。
 FIRST_PARTY_ALLOWED = {
     "AGPL-3.0-or-later",
@@ -226,7 +226,7 @@ def write_outputs(ok: list[Path], bad: list[Path], vendored: dict[str, Counter],
     dist = Counter(license_of(f) or "<none>" for f in first_party_files())
     lines.append("")
     lines.append("第一方许可分布（LGPL-2.1-or-later = 继承上游 fcitx5-android 的文件头，")
-    lines.append("AGPL-3.0-or-later = MBM 新写/新改；组合分发依据见 NOTICE 第六节）：")
+    lines.append("AGPL-3.0-or-later = MBM 新写/新改；组合分发依据见 NOTICE 第五节）：")
     for lic, n in dist.most_common():
         lines.append(f"    {lic}: {n} 个文件")
     if disallowed:
@@ -238,7 +238,7 @@ def write_outputs(ok: list[Path], bad: list[Path], vendored: dict[str, Counter],
     lines.append("引入组件逐文件许可统计（submodule 未检出时该项为空）：")
     if not vendored:
         lines.append("  （未检测到任何 vendored 源码 —— submodule 未检出，")
-        lines.append("   请在完整检出后重跑；结论以 NOTICE 第六节为准）")
+        lines.append("   请在完整检出后重跑；结论以 NOTICE 第五节为准）")
     for project, counts in sorted(vendored.items()):
         lines.append(f"  {project}:")
         for lic, n in counts.most_common():
@@ -302,7 +302,7 @@ def write_outputs(ok: list[Path], bad: list[Path], vendored: dict[str, Counter],
                 "version": "see gradle/libs.versions.toml + git describe",
                 # 事实：MBM 是 fcitx5-android 的衍生作品——主体文件继承上游
                 # LGPL-2.1-or-later 头，MBM 新写部分为 AGPL-3.0-or-later。
-                # SBOM 同时列两者，不宣称单一许可（见 NOTICE 第六节）。
+                # SBOM 同时列两者，不宣称单一许可（见 NOTICE 第五节）。
                 "licenses": [
                     {"license": {"id": "AGPL-3.0-or-later"}},
                     {"license": {"id": "LGPL-2.1-or-later"}},

@@ -271,4 +271,28 @@ object RecallConfig {
 
     /** 键长度上限：容纳多字词首字母缩写键（blbl / qmqz ...）。 */
     const val CHOICE_KEY_LEN_MAX = 12
+
+    // ---- v1.0.72：预测增强（全拼键覆盖 + 上下文下一词预测） ----
+    //
+    // 根因：native `pinyin.cpp` 用 `customPhrase_.lookup(pyBeforeCursor)` 精确匹配
+    // 用户实际敲入的原始拼音串，而 v1.0.71 及以前所有模块只写「首字母缩写键」
+    // （安全=aq）。习惯全拼的用户输入 anquan 时词库无此键，v1.0.66~71 全部
+    // 个性化排序与 N-gram 预测完全不生效。修法：写词组时同一 order 额外挂全拼键。
+    // 同时新增「用户还没选过、但根据刚上屏的词可高置信猜到下一词」的预测冠军，
+    // 严格让位于用户硬层历史（hasHistory / hasUserWord）。
+
+    /** 全拼键（及预测键）最大长度：8 字词全拼可达 30+，超长词仍只走首字母键。 */
+    const val PREDICT_KEY_LEN_MAX = 24
+
+    /** 单次预测输出的最大词条数；一个词可挂 2 个键，行数另由 maxEntries 约束。 */
+    const val PREDICT_MAX_WORDS = 12
+
+    /** 单次预测写入词库的最大行数（键膨胀护栏）。 */
+    const val PREDICT_MAX_ENTRIES = 48
+
+    /** bigram/trigram 共现计数门槛，过滤一次性噪声。 */
+    const val PREDICT_MIN_CONFIDENCE = 2
+
+    /** 每个上下文种子最多取多少个后继词。 */
+    const val PREDICT_PER_SEED = 3
 }

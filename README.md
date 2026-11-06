@@ -1,36 +1,44 @@
-# MBM 输入法（fcitx5-android 分支）v1.0.39
+# MBM 输入法（fcitx5-android 分支）v1.0.72
 
-fcitx5-android 的 MBM 定制分支。私有仓库，仅仓库所有者可访问。
+fcitx5-android 的 MBM 定制分支。发布仓库为私有仓库，仅仓库所有者可访问；
+每个发布版本均附源码快照，以满足自研部分 AGPL-3.0-or-later 的对应源码要求。
 
-> 本 README 以 v1.0.39 实际实现为准，覆盖早期版本（v1.0.37 及以前）的描述。
-> 历史变更归档见 `docs/PATCHES_*.md` 与 `docs/pitfalls.md`。
+> 本 README 以 v1.0.72 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
+> 与 `docs/pitfalls.md`；隐私政策见 `PRIVACY.txt`，许可与第三方组件清单见
+> `LICENSE` / `NOTICE` / `docs/upstream.md`。
 
 ## 下载
 
-进入 Releases 页面下载 `v1.0.38-toolchain-ga` 的附件（已签名，可直接安装）：
+进入 Releases 页面下载 `v1.0.72-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
 
 | 文件 | 说明 |
 | --- | --- |
-| `MBM-v1.0.38-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，V3.0 已签名 |
-| `mbm-src-v1.0.38.tar.gz` | 源码快照 |
-| `SHA256SUMS.txt` | 上述两项的 SHA-256 校验和 |
+| `org.fcitx.fcitx5.android-1.0.72-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
+| `org.fcitx.fcitx5.android-1.0.72-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
+| `mbm-src-v1.0.72.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
+| `SHA256SUMS.txt` | SHA-256 校验和 |
 
-另可通过 WorkBuddy 分发 Portal 获取相同文件。
+另可通过 WorkBuddy 分发 Portal 获取相同文件（下载链接需带 sharecode）。
 
-## 本期变更（v1.0.39）
+## 本期变更（v1.0.72）：预测功能增强
 
-- **数字键盘重排（图二样式）**：左列运算符竖排（% / + *）、数字栅格、右上退格、
-  底行「返回 / !?:# / 0 / 空格 / 换行」。顶部工具条 UI 不变。
-  与图二的唯一差异：右列第 3 键用 `*` 替代 `@`——保证加减乘除全部可直接输入。
-- **全局计算器候选（任意键盘/输入框，光标前文本实时提取算式）（全局默认开启，无开关）**：输入 `123+456` 时候选条给出
-  【579】与【123+456=579】。求值为纯 Kotlin 标准库本地精确十进制运算
-  （`CalcEngine.kt`，递归下降，支持括号 / 一元正负 / 后缀 % / ×÷），
-  不联网、不落盘；电话拨号盘与密码输入框不启用。
-- **Recall「火力全开」隐私裁决**：删除「时间线已锁定/解锁查看」设备凭证门、
-  高级保护模式停采、密码框/敏感窗口整屏丢弃；安全改由 SQLCipher 静态加密 +
-  Keystore 信封密钥 + 不联网承担。详见 `PRIVACY.txt` v1.0.39。
-- **修复**：原生库安装失败 `INSTALL_FAILED_CONTAINER_ERROR res=-18`
-  （`useLegacyPackaging = true`）。
+- **全拼键覆盖（根因修复）**：native `pinyin.cpp` 用 `customPhrase_.lookup(pyBeforeCursor)`
+  精确匹配用户实际敲入的原始拼音串，而此前全仓库只写「首字母缩写键」
+  （`安全`→`aq`、`哔哩哔哩`→`blbl`）。习惯全拼的用户输入 `anquan` / `bilibilli`
+  时词库无对应键，v1.0.66~71 的全部个性化排序与 N-gram 预测完全不生效。
+  新增 `PhraseKeys.forWord`：写词组时同一 order 额外挂全拼键；`UserChoiceStore`
+  的托管/剔除范围同步覆盖，避免旧全拼行脱离托管。首字母键一行不动，零回归。
+- **上下文「下一词」预测冠军**：新增零 Android 依赖的 `ContextPredictor`
+  （17 个 JVM 单测）+ `PredictionStore`。复用本机 `SmartDictManager` 的
+  bigram/trigram，把「刚上屏的词的高置信下一词」写成 `order=1` 预测冠军，
+  60ms 落盘 + `reloadNow()`。严格让位：任一键已有用户硬层历史、该词已被用户
+  选过、已手动置顶，一律不写；每次上屏全量替换托管行，不长期占首位。
+  **「选择 >= 1 次即第一」的硬规则完全不被削弱。**
+- **文档与代码对齐**：`PRIVACY.txt` 升到 v1.0.72，纠正「Recall 为独立可选
+  APK」等失实描述、补全权限清单与新增学习状态披露；`NOTICE` 第六/七节重写；
+  `LICENSE` 头部与 `docs/upstream.md` 更正 fcitx5-chinese-addons 的许可标注；
+  应用内「关于 → 开源许可」不再跳浏览器，全程离线；备份规则改为整域排除。
+- 全量 JVM 单测 **100/100 通过**（原 83 + 新增 17）。
 
 ## 校验
 
@@ -51,22 +59,27 @@ sha256sum -c SHA256SUMS.txt
 
 ## 安装
 
-Release 附件已签名（V3.0）。覆盖安装无需卸载旧版；换装自签名版本需先卸载。
+Release 附件已签名。证书与 v1.0.70/71 一致，覆盖安装无需卸载旧版、
+不丢本机学习数据；换装不同签名版本需先卸载。
 
 ## 构建方式
 
 ```bash
 cd mbm-gh
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
-ANDROID_HOME=/opt/android-sdk sh gradlew :app:assembleRelease --no-daemon \
-  -PBUILD_ABI=arm64-v8a
+export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.72 \
+  SIGN_KEY_FILE=/path/to/key.jks SIGN_KEY_PWD=... SIGN_KEY_ALIAS=...
+ANDROID_HOME=/opt/android-sdk sh gradlew :app:compileReleaseKotlin :app:assembleRelease \
+  --no-daemon -PbuildVersionName=1.0.72
 ```
 
-构建产物为未签名 APK，需自行 `zipalign + apksigner` 签名后安装。
+不带签名环境变量时产物为未签名 APK，需自行 `zipalign + apksigner` 签名。
 
 ## 说明
 
 - 单一 `app` 模块：Recall 屏幕记忆已内嵌同进程（v1.0.36 起，无独立插件 APK）
 - 单 ABI（arm64-v8a），不包含 32 位库
+- 全离线：最终 APK 不含 `INTERNET` / `ACCESS_NETWORK_STATE` 权限；
+  无任何预置训练语料，学习数据全部运行时写入本机应用私有目录
 - 许可：逐文件 SPDX 头（LGPL-2.1-or-later 继承上游 + AGPL-3.0-or-later MBM 新写），
   台账见 `docs/sbom/`；第三方组件清单见 `app/src/main/assets/licenses/NOTICE.txt`

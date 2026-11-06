@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  MBM v1.0.26：allowBackup=false 为主，这里是 API 30- 的旧路径双保险。
-  用户词库 / 自定义词组 / 短语锁一律排除禁止备份；Recall 数据已迁往独立 APK。
+  MBM v1.0.26 / v1.0.72：allowBackup=false 为主，这里是 API 30- 的旧路径双保险。
+  v1.0.72 修正：Recall 已内嵌主 APK（v1.0.36 起，无独立插件 APK），其捕获数据、
+  审计日志与用户学习状态均在本包内。旧规则只排除 5 个具体 file 路径，漏掉
+  recall_blobs / clipblobs / recall_audit.log；改为整域排除，与 data_extraction_rules 同口径。
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="." />
     <exclude domain="database" path="." />
-    <exclude domain="file" path="datastore" />
-    <exclude domain="file" path="usr" />
-    <exclude domain="file" path="descriptor.json" />
-    <exclude domain="file" path="licenses.json" />
-    <exclude domain="file" path="README.md" />
+    <exclude domain="file" path="." />
+    <exclude domain="external" path="." />
 </full-backup-content>

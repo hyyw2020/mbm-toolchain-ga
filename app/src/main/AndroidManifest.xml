@@ -74,11 +74,15 @@
     <uses-permission android:name="${applicationId}.permission.PLUGIN" />
 
     <!--
-      MBM 冻结方案（Recall 同进程内嵌）：
+      MBM 冻结方案（Recall 同进程内嵌，v1.0.36 起）：
       屏幕记忆的 RecallService 作为独立 AccessibilityService 直接注册在主输入法 APK 内，
       与 IME 同进程运行，彻底消灭跨进程 IPC。它只在用户于系统「无障碍」设置里手动开启后
-      由系统拉起；开启前不占用任何后台资源。敏感捕获（密码框 / 系统敏感节点 / 高级保护模式）
-      仍按 RecallPolicy 硬规则拦截，详见 recall/RecallPolicy.kt。
+      由系统拉起；开启前不占用任何后台资源。
+      v1.0.39 裁决 / v1.0.72 注释校正：应用内不再保留任何窗口级封锁（密码框、系统
+      敏感窗口、金融类应用均照常捕获），系统「高级保护模式」也不停用本服务；
+      卡号/身份证/验证码等仅打标降权，不丢弃。规则清单见 recall/RecallPolicy.kt。
+      v1.0.72：此注释原写「仍按 RecallPolicy 硬规则拦截敏感捕获」，与 v1.0.39 起的
+      实际代码及 PRIVACY.txt 第四节相反，已修正。
     -->
 
         <application

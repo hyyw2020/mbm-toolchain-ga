@@ -414,6 +414,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/MbmCandidateSanitizer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/core/SubtypeManager.kt",
       "licenses": [
         {
@@ -798,7 +810,43 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PersonalPhraseImporter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PhraseKeys.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PhraseLockStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/customphrase/PhrasePinStore.kt",
       "licenses": [
         {
           "license": {
@@ -834,6 +882,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/CellDictionary.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/LibIMEDictionary.kt",
       "licenses": [
         {
@@ -847,18 +907,6 @@
     {
       "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/PinyinDictionary.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "LGPL-2.1-or-later",
-            "name": "LGPL-2.1-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/pinyin/dict/CellDictionary.kt",
       "licenses": [
         {
           "license": {
@@ -1626,6 +1674,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/calc/CalcCandidateComponent.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/input/candidates/CandidateItemUi.kt",
       "licenses": [
         {
@@ -1986,6 +2046,42 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/WordSelectUi.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/WordSelectWindow.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/clipboard/WordTokenizer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/input/cursor/CursorRange.kt",
       "licenses": [
         {
@@ -2184,6 +2280,18 @@
           "license": {
             "id": "LGPL-2.1-or-later",
             "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/keyboard/CalcEngine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
           }
         }
       ]
@@ -2718,6 +2826,294 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/PhraseAutoWriter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/RecallClipboardWriter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/RecallConfig.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/RecallPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/RecallService.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallAuditLog.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallBlobStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallDatabase.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallPreferences.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallRepository.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/data/StreamingFileCipher.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/ocr/OcrEngine.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/ocr/RecallOcrController.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/picker/RecallFrameCache.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/picker/RecallPicker.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/rank/ChoiceRanker.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/rank/ContextPredictor.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/segment/RecallNer.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/segment/RecallSegmenter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/segment/RecallTextUtils.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/store/PredictionStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/store/RecallReloader.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/store/RecallWordStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/recall/store/UserChoiceStore.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/common/BaseDynamicListUi.kt",
       "licenses": [
         {
@@ -3012,6 +3408,18 @@
           "license": {
             "id": "LGPL-2.1-or-later",
             "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/RecallActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
           }
         }
       ]
@@ -4050,6 +4458,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/MbmDebug.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/Menu.kt",
       "licenses": [
         {
@@ -4111,6 +4531,18 @@
     {
       "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/PackageInfo.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later",
+            "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/utils/PathSafety.kt",
       "licenses": [
         {
           "license": {
@@ -4447,6 +4879,30 @@
     {
       "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipherTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/recall/rank/ChoiceRankerTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/recall/rank/ContextPredictorTest.kt",
       "licenses": [
         {
           "license": {
@@ -5154,234 +5610,6 @@
     },
     {
       "type": "file",
-      "name": "plugin/recall/build.gradle.kts",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/plugin/recall/RecallApplication.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/AdvancedProtectionProbe.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/PhraseAutoWriter.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallClipboardWriter.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallPolicy.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/RecallService.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallAuditLog.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallBlobStore.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallDatabase.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallPreferences.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/RecallRepository.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/data/StreamingFileCipher.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/recall/ocr/OcrEngine.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/ui/main/MbmActivityUi.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/ui/main/RecallActivity.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/main/java/org/fcitx/fcitx5/android/utils/AppContext.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/test/java/org/fcitx/fcitx5/android/recall/RecallPolicyTest.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
-      "name": "plugin/recall/src/test/java/org/fcitx/fcitx5/android/recall/data/RecallBlobStoreTest.kt",
-      "licenses": [
-        {
-          "license": {
-            "id": "AGPL-3.0-or-later",
-            "name": "AGPL-3.0-or-later"
-          }
-        }
-      ]
-    },
-    {
-      "type": "file",
       "name": "plugin/rime/build.gradle.kts",
       "licenses": [
         {
@@ -5478,6 +5706,24 @@
     },
     {
       "type": "library",
+      "name": "ncnn (Tencent)",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "116"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "fcitx5-lua",
       "version": "vendored-submodule",
       "licenses": [
@@ -5514,96 +5760,6 @@
     },
     {
       "type": "library",
-      "name": "fcitx5",
-      "version": "vendored-submodule",
-      "licenses": [
-        {
-          "license": {
-            "id": "LGPL-2.1-or-later"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "fileCount",
-          "value": "436"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "fcitx5",
-      "version": "vendored-submodule",
-      "licenses": [
-        {
-          "license": {
-            "id": "<no-spdx-header>"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "fileCount",
-          "value": "151"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "fcitx5-android/prebuilt",
-      "version": "vendored-submodule",
-      "licenses": [
-        {
-          "license": {
-            "id": "<no-spdx-header>"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "fileCount",
-          "value": "14204"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "fcitx5-android/prebuilt",
-      "version": "vendored-submodule",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "fileCount",
-          "value": "46"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "ncnn (Tencent)",
-      "version": "vendored-submodule",
-      "licenses": [
-        {
-          "license": {
-            "id": "<no-spdx-header>"
-          }
-        }
-      ],
-      "properties": [
-        {
-          "name": "fileCount",
-          "value": "116"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "libime",
       "version": "vendored-submodule",
       "licenses": [
@@ -5635,6 +5791,96 @@
         {
           "name": "fileCount",
           "value": "17"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "LGPL-2.1-or-later"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "432"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "397"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-android/prebuilt",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "<no-spdx-header>"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "61932"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "fcitx5-android/prebuilt",
+      "version": "vendored-submodule",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "fileCount",
+          "value": "230"
         }
       ]
     },

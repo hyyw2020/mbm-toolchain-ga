@@ -1,18 +1,20 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.35（versionCode = baseVersionCode(1) * 10 + ABI；未签名/无混淆/无加固）。
-本轮加固（v1.0.35）的完整改动清单见 docs/PATCHES_v1.0.35.md；上一轮（v1.0.34）见 docs/PATCHES_v1.0.34.md。
-历史加固记录见 docs/PATCHES_v1.0.33.md、docs/PATCHES_v1.0.32.md、docs/PATCHES_v1.0.26.md。
-变更、崩溃修复与加固方法论长期记忆见 docs/pitfalls.md（第 1 ~ 77 条）。
+当前版本：v1.0.72（versionCode = baseVersionCode(26) * 10 + ABI；发布 APK 已签名，
+无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
+变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt）随本产品各 APK 分发，可在主输入法「关于 → 隐私政策」
-与「屏幕记忆」Recall 界面内离线查看。
+隐私政策（PRIVACY.txt v1.0.72）随本产品各 APK 分发，可在主输入法
+「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
-重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。逐文件
-SPDX 头的实测分布为 LGPL-2.1-or-later × 360（继承上游的文件头）+
-AGPL-3.0-or-later × 91（MBM 新写/新改），组合分发依据见第五节。
-逐文件许可台账由 docs/license_audit.py 生成为 docs/sbom/license_ledger.txt
+重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
+v1.0.72 重跑 docs/license_audit.py 的实测分布为
+第一方 470 个文件带 SPDX 头、0 缺失：
+  LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
+  AGPL-3.0-or-later × 105（MBM 新写/新改，含 v1.0.72 新增的
+  ContextPredictor / PredictionStore / PhraseKeys 及其单测）。
+组合分发依据见第五节。逐文件许可台账为 docs/sbom/license_ledger.txt
 （CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
 
 本文件（NOTICE）列出随本产品分发的第三方组件及其许可。
@@ -100,16 +102,18 @@ PaddleOCR PP-OCRv6(small) 模型             离线 OCR 模型（assets/ocr/） 
   - ppocrv6_dict.txt（rec 字典，18708 词，50 语言）
   - 模型来源：RapidAI/RapidOCR v3.10.0（ModelScope 分发，SHA256 已核验）
 SQLCipher Android (Zetetic)               本地加密数据库                 BSD-3-Clause（社区版）
-  - Recall 独立 APK 与主输入法剪贴板数据库均以 raw key（32B 随机）直传
-    SupportOpenHelperFactory，绕过 PBKDF2 KDF；raw key 由 Keystore
-    AES-256-GCM（StrongBox 优先）信封加密后落盘，安全链路见
-    plugin/recall/src/main/java/.../data/RecallDatabase.kt 与
+  - 屏幕记忆（v1.0.36 起内嵌主 APK 同进程）与主输入法剪贴板数据库均以
+    raw key（32B 随机）直传 SupportOpenHelperFactory，绕过 PBKDF2 KDF；
+    raw key 由 Keystore AES-256-GCM（StrongBox 优先）信封加密后落盘，
+    安全链路见 app/src/main/java/.../recall/data/RecallDatabase.kt 与
     app/src/main/java/.../data/crypto/AppKeyManager.kt
+    （v1.0.72 修正：旧路径 plugin/recall/... 已随内嵌删除）
   - v1.0.34 起大文本外置文件（blob）另有一层分块流式 AES-256-GCM
     静态加密（StreamingFileCipher，两侧模块同构镜像），详见
     docs/PATCHES_v1.0.34.md
 androidx.security:security-crypto         加密偏好（EncryptedSharedPrefs）Apache-2.0
-androidx.biometric                        「查看与填充」生物识别门      Apache-2.0
+androidx.biometric                        依赖声明；v1.0.39 起凭证门已移除，
+                                           当前不作数据访问门            Apache-2.0
 androidx.datastore:datastore-preferences  Recall 本地偏好               Apache-2.0
 androidx.room                             Recall 本地数据库             Apache-2.0
 Ismantic/Handwritten 运行时代码            离线手写识别（lib/handwritten）Apache-2.0
@@ -159,24 +163,50 @@ AnySoftKeyboard / Urik
    复现：python3 docs/license_audit.py --check（退出码 0 = 合规通过）。
 
 ================================================================================
-六、Recall 独立可选 APK 的特别说明（v1.0.26 起）
+六、屏幕记忆 Recall 的架构与采集规则（v1.0.72 修正）
 ================================================================================
-Recall（屏幕内容捕获/记忆）自 v1.0.26 起从主输入法拆为**独立可选 APK**
-（org.fcitx.fcitx5.android.recall，许可 AGPL-3.0-or-later）：
-- 主输入法（org.fcitx.fcitx5.android）**不声明任何 AccessibilityService**，
-  屏幕捕获能力只存在于独立安装并显式开启无障碍的 Recall APK；
-- Recall 服务在探测到第三方 APM（AccessibilityService Monitor）后按
-  RecallPolicy 显式禁用自身，并对 password / accessibilityDataSensitive
-  节点跳过或仅记事件不存内容；
-- Recall 的本地数据库为 SQLCipher 加密，密钥经 Keystore 信封加密，
-  「查看与填充」界面有生物识别门；主输入法不持有 Recall 数据库的任何密钥。
-- Recall 与主输入法的大文本外置文件（blob）自 v1.0.34 起为 AES-256-GCM
-  分块静态加密；v1.0.33 及以前的遗留明文文件自动识别、照常可读。
-未安装 Recall 的用户得到与上游 fcitx5-android 等价的功能面。
+本节描述**当前**实现。v1.0.26~35 期间 Recall 曾拆为独立可选 APK
+（org.fcitx.fcitx5.android.recall）；自 v1.0.36 起已**内嵌主输入法 APK**、
+与 IME 同进程运行，plugin/recall 源码目录已删除（settings.gradle.kts 有
+明确注释）。旧版 NOTICE 第六节关于「独立 APK / 主程序不声明无障碍服务 /
+主程序不持有密钥」的描述已全部失效，特此更正：
+
+- 主输入法 AndroidManifest 直接注册 .recall.RecallService
+  （BIND_ACCESSIBILITY_SERVICE，foregroundServiceType="dataSync"），
+  默认关闭，仅由用户在系统「无障碍」设置中显式开启后拉起。
+- v1.0.39 裁决：采集火力全开，应用内不再有任何窗口级封锁 —— 密码框、
+  系统敏感节点、金融类应用均照常捕获；系统「高级保护模式」不停用服务；
+  卡号/身份证/验证码仅打标降权（照常收录，不占候选首位）。规则清单的
+  唯一事实来源是 app/src/main/java/.../recall/RecallPolicy.kt。
+- v1.0.39 起移除「时间线已锁定 / 解锁查看」设备凭证门，查看已捕获内容
+  不再要求生物识别。静态安全由 SQLCipher 加密数据库 + Keystore 信封
+  密钥 + 不联网承担。
+- 数据库与 blob 加密链路仍为 v1.0.34 起的 AES-256-GCM 分块静态加密；
+  遗留明文文件自动识别、照常可读。
+- 无障碍服务配置保留 android:accessibilityDataSensitive="auto"（由系统
+  决定是否规避标记为敏感数据的窗口）与 canTakeScreenshot="true"；
+  FLAG_SECURE 窗口的系统截图由 Android 返回黑帧，属 OS 层行为。
 
 ================================================================================
-七、合规红线
+七、v1.0.72 预测增强（新增章节）
+================================================================================
+- PhraseKeys.forWord：写词组时同时挂「拼音首字母键」与「全拼键」。
+  根因是 native `pinyin.cpp` 用 lookup(pyBeforeCursor) 精确匹配用户实际
+  敲入的原始拼音串，此前只写首字母键（aq），全拼用户（anquan）完全
+  取不到个性化排序。首字母键一行不动，全拼键为纯新增通道。
+- ContextPredictor（零 Android 依赖，17 个 JVM 单测）+ PredictionStore：
+  复用 SmartDictManager 的本机 bigram/trigram，把「刚上屏的词的高置信
+  下一词」写成 order=1 预测冠军；严格让位于用户已选过的词与已有硬层
+  历史的键，每次上屏全量替换托管行，不长期占首位。
+- 全部数据来自运行时本机学习，**不含任何预置训练语料**；不联网、
+  不写输入原文日志；密码/隐私模式下完全不学习。
+
+================================================================================
+八、合规红线
 ================================================================================
 本产品不反编译、不并入任何闭源 APK 的代码。
-构建产物不含任何签名/混淆/加固；上架轨（AAB）如需签名，指纹自校验见
+发布 APK 使用开发者自签名证书签名（Android 安装所必需），未混淆、未加固；
+源码快照随各版本发布提供，以满足 AGPL-3.0 §6 / LGPL-2.1 §4 的
+Corresponding Source 要求。指纹自校验见
 app/src/main/java/org/fcitx/fcitx5/android/utils/AppSignatureVerifier.kt。
+（v1.0.72 修正：旧版「构建产物不含任何签名」与已签名发布事实不符。）

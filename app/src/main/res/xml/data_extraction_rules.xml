@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  MBM v1.0.26：
-  - android:allowBackup="false"（P2-7）：默认即全部排除，以下为「双保险」排除。
-  - Recall 捕获库/审计日志已随拆包迁往 org.fcitx.fcitx5.android.plugin.recall，
-    那边有自己的整包禁备份规则。
-  - 用户词库、自定义词组、短语锁等仍在本包，一律排除，禁止云备份/换机迁移。
+  MBM v1.0.26 / v1.0.72：
+  - android:allowBackup="false"（P2-7）为主开关；以下是 Android 12+ 数据提取规则的
+    「双保险」，逐域显式排除全部内容。
+  - v1.0.72 修正：Recall 自 v1.0.36 起已内嵌主 APK、与 IME 同进程，捕获数据
+    （filesDir/recall_blobs/、filesDir/clipblobs/、filesDir/recall_audit.log）与
+    用户学习状态（mbm_choice_boost / mbm_context_pred 等 SP）都在**本包**内。
+    旧注释「已迁往独立插件 APK，那边有自己的规则」已失效；旧规则在 file 域只
+    排除了 5 个具体路径，恰好漏掉上述敏感目录。改为 path="." 整域排除，兑现
+    隐私政策「显式排除全部目录的云备份与换机迁移」。
+  - 应用专属外部目录（domain="external"）一并排除。
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="." />
         <exclude domain="database" path="." />
-        <exclude domain="file" path="datastore" />
-        <exclude domain="file" path="usr" />
-        <exclude domain="file" path="descriptor.json" />
-        <exclude domain="file" path="licenses.json" />
-        <exclude domain="file" path="README.md" />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="." />
         <exclude domain="database" path="." />
-        <exclude domain="file" path="datastore" />
-        <exclude domain="file" path="usr" />
-        <exclude domain="file" path="descriptor.json" />
-        <exclude domain="file" path="licenses.json" />
-        <exclude domain="file" path="README.md" />
+        <exclude domain="file" path="." />
+        <exclude domain="external" path="." />
     </device-transfer>
 </data-extraction-rules>

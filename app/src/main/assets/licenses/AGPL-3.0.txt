@@ -8,29 +8,40 @@ MBM（Mixed Bug Method）许可适用范围声明 / SCOPE OF THIS LICENSE
 【适用 —— AGPL-3.0-or-later】
   仅适用于 MBM 项目**自行编写**的代码与文件，即在文件头标注
   `SPDX-License-Identifier: AGPL-3.0-or-later` 的部分
-  （主要位于 `app/src/main/java/org/fcitx/fcitx5/android/`、`plugin/recall/`、
-   `lib/handwritten/` 等自研模块）。
+  （主要位于 `app/src/main/java/org/fcitx/fcitx5/android/`、`lib/handwritten/`
+   等自研模块；v1.0.72 新增 `recall/rank/ContextPredictor.kt`、
+   `recall/store/PredictionStore.kt`、`data/pinyin/customphrase/PhraseKeys.kt`）。
+  注：`plugin/recall/` 自 v1.0.36 起已删除（内嵌主 APK），旧版此处路径失效。
 
 【不适用 —— 各自保留原许可】
   本项目包含并分发大量上游自由软件组件，它们**未被重新许可为 AGPL-3.0**，
-  仍按各自原有条款授权，其中主要包括：
+  仍按各自原有条款授权。以下按 docs/license_audit.py 的逐文件 SPDX 实测
+  与子模块内 COPYING / README 校准（v1.0.72 更正）：
 
-    - Fcitx5 核心 / libime / fcitx5-lua ............ LGPL-2.1-or-later
-    - fcitx5-chinese-addons ........................ GPL-3.0-or-later
-    - librime / rime 插件 .......................... GPL-3.0-or-later
-    - Anthy / Chewing / Hangul / Unikey / Sayura ... 各自上游许可
-    - ONNX Runtime（仅 Recall 插件）................. MIT
-    - SQLCipher 社区版 / OpenCC / NCNN 等 ........... 各自上游许可
+    - Fcitx5 核心 / libime / fcitx5-lua / fcitx5-chinese-addons
+      / fcitx5-rime 等 .............................. LGPL-2.1-or-later
+      （fcitx5-chinese-addons 上游 COPYING 为 LGPL-2.1、README 标
+        LGPL-2.1+，旧版本文件误写 GPL-3.0-or-later 并按 GPL §13 论证
+        兼容性，v1.0.72 更正为 LGPL 组合路径）
+    - fcitx5-anthy / fcitx5-unikey / fcitx5-sayura
+      / fcitx5-libthai 等 ........................... GPL-2.0-or-later
+      （含 "or-later" 升级条款，可升至 GPL-3.0 系后依 AGPL-3.0 §13 组合）
+    - librime 本体 ................................. 未以源码子模块引入
+      （.gitmodules 只有 fcitx5-rime 与 rime-* 词库，旧版声明缺依据）
+    - ONNX Runtime Android（主 APK 内嵌 OCR）....... MIT
+    - SQLCipher 社区版 / OpenCC / ncnn 等 ........... 各自上游许可
 
   完整清单与逐项条款见仓库根目录 [NOTICE](NOTICE) 与 [docs/upstream.md](docs/upstream.md)。
 
 【重要说明】
   MBM 是上述组件的**衍生作品与聚合体**，整体并非单一许可证作品。
   任何再分发都必须同时满足：(1) 自研部分的 AGPL-3.0-or-later；
-  (2) 各上游组件原有的 LGPL-2.1+ / GPL-3.0 等条款（LGPL 组件不得被
+  (2) 各上游组件原有的 LGPL-2.1+ / GPL-2.0+ 等条款（LGPL 组件不得被
   升格为 AGPL，其"或更高版本"选项只上溯至 LGPL-3.0）。
   作为聚合体分发时，AGPL-3.0 第 13 条的义务**仅及于自研部分**，
   不及于上游组件本身。
+  自研部分按 AGPL-3.0 §6 向二进制接收者提供 Corresponding Source：
+  各版本发布附 `mbm-src-v<版本>.tar.gz` 源码快照。
 
 ================================================================================
                     GNU AFFERO GENERAL PUBLIC LICENSE

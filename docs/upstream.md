@@ -44,12 +44,23 @@ MBM 以 fcitx5-android 为基座，所有上游代码以 submodule / vendored �
 
 ## 4. 许可条款摘录
 
-- **Fcitx5 核心 / libime / fcitx5-lua / fcitx5-rime / fcitx5-anthy / fcitx5-unikey /
-  fcitx5-hangul / fcitx5-chewing / libime-jyutping / fcitx5-libthai**：LGPL-2.1-or-later。
-  按 LGPL 条款单独保留，可升级至 LGPL-3.0 / GPL-3.0 后与 AGPL 作品组合。
-- **fcitx5-chinese-addons / librime**：GPL-3.0-or-later。
-  依据 GPL-3.0 第 13 条，可与 AGPL-3.0 作品组合发布。
-- **fcitx5-sayura**：GPL-2.0-or-later（同上，第 13 条兼容）。
+v1.0.72 更正：以下按 `docs/license_audit.py` 的逐文件 SPDX 实测与各子模块内
+COPYING / README 校准。旧版本把 fcitx5-chinese-addons 写成 GPL-3.0-or-later
+并援引 GPL-3.0 §13，实测其 COPYING 为 LGPL-2.1、README 标 LGPL-2.1+；
+亦曾把 librime 列为本产品包含的组件，但 `.gitmodules` 中并无 librime 本体。
+
+- **LGPL-2.1-or-later（主体）**：Fcitx5 核心、libime、fcitx5-lua、
+  fcitx5-chinese-addons（SPDX ×88）、fcitx5-rime（×10）、fcitx5-chewing（×2）、
+  fcitx5-hangul（×3）、libime-jyutping。
+  按 LGPL-2.1 条款单独保留；其 "or-later" 只上溯至 LGPL-3.0，不得被升格为
+  AGPL，作为聚合体分发时随本产品一同提供源码即可。
+- **GPL-2.0-or-later（含升级条款）**：fcitx5-anthy（×32）、fcitx5-unikey（×32）、
+  fcitx5-sayura（×2）、fcitx5-libthai（×6）、fcitx5-rime（×4）、
+  fcitx5-chewing（×1）、fcitx5-hangul（×1）。
+  可依升级条款升至 GPL-3.0-or-later，再依 AGPL-3.0 §13 与本作品组合发布。
+- **fcitx5-unikey 另有 LGPL-2.0-or-later ×9**：按 LGPL 路径单独保留。
+- **librime 本体**：未以源码子模块引入；`.gitmodules` 只有 fcitx5-rime 与
+  rime-* 词库，预编译依赖（若有）在 fcitx5-android/prebuilt 中按上游声明处理。
 - **ClearURLs Rules**：LGPL-3.0-or-later。
 - **kenlm**：LGPL-2.1（Apache-2.0 双许可可选）。
 - **yoga**：MIT License。
@@ -61,10 +72,10 @@ MBM 以 fcitx5-android 为基座，所有上游代码以 submodule / vendored �
 
 | 组件 | 用途 | 许可 |
 |---|---|---|
-| ONNX Runtime Android（Microsoft） | 离线 OCR 推理 | MIT |
-| PaddleOCR PP-OCRv4 模型（assets/ocr/） | 离线 OCR 模型 | Apache-2.0 |
-| SQLCipher Android（Zetetic） | Recall 本地加密存储 | BSD-3-Clause |
-| rapidocr_onnxruntime（参考，未包含代码） | OCR 流水线算法参考 | Apache-2.0 |
+| ONNX Runtime Android（Microsoft） | 离线 OCR 推理（随主 APK 分发） | MIT |
+| PaddleOCR PP-OCRv6 small 模型（assets/ocr/） | 离线 OCR 模型 | Apache-2.0 |
+| SQLCipher Android（Zetetic） | 屏幕记忆 + 剪贴板本地加密存储 | BSD-3-Clause |
+| RapidOCR v3.10.0（算法参考，未包含代码） | OCR 流水线算法参考 | Apache-2.0 |
 | Ismantic/Handwritten（vendored 代码 + 模型） | 离线手写识别（lib/handwritten） | Apache-2.0 |
 | ncnn（Tencent，预编译静态库 ncnn-20250503-android） | 离线手写推理引擎 | BSD-3-Clause |
 

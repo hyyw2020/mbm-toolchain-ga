@@ -195,7 +195,20 @@ object Versions {
     //  4. ChoiceRanker.importState / UserChoiceStore.loadState 的 records 与 stacks/samples
     //     校验口径不一致（后者有 validKey，前者几乎不设防），畸形/遗留脏 id 会被载入。
     //     统一为「合法 key + 2..8 字值」，新增 3 个 JVM 单测（含多字词/长键防误拒）。
-    const val baseVersionCode = 25
+    // v1.0.72：预测功能增强（不改变既有行为，只新增通道）。
+    //  1. 根因修复：native `pinyin.cpp` 用 lookup(pyBeforeCursor) 精确匹配用户实际敲入的
+    //     原始拼音串，此前全仓库只写「首字母缩写键」(aq/blbl)，全拼用户(anquan)永远
+    //     吃不到 v1.0.66~71 的全部个性化排序与 N-gram 预测。新增 PhraseKeys.forWord，
+    //     写词组时同一 order 额外挂全拼键；UserChoiceStore 的托管/剔除范围同步覆盖，
+    //     避免旧全拼行脱离托管成为孤儿。首字母键一行不动，零回归。
+    //  2. 新增 ContextPredictor（纯算法层）+ PredictionStore（Android 层）：复用本地
+    //     bigram/trigram，把「刚上屏的词的高置信下一词」写成 order=1 预测冠军，
+    //     60ms 落盘 + reloadNow。严格让位：任一键已有用户硬层历史、该词已被用户选过、
+    //     已手动置顶，一律不写；每次上屏全量替换托管行，不长期占首位。
+    //     「选择 >= 1 次即第一」硬规则完全不被削弱。新增 17 个 JVM 单测。
+    //  3. 同步修正文档与实际代码不符项（隐私政策/NOTICE/README/许可标注/离线许可入口/
+    //     备份排除规则），并补 v1.0.72 源码快照以满足 AGPL §6 对应源码要求。
+    const val baseVersionCode = 26
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

@@ -55,6 +55,7 @@ import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter
 import org.fcitx.fcitx5.android.recall.RecallService
+import org.fcitx.fcitx5.android.recall.store.PredictionStore
 import org.fcitx.fcitx5.android.recall.store.UserChoiceStore
 import org.fcitx.fcitx5.android.utils.imeExceptionHandler
 import org.fcitx.fcitx5.android.core.CapabilityFlags
@@ -589,6 +590,11 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             val t = text
             imeFallbackScope.launch(Dispatchers.IO) {
                 runCatching { SmartDictManager.recordUsage(t) }
+                // MBM v1.0.72：上屏后即时刷新「下一词预测冠军」。必须在 recordUsage
+                // 之后调用，保证 bigram/trigram 已包含本次上屏；60ms 落盘 + reloadNow，
+                // 比 PersonalPhraseImporter 的 1.5s 全量重排更快生效。纯内存 + 少量
+                // 词组行写入，不阻塞按键；用户已有硬层历史的键自动让位。
+                runCatching { PredictionStore.onCommit(t) }
                 // MBM v1.0.48：上屏即更新「上下文预测」——刚提交的词作为前词，
                 // 把其高频后继词抬到候选前列（见 PersonalPhraseImporter.requestContextRerank）。
                 runCatching { PersonalPhraseImporter.requestContextRerank(this@FcitxInputMethodService) }

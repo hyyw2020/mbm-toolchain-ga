@@ -44,6 +44,7 @@ import android.os.Looper
 import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
+import org.fcitx.fcitx5.android.data.pinyin.customphrase.PhraseKeys
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PhrasePinStore
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PinyinCustomPhrase
 import org.fcitx.fcitx5.android.recall.RecallConfig
@@ -135,6 +136,25 @@ object UserChoiceStore {
         return "$key=$value" in snapshot
     }
 
+    /**
+     * v1.0.72：供上下文预测模块让位判定用。
+     *
+     * 只读 [managedKeys] 的 @Volatile 快照，不触碰 [ranker]、不做 IO，因此可以从
+     * IO 线程安全调用，且与本模块 flush 的 lock -> writeLock 顺序无死锁风险。
+     * 托管集合的语义正是「本模块当前写进词库的用户硬层条目」，用它判断
+     * 「该键是否已有用户冠军」比遍历 ranker 栈更准确（词库是最终事实）。
+     */
+    fun hasHistory(key: String): Boolean {
+        val snapshot = managedKeys
+        return snapshot.any { it.startsWith("$key=") }
+    }
+
+    /** 该词是否已被用户主动选过（跨键让位，避免全拼与缩写下排序割裂）。 */
+    fun hasUserWord(word: String): Boolean {
+        val snapshot = managedKeys
+        return snapshot.any { it.substringAfter('=', "") == word }
+    }
+
     // ---------- 开关（同步读，IME 主线程可直接用；默认开启）----------
 
     fun isEnabled(): Boolean = prefs().getBoolean(KEY_ENABLED, true)
@@ -205,9 +225,11 @@ object UserChoiceStore {
             val effectiveKeys = keys.filter { ranker.hasHistory(it) }.toSet()
 
             val fresh = mutableListOf<PinyinCustomPhrase>()
-            val newManaged = managedKeys
-                .filterNot { mk -> effectiveKeys.any { mk.startsWith("$it=") } }
-                .toMutableSet()
+            // v1.0.72：托管/剔除范围必须包含「本模块实际写入的全部键」。
+            // 每个硬层条目除原有首字母键外还会挂一个全拼键（见下方 PhraseKeys），
+            // 若 ownedKeys 仍只有 effectiveKeys，全拼键旧行将脱离托管、永远不被清理，
+            // 用户改选后词库里会残留过期的全拼冠军行。
+            val ownedKeys = effectiveKeys.toMutableSet()
             val isPinned: (String, String) -> Boolean = { k, w ->
                 PhrasePinStore.isPinned(appContext, PinyinCustomPhrase(k, 1, w))
             }
@@ -215,10 +237,23 @@ object UserChoiceStore {
                 for (e in ranker.buildOrder(k, isPinned)) {
                     // 双保险：手动置顶的 key=value 不由本模块自动改写
                     if (PhrasePinStore.isPinned(appContext, PinyinCustomPhrase(e.key, e.order, e.word))) continue
-                    fresh.add(PinyinCustomPhrase(e.key, e.order, e.word))
-                    newManaged.add("${e.key}=${e.word}")
+                    // v1.0.72 全拼键覆盖：native 用 pyBeforeCursor 精确匹配用户实际
+                    // 敲入的拼音串，此前只写首字母键(aq)，全拼用户(anquan)永远吃不到
+                    // 个性化排序。同一词条按相同 order 额外挂全拼键，首字母键一行不动。
+                    val allKeys = (setOf(e.key) + PhraseKeys.forWord(e.word)).distinct()
+                    for (pk in allKeys) {
+                        if (PhrasePinStore.isPinned(appContext, PinyinCustomPhrase(pk, e.order, e.word))) continue
+                        fresh.add(PinyinCustomPhrase(pk, e.order, e.word))
+                        ownedKeys += pk
+                    }
                 }
             }
+            // 托管集合在循环**之后**全量重建：先按 ownedKeys 剔除本模块所有旧行
+            // （含新增的全拼键行），再加入本次 fresh，避免旧全拼行成为孤儿。
+            val newManaged = managedKeys
+                .filterNot { mk -> ownedKeys.any { k -> mk.startsWith("$k=") } }
+                .toMutableSet()
+                .apply { fresh.forEach { add("${it.key}=${it.value}") } }
 
             var ok = false
             CustomPhraseManager.withWriteLock {
@@ -228,7 +263,7 @@ object UserChoiceStore {
                 // 用户置顶/Recall/个人短语等其它来源条目，以及非有效键的既有置顶。
                 val kept = existing.filterNot { p ->
                     entryKeyOf(p) in managedKeys &&
-                        effectiveKeys.any { k -> entryKeyOf(p).startsWith("$k=") } &&
+                        p.key in ownedKeys &&
                         !PhrasePinStore.isPinned(appContext, p)
                 }
                 val merged = (kept + fresh)

@@ -1,22 +1,23 @@
 MBM 许可台账 / License Ledger
 生成者：docs/license_audit.py（纯本地解析，不联网）
 
-第一方代码：451 个文件带 SPDX 头，0 个缺失
+第一方代码：470 个文件带 SPDX 头，0 个缺失
 
 第一方许可分布（LGPL-2.1-or-later = 继承上游 fcitx5-android 的文件头，
-AGPL-3.0-or-later = MBM 新写/新改；组合分发依据见 NOTICE 第六节）：
-    LGPL-2.1-or-later: 360 个文件
-    AGPL-3.0-or-later: 91 个文件
+AGPL-3.0-or-later = MBM 新写/新改；组合分发依据见 NOTICE 第五节）：
+    LGPL-2.1-or-later: 365 个文件
+    AGPL-3.0-or-later: 105 个文件
 
 引入组件逐文件许可统计（submodule 未检出时该项为空）：
   anthy:
       <no-spdx-header>: 104 个文件
   fcitx5:
-      LGPL-2.1-or-later: 436 个文件
-      <no-spdx-header>: 151 个文件
+      LGPL-2.1-or-later: 432 个文件
+      <no-spdx-header>: 397 个文件
+      MIT: 1 个文件
   fcitx5-android/prebuilt:
-      <no-spdx-header>: 14204 个文件
-      MIT: 46 个文件
+      <no-spdx-header>: 61932 个文件
+      MIT: 230 个文件
   fcitx5-anthy:
       GPL-2.0-or-later: 32 个文件
   fcitx5-chewing:
