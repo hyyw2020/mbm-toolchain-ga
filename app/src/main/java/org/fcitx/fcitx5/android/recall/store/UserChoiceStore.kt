@@ -41,6 +41,7 @@ package org.fcitx.fcitx5.android.recall.store
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PhrasePinStore
@@ -116,6 +117,24 @@ object UserChoiceStore {
 
     private fun prefs() = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    /**
+     * v1.0.71：供其它自动写入模块在「剔除自己写过的旧条目」时排除本模块托管条目。
+     *
+     * 背景：v1.0.69 起硬层写 order=1..CHOICE_TOP_K（1/2/3），而其它模块靠 order 区间
+     * 判定归属（应用名 {2,8}、Recall {3,9}、个人短语 3..7）——用户选择的次位条目
+     * order=2/3 会落进它们的 isOwnEntry 区间，被当成「自己的旧条目」从词库剔除，
+     * 导致用户要求的「爱情第 1、安全第 2」次位排序随机丢失。v1.0.70 只护住了 order=1
+     * （这些区间都不含 1）。这里给出精确 key=value 归属，三模块剔除时让位即可。
+     *
+     * 只读 @Volatile 快照：不取 [lock]、不做 IO，避免与本模块 flush 的
+     * lock → CustomPhraseManager.writeLock 顺序形成死锁。[managedKeys] 在 flush 中是
+     * 整体替换（先构造完 newManaged 再赋值，赋值后不再原地修改），快照读取安全。
+     */
+    fun isOwnChoiceEntry(key: String, value: String): Boolean {
+        val snapshot = managedKeys
+        return "$key=$value" in snapshot
+    }
+
     // ---------- 开关（同步读，IME 主线程可直接用；默认开启）----------
 
     fun isEnabled(): Boolean = prefs().getBoolean(KEY_ENABLED, true)
@@ -134,8 +153,10 @@ object UserChoiceStore {
             text = text,
             resolveKeys = { w -> AppPhraseImporter.keysForName(w) },
             isSensitive = { t -> RecallConfig.SENSITIVE_PATTERNS.any { it.containsMatchIn(t) } },
-            // 隐私模式由 commitText 调用点统一过滤，此处再传一次做纵深防御
-            privacyMode = false,
+            // v1.0.71：纵深防御此前是假的 —— 原实现硬编码 false，注释声称「再传一次」
+            // 却从未生效。commitText 调用点已有第一道 PrivacyController 过滤，这里补齐
+            // 第二道，保证 recordCommit 作为 public API 被其它路径直接调用时同样不学习。
+            privacyMode = PrivacyController.inPrivacyMode,
         )
         if (dirty.isEmpty()) return
         lock.withLock { dirtyKeys.addAll(dirty) }
@@ -279,9 +300,18 @@ object UserChoiceStore {
             val records = mutableMapOf<String, ChoiceRecord>()
             obj.optJSONObject("records")?.let { r ->
                 r.keys().forEach { id ->
-                    // 丢弃超长词条（v1.0.63 长键拼接垃圾），逐条容错。
-                    // v1.0.70 上限放宽到 CHOICE_PHRASE_LEN_MAX，与算法层一致。
-                    if (id.substringAfter("=>").length > RecallConfig.CHOICE_PHRASE_LEN_MAX) return@forEach
+                    // v1.0.71：与 stacks/samples 采用同一套 id 校验。原实现只用
+                    // substringAfter("=>") 查值长度，对不含 "=>" 的脏 id 会返回整个 id
+                    // （校验形同虚设），且完全不校验 key 段，畸形 / v1.0.63 长键拼接
+                    // 垃圾会被载入并长期占用 recordCap。逐条容错不变。
+                    val sep = id.indexOf("=>")
+                    if (sep < 0) return@forEach
+                    val rk = id.substring(0, sep)
+                    val rw = id.substring(sep + 2)
+                    if (rk.length !in RecallConfig.CHOICE_KEY_LEN_MIN..RecallConfig.CHOICE_KEY_LEN_MAX ||
+                        !rk.all { it in 'a'..'z' }
+                    ) return@forEach
+                    if (rw.length !in 2..RecallConfig.CHOICE_PHRASE_LEN_MAX) return@forEach
                     val v = r.optJSONObject(id) ?: return@forEach
                     records[id] = ChoiceRecord(
                         n = v.optInt("n", 1).coerceAtLeast(0),

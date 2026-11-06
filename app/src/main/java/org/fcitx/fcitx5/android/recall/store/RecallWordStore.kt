@@ -110,8 +110,14 @@ object RecallWordStore {
             val nextManaged = CustomPhraseManager.withWriteLock {
                 val existing = runCatching { CustomPhraseManager.loadCached() }
                     .getOrNull() ?: emptyArray()
-                // 只剔除本模块写过的旧条目：应用名条目（order ∈ {2,8}）与用户自造词组保留
-                val kept = existing.filterNot { isOwnEntry(it) && it.value in managed }
+                // 只剔除本模块写过的旧条目：应用名条目（order ∈ {2,8}）与用户自造词组保留。
+                // v1.0.71：UserChoiceStore 硬层次位写 order=3，会落进本模块 isOwnEntry
+                // 的 {3,9} 区间；若该词恰好也是屏幕记忆捕获词（极常见），原逻辑会把用户
+                // 主动选择的第 3 候选当成「本模块旧冷词」删掉。按精确 key=value 让位。
+                val kept = existing.filterNot { p ->
+                    isOwnEntry(p) && p.value in managed &&
+                        !UserChoiceStore.isOwnChoiceEntry(p.key, p.value)
+                }
 
                 // v1.0.62 同键同值去重：与 AppPhraseImporter.rebuildLocked 同范式 ——
                 // native 对 (key,value) 相同的条目只取 order 最小者，落盘前合并为一行，

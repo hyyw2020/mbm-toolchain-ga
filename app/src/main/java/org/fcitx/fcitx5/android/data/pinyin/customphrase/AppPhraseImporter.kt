@@ -34,6 +34,7 @@ import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
 import org.fcitx.fcitx5.android.core.reloadPinyinCustomPhrase
 import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
+import org.fcitx.fcitx5.android.recall.store.UserChoiceStore
 import org.fcitx.fcitx5.android.utils.PinyinUtils
 import org.fcitx.fcitx5.android.utils.appContext
 import timber.log.Timber
@@ -244,7 +245,13 @@ object AppPhraseImporter {
         val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull() ?: emptyArray()
         val oldManaged = prefs(ctx).getStringSet(KEY_MANAGED, emptySet()) ?: emptySet()
         // 只剔除本模块自己写过的条目（order ∈ {2, 8}），见 [isOwnEntry] 注释。
-        val kept = existing.filterNot { isOwnEntry(it) && oldManaged.contains(managedKeyOf(it)) }
+        // v1.0.71：UserChoiceStore 硬层次位写 order=2，会落进 {2,8}；若该词同时是
+        // 应用名（如「哔哩哔哩」），原逻辑会把用户主动选择的第 2 候选当旧应用名条目
+        // 删掉并由 fresh 以 order=8 重建，次位排序直接丢失。按精确 key=value 让位。
+        val kept = existing.filterNot { p ->
+            isOwnEntry(p) && oldManaged.contains(managedKeyOf(p)) &&
+                !UserChoiceStore.isOwnChoiceEntry(p.key, p.value)
+        }
         // v1.0.62 同键同值去重：native 对 (key,value) 完全相同的条目只取 order 最小者，
         // 落盘前合并为一行（列表不再出现同键同值的重复行）；用户置顶（order=1）必然保留。
         val merged = (kept + fresh)

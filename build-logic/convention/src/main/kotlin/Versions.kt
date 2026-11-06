@@ -182,7 +182,20 @@ object Versions {
     //          否则重启即丢状态。仍不做窗口切片、仍排除单字母键，v1.0.66~69 全部防御保留。
     //          AppPhraseImporter/RecallWordStore 的 minByOrNull{order} 保证用户 order=1
     //          不会被 OCR 的 order=2/3 覆盖。新增多字词/长键/防污染 JVM 单测。
-    const val baseVersionCode = 24
+    // v1.0.71：一轮真 bug 修复，不改变任何既有功能。
+    //  1. PersonalPhraseImporter.syncFromUsage 的 merged=(kept+finalEntries) 缺跨 kept 的
+    //     key=value 去重（dedup 只覆盖 finalEntries 内部），用户选过的词同时是个人高频词时
+    //     必然产生同键同值重复行；补 groupBy.minByOrNull{order}，与其余 3 个写入模块一致。
+    //  2. v1.0.69 硬层 Top-K 写 order=1/2/3，2 与 3 落进 AppPhraseImporter{2,8} /
+    //     RecallWordStore{3,9} / PersonalPhraseImporter{3..7} 的 isOwnEntry 区间，会被当
+    //     作自动模块旧条目剔除，用户第 2/3 候选排序随机丢失（v1.0.70 只护住了 order=1）。
+    //     新增只读 UserChoiceStore.isOwnChoiceEntry，三模块剔除时按精确 key=value 让位。
+    //  3. recordCommit 的 privacyMode 硬编码 false，注释声称的纵深防御从未生效；改读
+    //     PrivacyController.inPrivacyMode（commitText 第一道过滤保持不变）。
+    //  4. ChoiceRanker.importState / UserChoiceStore.loadState 的 records 与 stacks/samples
+    //     校验口径不一致（后者有 validKey，前者几乎不设防），畸形/遗留脏 id 会被载入。
+    //     统一为「合法 key + 2..8 字值」，新增 3 个 JVM 单测（含多字词/长键防误拒）。
+    const val baseVersionCode = 25
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

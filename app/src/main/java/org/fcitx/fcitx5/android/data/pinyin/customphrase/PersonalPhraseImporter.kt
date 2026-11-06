@@ -30,6 +30,7 @@ import kotlin.math.roundToInt
 import org.fcitx.fcitx5.android.data.pinyin.CustomPhraseManager
 import org.fcitx.fcitx5.android.data.smartdict.SmartDictManager
 import org.fcitx.fcitx5.android.recall.store.RecallReloader
+import org.fcitx.fcitx5.android.recall.store.UserChoiceStore
 import timber.log.Timber
 
 object PersonalPhraseImporter {
@@ -263,9 +264,26 @@ object PersonalPhraseImporter {
         val managed = loadManaged(ctx)
         CustomPhraseManager.withWriteLock {
             val existing = runCatching { CustomPhraseManager.loadCached() }.getOrNull() ?: emptyArray()
-            // 只剔除本模块自己写过的旧条目，应用名/屏幕记忆/用户自造词组一概保留
-            val kept = existing.filterNot { isOwnEntry(it) && managed.contains(managedKeyOf(it)) }
-            val merged = (kept + finalEntries).toTypedArray()
+            // 只剔除本模块自己写过的旧条目，应用名/屏幕记忆/用户自造词组一概保留。
+            // v1.0.71：UserChoiceStore 硬层次位写 order=3，落在本模块 isOwnEntry 的
+            // 3..7 区间；用户选过的词几乎必然也是个人高频词，原逻辑会把它当本模块
+            // 旧条目删掉，用户要求的次位排序随之丢失。按精确 key=value 让位。
+            val kept = existing.filterNot { p ->
+                isOwnEntry(p) && managed.contains(managedKeyOf(p)) &&
+                    !UserChoiceStore.isOwnChoiceEntry(p.key, p.value)
+            }
+            // v1.0.71 真 bug 修复：原实现 (kept + finalEntries) 直接拼数组，上面的 dedup
+            // 只覆盖了 finalEntries 内部，**没有与 kept（词库既有条目）合并去重**。于是
+            // 同一 key=value 只要在 kept 里存在（用户选择 order=1/2、应用名 2/8、
+            // Recall 3/9、用户自造词），就又追加一行 order=3..7 —— 词库出现重复行，
+            // 正是「三个海一耶哇」类反馈的残留路径，也违背本文件 253 行的去重承诺。
+            // 与 AppPhraseImporter / RecallWordStore / UserChoiceStore 三处既有范式一致：
+            // 按 key=value 分组保留最小 order（native 本就按 order 升序取首个同值候选，
+            // 故候选栏行为不变，只是落盘不再有冗余行）。
+            val merged = (kept + finalEntries)
+                .groupBy { "${it.key}=${it.value}" }
+                .map { g -> g.value.minByOrNull { it.order }!! }
+                .toTypedArray()
             runCatching { CustomPhraseManager.saveCached(merged) }
                 .onFailure { Timber.w(it, "MBM: save personal phrase failed") }
         }

@@ -257,7 +257,10 @@ class ChoiceRanker(
     fun importState(state: ChoiceState) {
         clearAll()
         state.stacks.forEach { (k, v) -> if (validKey(k)) stacks[k] = v.toMutableList() }
-        state.records.forEach { (k, v) -> records[k] = v }
+        // v1.0.71：records 必须与 stacks/samples 采用同一套 id 校验。原实现无脑全收，
+        // 畸形 / 遗留脏 id（不含 "=>"、非法 key 段、超长值）会被载入并长期占用 recordCap，
+        // 与 loadState 的过滤标准不一致。正常状态（含 v1.0.70 多字词 / 长键）全部通过。
+        state.records.forEach { (id, v) -> if (validRecordId(id)) records[id] = v }
         state.samples.forEach { (k, v) -> if (validKey(k)) samples[k] = v }
         lastWord = state.lastWord
     }
@@ -266,6 +269,14 @@ class ChoiceRanker(
 
     private fun validKey(key: String): Boolean =
         key.length in config.keyLen..config.keyLenMax && key.all { it in 'a'..'z' }
+
+    /** 记录 id 必须是 "$合法key=>$2..phraseLenMax 字词"，与 [validKey] 口径一致。 */
+    private fun validRecordId(id: String): Boolean {
+        val sep = id.indexOf("=>")
+        if (sep < 0) return false
+        return validKey(id.substring(0, sep)) &&
+            id.substring(sep + 2).length in 2..config.phraseLenMax
+    }
 
     private fun entryId(key: String, word: String) = "$key=>$word"
 

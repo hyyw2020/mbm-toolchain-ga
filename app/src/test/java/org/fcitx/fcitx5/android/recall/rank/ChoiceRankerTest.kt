@@ -421,4 +421,64 @@ class ChoiceRankerTest {
         assertTrue(b.hasHistory("blbl"))
         assertEquals("哔哩哔哩", b.buildOrder("blbl").first().word)
     }
+
+    // ---------------------------------------------------------------- v1.0.71 状态校验
+
+    @Test
+    fun `importState 拒绝畸形记录 id 与 stacks 校验口径一致`() {
+        val r = ranker()
+        val st = ChoiceState(
+            stacks = mapOf("aq" to listOf("安全", "爱情")),
+            records = mapOf(
+                "aq=>安全" to ChoiceRecord(n = 3, lastAt = now),
+                "aq=>爱情" to ChoiceRecord(n = 2, lastAt = now),
+                "没有分隔符" to ChoiceRecord(n = 9),                    // 不含 =>
+                "Aq=>安全" to ChoiceRecord(n = 9),                       // key 含大写
+                "a=>安全" to ChoiceRecord(n = 9),                        // 单字母键
+                "aq123456789012=>安全" to ChoiceRecord(n = 9),           // 超长键
+                "aq=>安全爱情安庆安排按期暗器" to ChoiceRecord(n = 9),    // 超长值(>8)
+                "aq=>安" to ChoiceRecord(n = 9),                         // 单字值
+                "=>安全" to ChoiceRecord(n = 9),                         // 空 key
+            ),
+            samples = mapOf("aq" to 5),
+            lastWord = "爱情",
+        )
+        r.importState(st)
+        assertEquals("只保留两条合法记录", 2, r.recordCount())
+        assertEquals("合法栈不受影响", 2, r.stackSize("aq"))
+        assertEquals("合法样本不受影响", 5, r.sampleCount("aq"))
+        assertEquals(listOf("安全", "爱情"), r.buildOrder("aq").map { it.word })
+    }
+
+    @Test
+    fun `importState 不误拒 v1_0_70 多字词与长键合法记录`() {
+        val r = ranker()
+        r.importState(
+            ChoiceState(
+                stacks = mapOf("blbl" to listOf("哔哩哔哩")),
+                records = mapOf("blbl=>哔哩哔哩" to ChoiceRecord(n = 1, lastAt = now)),
+                samples = mapOf("blbl" to 1),
+                lastWord = "哔哩哔哩",
+            )
+        )
+        assertEquals(1, r.recordCount())
+        assertTrue(r.hasHistory("blbl"))
+        assertEquals("哔哩哔哩", r.buildOrder("blbl").single().word)
+    }
+
+    @Test
+    fun `exportState 与 importState 往返不丢任何合法状态`() {
+        val a = ranker()
+        val blbl: (String) -> Collection<String> = { listOf("blbl") }
+        a.onCommit("哔哩哔哩", blbl); now += 1000
+        a.onCommit("哔哩啪啦", blbl); now += 1000
+        a.onCommit("安全", keys)
+        val before = a.exportState()
+        val b = ranker()
+        b.importState(before)
+        assertEquals("往返后状态完全一致", before, b.exportState())
+        assertEquals(a.recordCount(), b.recordCount())
+        assertEquals(a.buildOrder("blbl"), b.buildOrder("blbl"))
+        assertEquals(a.buildOrder("aq"), b.buildOrder("aq"))
+    }
 }
