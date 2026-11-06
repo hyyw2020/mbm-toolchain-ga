@@ -78,6 +78,22 @@ COPYING / README 校准。旧版本把 fcitx5-chinese-addons 写成 GPL-3.0-or-l
 | RapidOCR v3.10.0（算法参考，未包含代码） | OCR 流水线算法参考 | Apache-2.0 |
 | Ismantic/Handwritten（vendored 代码 + 模型） | 离线手写识别（lib/handwritten） | Apache-2.0 |
 | ncnn（Tencent，预编译静态库 ncnn-20250503-android） | 离线手写推理引擎 | BSD-3-Clause |
+| AndroidX Core / Core-Ktx（AndroidX） | Rich Content API 兼容封装（InputConnectionCompat / InputContentInfoCompat / FileProvider） | Apache-2.0 |
+| kotlinx.serialization（JetBrains） | 自定义图像表情清单的本机序列化 | Apache-2.0 |
+
+v1.0.73 表情功能另引用以下**公开标准**（非第三方库、非专有资产，仅实现其
+码点判据或系统协议，故不计入上表依赖）：
+- **The Unicode Standard / UTS #51「Unicode Emoji」**：Extended_Pictographic、
+  ZWJ 序列、Emoji_Modifier、Variation Selector、Keycap、Regional Indicator、
+  TAG 序列等码点结构判据（`core/EmojiSequence.kt`）。
+- **Unicode CLDR `RGI_Emoji` 集合**：表情序列的规范性参考。
+- **Android Rich Content API / Image Keyboard**（AOSP `EditorInfo.contentMimeTypes`
+  与 `InputConnection.commitContent`）：图像表情上屏协议。
+- **Android Storage Access Framework**（AOSP）：用户运行时导入图像资产。
+
+上述标准与组件均以公开规范或 SPDX 许可标识表达；本产品**不内置、不分发
+任何第三方专有表情包**，图像表情资产 100% 由使用者在运行时自行导入，
+著作权与来源由导入者负责。
 
 ### 5.1 离线手写模块说明
 

@@ -13,6 +13,7 @@ import android.os.Build
 import android.text.TextPaint
 import androidx.annotation.RequiresApi
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.core.EmojiSequence
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreferenceEnum
 
 object EmojiModifier {
@@ -96,12 +97,31 @@ object EmojiModifier {
         UnicodeSet("[:RGI_Emoji:]").freeze()
     }
 
+    /**
+     * 判断是否为**合法且应被支持**的 Unicode Emoji 序列。
+     *
+     * v1.0.73 修复：旧实现用 `DefaultTextPaint.hasGlyph(emoji)` 判定整个字符串，
+     * 而该 API 对多码点序列（ZWJ 组合、肤色、RI 旗帜、Tag 序列、键帽）恒返回
+     * false —— 于是「隐藏不支持的表情」开启时，PickerData.Emoji 中所有复合
+     * RGI 序列都被静默裁掉；API 34+ 的 `UnicodeSet.contains(String)` 对整串
+     * 同样不可靠。数据层判定必须与宿主字体渲染能力解耦：合法序列一律有效。
+     */
     fun isValidEmoji(emoji: String): Boolean {
-        // UProperty.RGI_EMOJI is available on 34+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            if (!RGIEmojiSet.contains(emoji)) return false
-        }
-        return DefaultTextPaint.hasGlyph(emoji)
+        if (EmojiSequence.isEmojiSequence(emoji)) return true
+        // 兜底：部分以文本默认呈现的 BMP 符号（无 VS16）由平台 RGI 集合确认。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            RGIEmojiSet.contains(emoji)
+        ) return true
+        return false
+    }
+
+    /**
+     * 仅供「隐藏不支持的表情」开关的可选增强过滤使用：**单码点**表情才查
+     * 系统字体；复合序列永不因字体判定被裁剪（hasGlyph 对多码点串无意义）。
+     */
+    fun lacksSystemGlyph(emoji: String): Boolean {
+        if (EmojiSequence.codePoints(emoji).size != 1) return false
+        return !DefaultTextPaint.hasGlyph(emoji)
     }
 
     fun getPreferredTone(emoji: String, tone: SkinTone): String {

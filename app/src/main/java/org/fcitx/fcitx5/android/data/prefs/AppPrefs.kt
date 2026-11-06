@@ -362,16 +362,34 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
     }
 
     inner class Symbols : ManagedPreferenceCategory(R.string.emoji_and_symbols, sharedPreferences) {
+        // v1.0.73：默认「不隐藏」——默认支持全部 Unicode Emoji 序列。
+        // 旧实现默认 true，且用 Paint.hasGlyph(整串) 判定，会把 ZWJ / 肤色 /
+        // 旗帜 / Tag 等复合 RGI 序列全部误杀（hasGlyph 对多码点串返回 false）。
+        // 现改为：默认全量放行；开启隐藏时也不再用字体渲染能力裁剪合法序列。
         val hideUnsupportedEmojis = switch(
             R.string.hide_unsupported_emojis,
             "hide_unsupported_emojis",
-            true
+            false
         )
 
         val defaultEmojiSkinTone = enumList(
             R.string.default_emoji_skin_tone,
             "default_emoji_skin_tone",
             EmojiModifier.SkinTone.Default,
+        )
+
+        /** 目标编辑器未声明 image 富媒体能力时，是否降级提交文本短码。 */
+        val customEmojiFallbackText = switch(
+            R.string.custom_emoji_fallback_text,
+            "custom_emoji_fallback_text",
+            true
+        )
+
+        /** 系统剪贴板出现 image 资产时，是否纳入自定义表情面板。 */
+        val customEmojiClipboardCapture = switch(
+            R.string.custom_emoji_clipboard_capture,
+            "custom_emoji_clipboard_capture",
+            true
         )
     }
 

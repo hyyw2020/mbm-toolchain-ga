@@ -5,6 +5,7 @@
 package org.fcitx.fcitx5.android.input.picker
 
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.input.keyboard.ImageLayoutSwitchKey
 import org.fcitx.fcitx5.android.input.keyboard.ImagePickerSwitchKey
 import org.fcitx.fcitx5.android.input.keyboard.NumberKeyboard
@@ -24,7 +25,16 @@ fun emojiPicker(): PickerWindow = PickerWindow(
     switchKey = TextPickerSwitchKey(":-)", PickerWindow.Key.Emoticon),
     popupPreview = false,
     followKeyBorder = false,
-    policy = EmojiPickerPolicy()
+    policy = EmojiPickerPolicy(),
+    // v1.0.73：动态追加「自定义图像表情」分类。数据来自用户运行时导入的本地包，
+    // 每次重建分类（含导入/清空后的 revision 变化）都会重新求值，无需重建窗口。
+    dataProvider = {
+        val tokens = CustomEmojiRepository.allTokens()
+        if (tokens.isEmpty()) PickerData.Emoji
+        else PickerData.Emoji + listOf(
+            PickerData.Category("✦", R.drawable.ic_baseline_tag_faces_24) to tokens.toTypedArray()
+        )
+    }
 )
 
 fun emoticonPicker(): PickerWindow = PickerWindow(

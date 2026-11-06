@@ -1,19 +1,20 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.72（versionCode = baseVersionCode(26) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.73（versionCode = baseVersionCode(27) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.72）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.73）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
-v1.0.72 重跑 docs/license_audit.py 的实测分布为
-第一方 470 个文件带 SPDX 头、0 缺失：
+v1.0.73 重跑 docs/license_audit.py 的实测分布为
+第一方 477 个文件带 SPDX 头、0 缺失：
   LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
-  AGPL-3.0-or-later × 105（MBM 新写/新改，含 v1.0.72 新增的
-  ContextPredictor / PredictionStore / PhraseKeys 及其单测）。
+  AGPL-3.0-or-later × 112（MBM 新写/新改，含 v1.0.73 新增的
+  EmojiSequence / CustomEmojiProtocol / CustomEmojiRepository /
+  EmojiRichContentCommitter / CustomEmojiImportActivity 及其单测）。
 组合分发依据见第五节。逐文件许可台账为 docs/sbom/license_ledger.txt
 （CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
 
@@ -202,7 +203,43 @@ AnySoftKeyboard / Urik
   不写输入原文日志；密码/隐私模式下完全不学习。
 
 ================================================================================
-八、合规红线
+八、v1.0.73 全表情支持与自定义图像表情容器（新增章节）
+================================================================================
+本章节涉及的新增文件 SPDX 头均为 AGPL-3.0-or-later；所引用的名称仅为
+公开标准与开源组件（The Unicode Standard / UTS #51 / Unicode CLDR、
+Android Rich Content API、AndroidX Core、JetBrains kotlinx.serialization、
+AOSP Storage Access Framework），许可以 SPDX 标识表达，不包含任何
+第三方应用名称或专有表情资产。
+
+- EmojiSequence（core/）：以 Unicode 码点结构判定「是否为一个表情」，
+  覆盖 ZWJ 序列、Fitzpatrick 肤色修饰符、VS15/VS16 变体选择符、键帽
+  序列、Regional Indicator 旗帜与 TAG 序列。判定**不依赖宿主字体**
+  （不再用 Paint.hasGlyph 裁剪整串），默认全量放行所有 Unicode Emoji；
+  EmojiModifier.isValidEmoji 改用该判据，避免复合 RGI 序列被误杀。
+  hideUnsupportedEmojis 默认值由 true 改为 false。
+- CustomEmojiProtocol（data/emoji/）：自定义图像表情的开放容器协议，
+  纯数据层零 Android 依赖。包含文件名净化（阻断路径穿越）、扩展名与
+  MIME 白名单（仅图像）、单文件 8MiB / 导入总量 64MiB / 单包 500 条
+  上限、清单逐条容错；token 用 Unicode 私用区前缀，避免与用户文本冲突。
+- CustomEmojiRepository（data/emoji/）：本机仓库，资产 100% 由用户在
+  运行时经系统文件选择器导入，落在 filesDir/custom_emoji/<packId>/
+  并附 pack.json 清单；APK 内不预置、不下载任何第三方专有表情资产。
+  缩略图 LruCache、revision 失效、bumpRevision 保证面板重建正确。
+- EmojiRichContentCommitter（input/emoji/）：按 EditorInfo.
+  contentMimeTypes 能力探测，用 InputConnectionCompat.commitContent +
+  FileProvider content:// URI + ClipDescription 临时读授权上屏图像；
+  目标不支持时可降级为文本短码，全程异常安全、不需要网络权限。
+- 接线：KeyAction.CommitStickerAction / CommonKeyActionListener /
+  FcitxInputMethodService.commitSticker；PickerPolicy / PickerWindow /
+  PickerPagesAdapter / PickerPageUi / PickerWindowPreset 动态追加
+  「自定义表情」分类并渲染缩略图；ClipboardManager 复制侧识别
+  ClipData.Item.uri 并导入容器，实现「复制表情后完美显示」；
+  SymbolSettingsFragment 与 CustomEmojiImportActivity 提供导入与清空入口。
+- 全部数据来自用户本机运行时导入，不含任何预置训练语料或预置表情包；
+  不联网、不上传、可一键删除；隐私模式下不捕获剪贴板图像资产。
+
+================================================================================
+九、合规红线
 ================================================================================
 本产品不反编译、不并入任何闭源 APK 的代码。
 发布 APK 使用开发者自签名证书签名（Android 安装所必需），未混淆、未加固；
@@ -210,3 +247,8 @@ AnySoftKeyboard / Urik
 Corresponding Source 要求。指纹自校验见
 app/src/main/java/org/fcitx/fcitx5/android/utils/AppSignatureVerifier.kt。
 （v1.0.72 修正：旧版「构建产物不含任何签名」与已签名发布事实不符。）
+（v1.0.73：第一方代码、注释与随版本分发的文档中不含任何第三方应用
+名称；出现的名称仅为 The Unicode Standard / UTS #51 / CLDR / AOSP /
+AndroidX / JetBrains kotlinx.serialization 等公开标准与开源组件，以及
+SPDX 许可标识。自定义图像表情功能只提供开放容器，不内置、不分发任何
+第三方专有表情素材，资产由使用者在运行时自行导入并自负来源责任。）

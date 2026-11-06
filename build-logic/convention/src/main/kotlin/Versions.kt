@@ -208,7 +208,24 @@ object Versions {
     //     「选择 >= 1 次即第一」硬规则完全不被削弱。新增 17 个 JVM 单测。
     //  3. 同步修正文档与实际代码不符项（隐私政策/NOTICE/README/许可标注/离线许可入口/
     //     备份排除规则），并补 v1.0.72 源码快照以满足 AGPL §6 对应源码要求。
-    const val baseVersionCode = 26
+    // v1.0.73：表情输入输出的完整支持（不改变任何既有输入功能）。
+    //  1. 真 bug 修复：EmojiModifier.isValidEmoji 与 EmojiPickerPolicy 用
+    //     Paint.hasGlyph(整串) / UnicodeSet.contains(整串) 判定多码点序列，而两者对
+    //     ZWJ / 肤色 / RI 旗帜 / Tag / 键帽等复合 RGI 序列恒返回 false —— 于是「隐藏
+    //     不支持的表情」默认 true 时，PickerData.Emoji 中全部复合序列被静默裁掉。
+    //     新增零 Android 依赖的 EmojiSequence（UTS#51 结构判据），数据层判定与宿主
+    //     字体渲染能力解耦；开关默认改 false，默认支持全部 Unicode Emoji 序列。
+    //  2. 新增「用户自定义图像表情」开放容器：CustomEmojiProtocol/Repository，
+    //     用户运行时经 SAF 导入 image 资产或 ZIP，落应用私有目录 + pack.json 清单，
+    //     不预置、不下载任何第三方专有素材；文件名净化、MIME 白名单、体积/条数上限、
+    //     Zip Slip 防护、清单逐条容错，全部可由 JVM 单测验证。
+    //  3. 富媒体输入/输出闭环：EmojiRichContentCommitter 走 Android Rich Content API
+    //     (InputConnectionCompat.commitContent + FileProvider content:// 临时授权)，
+    //     目标不支持时降级文本；表情面板动态追加「自定义表情」分类并渲染缩略图，
+    //     剪贴板复制侧捕获 image 资产落盘，实现「复制表情后完美显示」。
+    //  4. 合规：清除第一方代码/注释/文档中的第三方应用名称，新增文件仅使用
+    //     Unicode/CLDR/AndroidX/AOSP 等标准与开源组件名称及 SPDX 许可标识。
+    const val baseVersionCode = 27
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

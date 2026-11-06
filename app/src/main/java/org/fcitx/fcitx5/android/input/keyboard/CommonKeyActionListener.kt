@@ -26,6 +26,7 @@ import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.Backspace
 import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.BackspaceSwipeState.Selection
 import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.BackspaceSwipeState.Stopped
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.CommitAction
+import org.fcitx.fcitx5.android.input.keyboard.KeyAction.CommitStickerAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.DeleteSelectionAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.FcitxKeyAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.LangSwitchAction
@@ -111,6 +112,14 @@ class CommonKeyActionListener :
                     runCatching { commitAndReset() }
                         .onFailure { Timber.e(it, "MBM: 提交前复位失败，已抑制以避免输入法崩溃") }
                     service.lifecycleScope.launch(imeExceptionHandler) { service.commitText(action.text) }
+                }
+                // v1.0.73：自定义图像表情走 Rich Content，不经 commitText 文本通道。
+                is CommitStickerAction -> service.postFcitxJob {
+                    runCatching { commitAndReset() }
+                        .onFailure { Timber.e(it, "MBM: 表情提交前复位失败，已抑制") }
+                    service.lifecycleScope.launch(imeExceptionHandler) {
+                        service.commitSticker(action.token)
+                    }
                 }
                 is QuickPhraseAction -> service.postFcitxJob {
                     commitAndReset()

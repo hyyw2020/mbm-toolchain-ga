@@ -282,6 +282,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/core/EmojiSequence.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/core/Fcitx.kt",
       "licenses": [
         {
@@ -703,6 +715,30 @@
     {
       "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipher.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocol.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiRepository.kt",
       "licenses": [
         {
           "license": {
@@ -2262,6 +2298,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/input/emoji/EmojiRichContentCommitter.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/input/handwriting/HandwritingWindow.kt",
       "licenses": [
         {
@@ -3264,6 +3312,18 @@
           "license": {
             "id": "LGPL-2.1-or-later",
             "name": "LGPL-2.1-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/ui/main/CustomEmojiImportActivity.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
           }
         }
       ]
@@ -4854,6 +4914,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/core/EmojiSequenceTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardBlobStoreTest.kt",
       "licenses": [
         {
@@ -4879,6 +4951,18 @@
     {
       "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/crypto/StreamingFileCipherTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/emoji/CustomEmojiProtocolTest.kt",
       "licenses": [
         {
           "license": {

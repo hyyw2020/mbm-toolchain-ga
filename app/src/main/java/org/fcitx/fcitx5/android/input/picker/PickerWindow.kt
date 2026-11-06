@@ -7,6 +7,8 @@ package org.fcitx.fcitx5.android.input.picker
 import androidx.core.content.ContextCompat
 import androidx.transition.Transition
 import androidx.viewpager2.widget.ViewPager2
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiProtocol
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.broadcast.ReturnKeyDrawableComponent
 import org.fcitx.fcitx5.android.input.dependency.theme
@@ -30,7 +32,9 @@ class PickerWindow(
     private val switchKey: KeyDef,
     private val popupPreview: Boolean = true,
     private val followKeyBorder: Boolean = true,
-    private val policy: PickerPolicy = DefaultPickerPolicy()
+    private val policy: PickerPolicy = DefaultPickerPolicy(),
+    /** v1.0.73：可选的动态数据源（如用户导入的自定义表情分类），每次重建分类时求值。 */
+    private val dataProvider: (() -> List<Pair<PickerData.Category, Array<String>>>)? = null
 ) : InputWindow.ExtendedInputWindow<PickerWindow>(), EssentialWindow {
 
     enum class Key : EssentialWindow.Key {
@@ -73,10 +77,18 @@ class PickerWindow(
                 commonKeyActionListener.listener.onKeyAction(KeyAction.CommitAction(it.act), source)
             }
 
+            is KeyAction.CommitAction -> {
+                // v1.0.73：自定义图像表情的 token 不是待上屏文本，转成
+                // CommitStickerAction 走 Rich Content，绝不能 commitText 出私用区字符串。
+                val action: KeyAction = if (CustomEmojiProtocol.parseToken(it.text) != null) {
+                    KeyAction.CommitStickerAction(it.text)
+                } else it
+                // 最近使用同时收录两类条目；sticker token 由渲染层显示缩略图。
+                pickerPagesAdapter.insertRecent(it.text)
+                commonKeyActionListener.listener.onKeyAction(action, source)
+            }
+
             else -> {
-                if (it is KeyAction.CommitAction) {
-                    pickerPagesAdapter.insertRecent(it.text)
-                }
                 commonKeyActionListener.listener.onKeyAction(it, source)
             }
         }
@@ -107,8 +119,10 @@ class PickerWindow(
         val bordered = followKeyBorder && keyBorder
         pickerPagesAdapter = PickerPagesAdapter(
             theme, keyActionListener, popupActionListener, data,
-            density, key.name, bordered, policy
+            density, key.name, bordered, policy, dataProvider
         )
+        // 面板每次附着时预热缩略图（后台 IO + 内存缓存），绑定时零解码。
+        CustomEmojiRepository.preloadThumbnails()
         tabsUi.apply {
             setTabs(pickerPagesAdapter.getCategoryList())
             setOnTabClickListener { i ->

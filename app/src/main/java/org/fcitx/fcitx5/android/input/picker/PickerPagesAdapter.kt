@@ -27,8 +27,13 @@ class PickerPagesAdapter(
     private val density: PickerPageUi.Density,
     recentlyUsedFileName: String,
     private val bordered: Boolean,
-    private val policy: PickerPolicy
+    private val policy: PickerPolicy,
+    /** v1.0.73：可选动态数据源；提供时每次重建分类都重新求值（自定义表情包导入后立即生效）。 */
+    private val dataProvider: (() -> List<Pair<PickerData.Category, Array<String>>>)? = null
 ) : RecyclerView.Adapter<PickerPagesAdapter.ViewHolder>() {
+
+    private fun currentData(): List<Pair<PickerData.Category, Array<String>>> =
+        dataProvider?.invoke() ?: rawData
 
     class ViewHolder(val ui: PickerPageUi) : RecyclerView.ViewHolder(ui.root)
 
@@ -81,7 +86,7 @@ class PickerPagesAdapter(
         pages.clear()
         // empty "RecentlyUsed" page
         pages.add(emptyList())
-        rawData.forEach { (cat, arr) ->
+        currentData().forEach { (cat, arr) ->
             val pageCount = arr.asList().chunked(density.pageSize).size
             categories.add(cat to IntRange(pages.size, pages.size + pageCount - 1))
             repeat(pageCount) { pages.add(emptyList()) }
@@ -105,7 +110,7 @@ class PickerPagesAdapter(
         // N40：先取消上一次未完成的构造，避免旧结果覆盖新结果
         buildJob?.cancel()
         buildJob = buildScope.launch {
-            val built = builtCache[key] ?: buildPages(rawData).also { builtCache[key] = it }
+            val built = builtCache[key] ?: buildPages(currentData()).also { builtCache[key] = it }
             // 数据变更与刷新必须回到主线程
             withContext(Dispatchers.Main.immediate) {
                 applyBuilt(built)

@@ -5,13 +5,18 @@
 package org.fcitx.fcitx5.android.input.picker
 
 import android.content.Context
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.updateLayoutParams
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.FcitxKeyMapping
 import org.fcitx.fcitx5.android.core.KeySym
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiProtocol
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.AutoScaleTextView
@@ -92,6 +97,49 @@ class PickerPageUi(
                     setPadding(hMargin, vMargin, hMargin, vMargin)
                 }
             }
+        }
+    }
+
+    /**
+     * v1.0.73：自定义图像表情的缩略图覆盖层。KeyView 是 FrameLayout，
+     * 后添加的 ImageView 位于文本层之上；不拦截点击，触摸仍由 CustomGestureView 处理。
+     * 位图来自 CustomEmojiRepository 的内存缓存（面板附着时已后台预热）。
+     */
+    private val stickerSize = (ctx.resources.displayMetrics.density * 40).toInt()
+    private val stickerImages = Array(density.pageSize) { i ->
+        ImageView(ctx).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            isClickable = false
+            isFocusable = false
+            visibility = View.GONE
+        }.also { iv ->
+            keyViews[i].addView(iv, FrameLayout.LayoutParams(stickerSize, stickerSize, Gravity.CENTER))
+        }
+    }
+
+    /** 单元格绑定：token 显示缩略图，普通文本显示字符。两类条目共用一套点击/分页逻辑。 */
+    private fun bindCell(index: Int, item: String) {
+        val keyView = keyViews[index]
+        val image = stickerImages[index]
+        if (CustomEmojiProtocol.parseToken(item) == null) {
+            keyView.mainText.visibility = View.VISIBLE
+            keyView.mainText.text = item
+            image.visibility = View.GONE
+            image.setImageDrawable(null)
+            return
+        }
+        val bmp = CustomEmojiRepository.cachedThumbnail(item)
+        if (bmp != null && !bmp.isRecycled) {
+            keyView.mainText.visibility = View.GONE
+            image.setImageBitmap(bmp)
+            image.visibility = View.VISIBLE
+        } else {
+            // 缓存尚未预热完成时降级为可读文件名，绝不显示私用区 token 原文。
+            keyView.mainText.visibility = View.VISIBLE
+            keyView.mainText.text = CustomEmojiProtocol
+                .parseToken(item)?.second?.let { CustomEmojiProtocol.labelFromFileName(it) } ?: ""
+            image.visibility = View.GONE
+            image.setImageDrawable(null)
         }
     }
 
@@ -178,11 +226,13 @@ class PickerPageUi(
             keyView.apply {
                 if (i >= items.size) {
                     isEnabled = false
+                    mainText.visibility = View.VISIBLE
                     mainText.text = ""
+                    stickerImages[i].visibility = View.GONE
                     setOnClickListener(null)
                 } else {
                     isEnabled = true
-                    mainText.text = items[i]
+                    bindCell(i, items[i])
                     MbmDebug.markFeature(this, "picker.item")
                     setOnClickListener {
                         MbmDebug.logFeature("picker.item", items[i])
@@ -201,7 +251,9 @@ class PickerPageUi(
             keyView.apply {
                 if (i >= items.size) {
                     isEnabled = false
+                    mainText.visibility = View.VISIBLE
                     mainText.text = ""
+                    stickerImages[i].visibility = View.GONE
                     setOnClickListener(null)
                     setOnLongClickListener(null)
                     swipeEnabled = false
@@ -210,7 +262,7 @@ class PickerPageUi(
                     isEnabled = true
                     val item = items[i]
                     val transformed = policy.transform(item)
-                    mainText.text = transformed
+                    bindCell(i, transformed)
                     MbmDebug.markFeature(this, "picker.item")
                     setOnClickListener {
                         MbmDebug.logFeature("picker.item", transformed)

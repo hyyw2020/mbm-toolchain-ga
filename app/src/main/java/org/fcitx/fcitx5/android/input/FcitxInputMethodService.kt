@@ -52,8 +52,10 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.AppPhraseImporter
 import org.fcitx.fcitx5.android.data.pinyin.customphrase.PersonalPhraseImporter
+import org.fcitx.fcitx5.android.input.emoji.EmojiRichContentCommitter
 import org.fcitx.fcitx5.android.recall.RecallService
 import org.fcitx.fcitx5.android.recall.store.PredictionStore
 import org.fcitx.fcitx5.android.recall.store.UserChoiceStore
@@ -638,6 +640,47 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
     }
 
     /**
+     * MBM v1.0.73：提交用户自定义图像表情。
+     *
+     * 资产由用户运行时导入，落在本应用私有目录；通过 Android Rich Content API
+     * 以 FileProvider content:// URI 提交给声明了 image 能力的编辑器。目标不支持
+     * 富媒体时按用户偏好降级为文本短码，避免出现「点了没反应」。
+     * 全程异常安全，不触碰学习/Recall 词库（表情不是文本输入，不参与候选排序）。
+     */
+    fun commitSticker(token: String) {
+        val resolved = runCatching { CustomEmojiRepository.resolve(token) }.getOrNull()
+        if (resolved == null) {
+            lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_import_failed)) }
+            return
+        }
+        val uri = CustomEmojiRepository.contentUri(this, resolved)
+        if (uri == null) {
+            lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
+            return
+        }
+        val fallbackEnabled = runCatching {
+            AppPrefs.getInstance().symbols.customEmojiFallbackText.getValue()
+        }.getOrDefault(true)
+        val shortCode = ":[${resolved.label}]:"
+        val result = EmojiRichContentCommitter.commit(
+            context = this,
+            ic = currentInputConnection,
+            editorInfo = currentInputEditorInfo,
+            uri = uri,
+            mime = resolved.mime,
+            label = resolved.label,
+            fallbackText = if (fallbackEnabled) shortCode else null
+        )
+        when (result) {
+            EmojiRichContentCommitter.Result.FALLBACK_TEXT ->
+                lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_fallback_hint, shortCode)) }
+            EmojiRichContentCommitter.Result.UNAVAILABLE ->
+                lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
+            EmojiRichContentCommitter.Result.COMMITTED -> Unit
+        }
+    }
+
+    /**
      * MBM v1.0.31：粘贴剪贴板条目 —— 支持 100MB+ 大文本，粘贴结果 = 完整原文。
      *
      * 背景：`InputConnection.commitText` 走 Binder 事务（上限约 1MB），
@@ -702,8 +745,8 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             var lastReport = 0L
             val committed = stream.use { s ->
                 // U4 修复：commitText 必须跑在输入法主线程——InputConnection 是跨进程
-                // Binder 代理，在 IO 线程调用会让目标 App 的 ViewRootImpl.checkThread
-                // 抛异常（崩的是微信/备忘录），被 runCatching 吞掉则表现为「点了没反应」。
+                // Binder 代理，在 IO 线程调用会让目标编辑器的 ViewRootImpl.checkThread
+                // 抛异常，被 runCatching 吞掉则表现为「点了没反应」。
                 // 流式读取仍在 IO，仅提交跨回主线程。
                 ClipboardPasteChunker.chunks(s) { text, byteLen ->
                     val ok = runCatching {

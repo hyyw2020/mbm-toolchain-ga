@@ -390,4 +390,23 @@
     <string name="word_select_empty_hint">Slide over the words to select text first</string>
     <string name="word_select_read_failed">Failed to read entry content</string>
     <string name="word_select_truncated">Text is too long, only showing the first %1$d words</string>
+
+    <!-- MBM v1.0.73: Unicode Emoji 全量支持 + 自定义图像表情容器 -->
+    <string name="custom_emoji_category">Custom stickers</string>
+    <string name="custom_emoji_import">Import sticker pack</string>
+    <string name="custom_emoji_import_summary">Import one or more image assets (PNG / JPEG / WebP / GIF / BMP / HEIC / AVIF) or a ZIP archive. Assets are stored only in this app private directory; no third-party assets are bundled.</string>
+    <string name="custom_emoji_clear">Remove all custom stickers</string>
+    <string name="custom_emoji_clear_confirm">Remove all locally imported sticker packs? This cannot be undone.</string>
+    <string name="custom_emoji_empty">No custom stickers imported yet</string>
+    <string name="custom_emoji_import_result">Imported %1$d sticker(s)</string>
+    <string name="custom_emoji_import_failed">Nothing was imported. Check that the files are supported images or a ZIP.</string>
+    <string name="custom_emoji_fallback_text">Fallback to text when rich content is unsupported</string>
+    <string name="custom_emoji_clipboard_capture">Add copied image stickers to the panel</string>
+    <string name="custom_emoji_fallback_hint">Sent as text: %1$s</string>
+    <string name="custom_emoji_unavailable">Current editor cannot accept image content</string>
+    <string name="custom_emoji_import_title">Custom sticker packs</string>
+    <string name="custom_emoji_import_hint">Open container only. All assets are supplied by you at runtime, stored locally, never uploaded.</string>
+    <string name="custom_emoji_pick_files">Choose images or ZIP</string>
+    <string name="custom_emoji_cleared">All custom stickers removed</string>
+    <string name="custom_emoji_pack_count">%1$d pack(s), %2$d sticker(s)</string>
 </resources>

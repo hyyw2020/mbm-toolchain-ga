@@ -292,6 +292,13 @@
             android:theme="@style/Theme.MbmActivity"
             android:label="@string/rule_import" />
 
+        <!-- MBM v1.0.73：用户自定义图像表情包导入（SAF，纯本地，不内置任何素材） -->
+        <activity
+            android:name=".ui.main.CustomEmojiImportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MbmActivity"
+            android:label="@string/custom_emoji_import_title" />
+
         <!-- MBM: 离线智能词库 -->
         <activity
             android:name=".ui.main.SmartDictActivity"

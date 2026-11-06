@@ -22,6 +22,7 @@ import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardDao
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardDatabase
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.crypto.AppKeyManager
+import org.fcitx.fcitx5.android.data.emoji.CustomEmojiRepository
 import org.fcitx.fcitx5.android.data.password.PrivacyController
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
@@ -520,6 +521,11 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         launch {
             // N04：隐私模式（密码框等）下，系统剪贴板内容不进历史，避免密码/令牌被记录
             if (PrivacyController.inPrivacyMode) return@launch
+            // v1.0.73：复制侧富媒体通道。系统剪贴板携带 image 资产（ClipData.Item.uri）
+            // 时，按用户偏好复制进自定义表情容器，使其在表情面板内可见、可再次提交。
+            // 纯本地、遵守隐私模式与体积上限；不改动文本剪贴板历史的既有行为。
+            runCatching { captureImageSticker(clip) }
+                .onFailure { Timber.w(it, "Failed to capture clipboard image sticker") }
             val entry = ClipboardEntry.fromClipData(clip, transformer) ?: return@launch
             if (entry.text.isBlank()) return@launch
             // N51：统一走 insertEntry 分流（大文本外置 blob），避免全文塞 text 列触发
@@ -529,6 +535,41 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
             }.onFailure {
                 Timber.w(it, "Failed to insert clipboard entry from primary clip")
             }
+        }
+    }
+
+    /**
+     * v1.0.73：复制侧富媒体捕获。
+     *
+     * 当系统剪贴板声明 image 类 MIME 且含 content URI 时，把该资产复制进
+     * 自定义表情容器（应用私有目录），使用户在表情面板内能看到并再次以
+     * Rich Content 方式提交。这是「复制表情后能完美显示」的实现路径：
+     * 不依赖 URI 的临时读授权长期有效，落盘后由本应用自己的 FileProvider 授权。
+     *
+     * 边界：遵守隐私模式、用户开关、MIME 白名单与体积/条数上限；
+     * 忽略本应用 FileProvider 自身产生的 URI，避免提交→复制→再导入的回环；
+     * 任何失败都只跳过，绝不影响文本剪贴板历史。
+     */
+    private fun captureImageSticker(clip: android.content.ClipData) {
+        val enabled = runCatching {
+            AppPrefs.getInstance().symbols.customEmojiClipboardCapture.getValue()
+        }.getOrDefault(true)
+        if (!enabled) return
+        val desc = clip.description ?: return
+        var mime: String? = null
+        for (i in 0 until desc.mimeTypeCount) {
+            val m = desc.getMimeType(i)
+            if (m.startsWith("image/")) {
+                mime = m
+                break
+            }
+        }
+        val imageMime = mime ?: return
+        for (i in 0 until clip.itemCount) {
+            val uri = runCatching { clip.getItemAt(i).uri }.getOrNull() ?: continue
+            // 跳过本应用自己签发的 URI，防止自我复制回环
+            if (uri.authority == appContext.packageName + ".fileprovider") continue
+            if (CustomEmojiRepository.importClipboardImage(appContext, uri, imageMime)) return
         }
     }
 

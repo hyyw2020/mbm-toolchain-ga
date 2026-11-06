@@ -174,7 +174,7 @@
      后台协程（`Dispatchers.Default`）。主线程回调里**不做任何 binder IPC / 遍历**。
   2. `onDestroy()` 改为 `trimJob?.cancel()`（异步取消），不再在主线程 `runBlocking` 等待。
   3. **未**用 try-catch 包异常 / **未**降低捕获频率掩盖问题（节流间隔已是设计值，非补丁）。
-- **验证方式**：API 35+ 真机/模拟器，开启 Recall 无障碍服务，在内容密集的应用（设置、微信聊天列表）
+- **验证方式**：API 35+ 真机/模拟器，开启 Recall 无障碍服务，在内容密集的应用（系统设置、消息会话列表）
   高速滚动 1–2 分钟，观察是否再弹「无响应」；`adb shell am monitor` 或
   `adb bugreport | grep -A20 "ANR org.fcitx.fcitx5.android"` 不应出现新 ANR；
   同时确认节点捕获仍在正常入库（Recall 列表增长）。
