@@ -170,5 +170,9 @@
     <string name="word_select_copied">Kopiert</string>
     <string name="word_select_empty_hint">Zuerst über die Wörter wischen, um Text auszuwählen</string>
     <string name="word_select_read_failed">Inhalt des Eintrags konnte nicht gelesen werden</string>
-    <string name="word_select_truncated">Text zu lang, nur die ersten %1$d Wörter werden angezeigt</string>
+    <string name="word_select_truncated">Only the first %1$d words are shown. Increase Characters loaded at once in clipboard settings to see more.</string>
+    <!-- MBM v1.0.77: unlimited clipboard audit / large-text clipboard writeback -->
+    <string name="clipboard_copy_as_file">Text is large: added to clipboard as a file. The full text is saved in clipboard history — paste it from the panel.</string>
+    <string name="clipboard_copy_failed">Could not write to the system clipboard. The full text is saved in clipboard history.</string>
+    <string name="clipboard_ui_load_chars">Characters loaded at once (0 = default)</string>
 </resources>

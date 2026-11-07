@@ -36,7 +36,6 @@ import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
-import java.security.MessageDigest
 
 object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
     CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default + imeExceptionHandler) {
@@ -271,19 +270,22 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
     suspend fun updateText(id: Int, text: String) {
         // MBM v1.0.31：编辑后按大小重新分流——大文本重写 blob，缩小的删 blob
         val entry = clbDao.get(id) ?: return
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) return
+        // v1.0.77：trim 只用于「是否全空白」判定，不再参与落库——旧实现把用户
+        // 编辑/复制内容首尾的空白与换行静默 trim 掉，破坏逐字保真。
+        if (ClipboardTextFidelity.shouldDrop(text)) return
+        val stored = ClipboardTextFidelity.stored(text)
         // U2 护栏①：内容未变则不改动——避免大文本条目在「未编辑即保存」时被降级为内联预览并删除 blob
-        if (sha256(trimmed) == entry.sha256) return
+        if (ClipboardTextFidelity.sha256(stored) == entry.sha256) return
         // U2 护栏②：blob 条目且编辑框文本仍等于预览（全文加载失败退化为预览、用户未实质修改）
         // → 不降级为内联、不删除 blob，保住 100MB 原文
-        if (entry.isBlob && trimmed == entry.text) return
-        if (trimmed.toByteArray().size <= ClipboardBlobStore.INLINE_THRESHOLD) {
+        if (entry.isBlob && stored == entry.text) return
+        val bytes = stored.toByteArray()
+        if (bytes.size <= ClipboardBlobStore.INLINE_THRESHOLD) {
             // 回落到内联：删旧 blob（若有）
             entry.blobRef?.let { ClipboardBlobStore.delete(it) }
-            clbDao.updateTextAndMeta(id, trimmed, trimmed.toByteArray().size.toLong(), sha256(trimmed), null, ClipboardEntry.CODEC_INLINE)
+            clbDao.updateTextAndMeta(id, stored, bytes.size.toLong(), ClipboardTextFidelity.sha256(stored), null, ClipboardEntry.CODEC_INLINE)
         } else {
-            val handle = ClipboardBlobStore.write(trimmed.byteInputStream())
+            val handle = ClipboardBlobStore.write(stored.byteInputStream())
             if (entry.blobRef != null && entry.blobRef != handle.sha256) {
                 ClipboardBlobStore.delete(entry.blobRef)
             }
@@ -396,22 +398,25 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         sensitive: Boolean,
         refreshLast: Boolean
     ): Boolean {
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) return false
-        val bytes = trimmed.toByteArray()
+        // v1.0.77：存储原文，不 trim。旧实现把首尾空白/换行静默吃掉，用户复制
+        // 「  abc\n」历史里变成「abc」，逐字保真失效。语义固化在纯 JVM 策略
+        // ClipboardTextFidelity（全空白才丢弃 / 原文落库 / 原文哈希），可回归单测。
+        if (ClipboardTextFidelity.shouldDrop(text)) return false
+        val stored = ClipboardTextFidelity.stored(text)
+        val bytes = stored.toByteArray()
         val entry = if (bytes.size <= ClipboardBlobStore.INLINE_THRESHOLD) {
             ClipboardEntry(
-                text = trimmed,
+                text = stored,
                 pinned = pinned,
                 timestamp = System.currentTimeMillis(),
                 sensitive = sensitive,
                 blobRef = null,
                 byteLen = bytes.size.toLong(),
-                sha256 = sha256(trimmed),
+                sha256 = ClipboardTextFidelity.sha256(stored),
                 codec = ClipboardEntry.CODEC_INLINE
             )
         } else {
-            val handle = ClipboardBlobStore.write(trimmed.byteInputStream())
+            val handle = ClipboardBlobStore.write(stored.byteInputStream())
             ClipboardEntry(
                 // 大文本条目的 text 列存 preview：列表 UI 零改动即显示摘要
                 text = handle.preview,
@@ -608,8 +613,6 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         clbDao.markUnpinnedOverLimit(limit)
     }
 
-    private fun sha256(s: String): String =
-        MessageDigest.getInstance("SHA-256").digest(s.toByteArray())
-            .joinToString("") { "%02x".format(it) }
-
+    // v1.0.77：sha256 口径统一由 ClipboardTextFidelity 按原文计算，
+    // 避免「trim 后哈希」与「原文落库」不一致（旧实现的保真缺陷）。
 }

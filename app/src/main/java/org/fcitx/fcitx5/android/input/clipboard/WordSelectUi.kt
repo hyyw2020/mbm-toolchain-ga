@@ -297,7 +297,7 @@ class WordSelectUi(
     }
 
     /** 用分词结果填充词块（可重复调用，先清空） */
-    fun setContent(r: WordTokenizer.Result) {
+    fun setContent(r: WordTokenizer.Result, sourceTruncated: Boolean = false) {
         result = r
         chipArea.removeAllViews()
         chips.clear()
@@ -332,8 +332,11 @@ class WordSelectUi(
             )
             chips.add(Chip(tv, token))
         }
-        truncationHint.visibility = if (r.truncated) View.VISIBLE else View.GONE
-        if (r.truncated) {
+        // v1.0.77：合并「读入侧截断」与「分词侧词块触顶」，任一为真都必须披露。
+        // 旧实现只认 r.truncated，blob 大文本被 readCapped 砍掉后半段却静默无提示。
+        val truncated = r.truncated || sourceTruncated
+        truncationHint.visibility = if (truncated) View.VISIBLE else View.GONE
+        if (truncated) {
             truncationHint.text = ctx.getString(
                 R.string.word_select_truncated, chips.size
             )

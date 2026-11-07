@@ -271,7 +271,7 @@ object Versions {
     //     ignoreCase 提取出的 "CONTENT://" 候选互相抵消；导入全程串行化并
     //     过滤清单中指向已删除文件的幽灵条目，修并发覆盖与面板空白格。
     //  新增 16 个 JVM 单测，全量 159/159 通过；第一方 485 文件带 SPDX、0 缺失。
-    const val baseVersionCode = 30
+    const val baseVersionCode = 31
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

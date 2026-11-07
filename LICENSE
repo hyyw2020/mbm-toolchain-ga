@@ -17,7 +17,9 @@ MBM（Mixed Bug Method）许可适用范围声明 / SCOPE OF THIS LICENSE
    `input/clipboard/WordSelectMaskPolicy.kt`；v1.0.75 新增
    `data/emoji/ClipboardStickerExtractor.kt` 及其 JVM 单测；v1.0.76 新增
    `data/emoji/ImageHeaderSniffer.kt`、
-   `data/emoji/ClipboardStickerPackPolicy.kt` 及其 JVM 单测）。
+   `data/emoji/ClipboardStickerPackPolicy.kt` 及其 JVM 单测；v1.0.77 新增
+   `data/clipboard/ClipItemTextMerge.kt`、`ClipboardCapacityPolicy.kt`、
+   `ClipboardTextFidelity.kt`、`SystemClipboardCopy.kt` 及其 JVM 单测）。
   注：`plugin/recall/` 自 v1.0.36 起已删除（内嵌主 APK），旧版此处路径失效。
 
 【不适用 —— 各自保留原许可】

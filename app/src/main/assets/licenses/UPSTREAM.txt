@@ -91,7 +91,10 @@ v1.0.73 表情功能另引用以下**公开标准**（非第三方库、非专�
   与 `InputConnection.commitContent`）：图像表情上屏协议。
 - **Android Storage Access Framework**（AOSP）：用户运行时导入图像资产。
 - **Android Clipboard Framework**（AOSP `ClipboardManager` / `ClipData` /
-  `ContentResolver`）：v1.0.75 复制侧读取与输出侧写回系统剪贴板的标准通道。
+  `ContentResolver`）：v1.0.75 复制侧读取与输出侧写回系统剪贴板的标准通道；
+  v1.0.77 起多 Item ClipData 的全部文本项完整读取，且超过 Binder 事务上限的
+  大文本改以 `ClipData.newUri` + `ClipDescription` + FileProvider 读授权提供，
+  事务大小按 UTF-16 码元计费判定（均为 AOSP 标准 API，非第三方库）。
 - **公开图像格式签名**（PNG / JPEG / GIF / WebP / BMP / ISO Base Media File
   Format）：v1.0.75 用文件头魔数嗅探真实位图类型，不信任剪贴板声明的 MIME；
   v1.0.76 改为按有效字节数逐段累积判定（兼容分块返回的 ContentProvider

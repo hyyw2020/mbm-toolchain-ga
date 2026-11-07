@@ -328,5 +328,9 @@
     <string name="word_select_copied">已複製</string>
     <string name="word_select_empty_hint">請先滑動選擇文字</string>
     <string name="word_select_read_failed">讀取條目內容失敗</string>
-    <string name="word_select_truncated">內容過長，僅顯示前 %1$d 個詞</string>
+    <string name="word_select_truncated">內容過長，僅顯示前 %1$d 個詞；可在剪貼板設定中調大「單次載入字數」查看更多</string>
+    <!-- MBM v1.0.77: 無上限剪貼板稽核 / 大文本寫回 -->
+    <string name="clipboard_copy_as_file">內容較大，已以檔案形式放入剪貼板；完整文字已存入剪貼板歷史，可從面板貼上</string>
+    <string name="clipboard_copy_failed">寫入系統剪貼板失敗，完整文字已存入剪貼板歷史</string>
+    <string name="clipboard_ui_load_chars">單次載入字數（0 = 預設）</string>
 </resources>

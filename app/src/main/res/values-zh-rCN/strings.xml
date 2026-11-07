@@ -342,7 +342,7 @@
     <string name="word_select_copied">已复制</string>
     <string name="word_select_empty_hint">请先滑动选择文字</string>
     <string name="word_select_read_failed">读取条目内容失败</string>
-    <string name="word_select_truncated">内容过长，仅显示前 %1$d 个词</string>
+    <string name="word_select_truncated">内容过长，仅显示前 %1$d 个词；可在剪贴板设置中调大「单次加载字数」查看更多</string>
 
     <!-- MBM v1.0.73：Unicode Emoji 全量支持 + 自定义图像表情容器 -->
     <string name="custom_emoji_category">自定义表情</string>
@@ -366,4 +366,8 @@
     <string name="custom_emoji_pick_files">选择图像或 ZIP</string>
     <string name="custom_emoji_cleared">已清空全部自定义表情</string>
     <string name="custom_emoji_pack_count">%1$d 个表情包，%2$d 个表情</string>
+    <!-- MBM v1.0.77: 无上限剪贴板审计 / 大文本写回 -->
+    <string name="clipboard_copy_as_file">内容较大，已以文件形式放入剪贴板；完整文本已存入剪贴板历史，可从面板粘贴</string>
+    <string name="clipboard_copy_failed">写入系统剪贴板失败，完整文本已存入剪贴板历史</string>
+    <string name="clipboard_ui_load_chars">单次加载字数（0 = 默认）</string>
 </resources>

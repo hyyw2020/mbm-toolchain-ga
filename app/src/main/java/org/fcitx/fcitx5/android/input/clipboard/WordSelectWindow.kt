@@ -4,15 +4,13 @@
  */
 package org.fcitx.fcitx5.android.input.clipboard
 
-import android.content.ClipData
-import android.content.ClipboardManager as SystemClipboardManager
-import android.content.Context
 import android.view.View
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.SystemClipboardCopy
 import org.fcitx.fcitx5.android.input.FcitxInputMethodService
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.dependency.theme
@@ -38,7 +36,13 @@ import timber.log.Timber
  */
 class WordSelectWindow(
     private val source: String,
-    private val maskSensitive: Boolean = false
+    private val maskSensitive: Boolean = false,
+    /**
+     * v1.0.77：读入侧（ClipboardWindow.readCapped）是否截断了原文。旧实现把这个
+     * 标志丢掉，导致大文本条目的后半段被静默隐藏、面板却毫无提示。现在必须与
+     * 分词器自身的截断合并后明确披露，让用户知道「还有内容没显示」。
+     */
+    private val sourceTruncated: Boolean = false
 ) : InputWindow.ExtendedInputWindow<WordSelectWindow>() {
 
     private val service: FcitxInputMethodService by manager.inputMethodService()
@@ -47,7 +51,7 @@ class WordSelectWindow(
 
     private val ui by lazy {
         WordSelectUi(context, theme, source, maskSensitive).apply {
-            setContent(WordTokenizer.tokenize(source))
+            setContent(WordTokenizer.tokenize(source), sourceTruncated)
             // 滑动选词 → 实时上屏预览：选区变化即回填背景输入框的 composing 预编辑
             onSelectionChanged = { text ->
                 if (text != null) service.setWordSelectPreview(text)
@@ -83,10 +87,13 @@ class WordSelectWindow(
     }
 
     /**
-     * 复制选中片段：
-     *  1. 写系统剪贴板（IME 在前台时允许写入）；
-     *  2. 登记（去重）为剪贴板面板条目，回到面板即可一键上屏；
-     *  3. Toast「已复制」，面板保持打开，可继续调整选区。
+     * 复制选中片段（v1.0.77 修复超限静默失败）：
+     *  1. 写系统剪贴板：小文本原路；超过 Binder 事务安全范围时以
+     *     FileProvider URI 形式放入，**并如实告知用户**（旧版会抛
+     *     TransactionTooLargeException 被吞掉后照样弹「已复制」）；
+     *  2. 无论系统剪贴板结果如何，全文都登记进无上限的剪贴板历史，
+     *     用户可从面板用分块粘贴把完整原文上屏到任意输入框；
+     *  3. 按真实结果给 Toast，绝不谎报成功；面板保持打开可继续调整选区。
      */
     private fun copySelected() {
         val selected = ui.selectedText()
@@ -94,17 +101,16 @@ class WordSelectWindow(
             Toast.makeText(context, R.string.word_select_empty_hint, Toast.LENGTH_SHORT).show()
             return
         }
-        runCatching {
-            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as SystemClipboardManager
-            cm.setPrimaryClip(ClipData.newPlainText(null, selected))
-        }.onFailure {
-            // 系统剪贴板写入失败不致命：条目仍会登记进面板
-            Timber.w(it, "滑动选词写系统剪贴板失败")
-        }
+        val result = SystemClipboardCopy.copy(context, selected)
         service.lifecycleScope.launch(imeExceptionHandler) {
             runCatching { ClipboardManager.addText(selected) }
                 .onFailure { Timber.e(it, "滑动选词登记条目失败") }
         }
-        Toast.makeText(context, R.string.word_select_copied, Toast.LENGTH_SHORT).show()
+        val msg = when (result) {
+            is SystemClipboardCopy.Result.Copied -> R.string.word_select_copied
+            is SystemClipboardCopy.Result.AsFile -> R.string.clipboard_copy_as_file
+            is SystemClipboardCopy.Result.Failed -> R.string.clipboard_copy_failed
+        }
+        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
     }
 }

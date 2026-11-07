@@ -33,6 +33,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardCapacityPolicy
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
@@ -219,16 +220,18 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                 val targetSha = entry.sha256
                 service.lifecycleScope.launch(imeExceptionHandler) {
                     try {
-                        // blob 条目的 text 列只有预览，必须先解密读全文（U1 同源）；
-                        // 读取限长见 WordTokenizer.MAX_CHARS，面板不展示超长后半段
-                        val text: String = if (entry.isBlob) {
+                        // blob 条目的 text 列只有预览，必须先解密读全文（U1 同源）。
+                        // v1.0.77：读入限长由统一策略解析（可在剪贴板设置里调整），
+                        // 且**必须把截断标志传给拆分面板披露**——旧实现用 .first
+                        // 丢掉它，导致大文本后半段被静默隐藏、用户以为看到的是全文。
+                        val (text, sourceTruncated) = if (entry.isBlob) {
                             withContext(Dispatchers.IO) {
                                 val stream = ClipboardManager.readFullText(entry)
                                     ?: throw IllegalStateException("clipboard blob file missing")
-                                stream.use { readCapped(it, WordTokenizer.MAX_CHARS).first }
+                                stream.use { readCapped(it, uiLoadChars()) }
                             }
                         } else {
-                            entry.text
+                            entry.text to false
                         }
                         // U09：读取期间条目可能已被删除/替换，目标变了就放弃本次打开
                         if (!isTargetIntact(targetId, targetSha)) {
@@ -241,7 +244,7 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
                         val mask = WordSelectMaskPolicy.shouldMask(
                             entry.sensitive, clipboardMaskSensitive
                         )
-                        windowManager.attachWindow(WordSelectWindow(text, mask))
+                        windowManager.attachWindow(WordSelectWindow(text, mask, sourceTruncated))
                     } catch (e: Throwable) {
                         Timber.e(e, "打开拆分选词失败")
                         Toast.makeText(service, R.string.word_select_read_failed, Toast.LENGTH_SHORT).show()
@@ -548,8 +551,16 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
 
     // ---- U1：查看剪贴板全文（blob 条目的全文在文件里，不在 text 列）----
 
-    /** 查看器内联显示的正文上限（字符数），超出部分截断并提示。避免把 100MB 整段读进内存。 */
-    private val VIEW_FULL_TEXT_LIMIT_CHARS = 200_000
+    /**
+     * v1.0.77：UI 单次装载字符数统一由 [ClipboardCapacityPolicy] 解析，用户可在
+     * 剪贴板设置里调整（0 = 内置默认软边界）。查看全文 / 拆分选词 / 编辑框共用。
+     * 这只是「一次读多少文本进内存」的展示边界，**不是容量上限**：单条存储
+     * （blob 外置）、历史条数、分块粘贴上屏、文件分享一律不受它约束，仍无上限。
+     * 任何因该边界产生的截断都会在 UI 明确披露，绝不静默丢字。
+     */
+    private fun uiLoadChars(): Int = ClipboardCapacityPolicy.resolveUiLoadChars(
+        runCatching { prefs.clipboardUiLoadChars.getValue() }.getOrDefault(0)
+    )
 
     private suspend fun showFullText(entry: ClipboardEntry) {
         // U11：blob 的打开/解密/读取与全文拼装都是重活，全部挪到 IO 线程，
@@ -557,7 +568,7 @@ class ClipboardWindow : InputWindow.ExtendedInputWindow<ClipboardWindow>() {
         val result: Pair<String, Boolean>? = withContext(Dispatchers.IO) {
             if (entry.isBlob) {
                 val stream = ClipboardManager.readFullText(entry) ?: return@withContext null
-                stream.buffered().use { readCapped(it, VIEW_FULL_TEXT_LIMIT_CHARS) }
+                stream.buffered().use { readCapped(it, uiLoadChars()) }
             } else {
                 entry.text to false
             }

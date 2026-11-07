@@ -342,6 +342,22 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             "clipboard_limit",
             0,
         ) { clipboardListening.getValue() }
+        /**
+         * MBM v1.0.77：UI 单次装载字符数（查看全文 / 拆分选词 / 编辑框共用）。
+         * 0 = 使用内置默认软边界（内存安全，推荐）；正数 = 用户主动设定的值。
+         *
+         * 重要：这只是「一次读多少文本进内存」的展示边界，**不是容量上限**——
+         * 单条存储（blob 外置）、历史条数、分块粘贴上屏、文件分享一律不受它约束，
+         * 仍保持无上限。任何因该边界产生的截断都会在 UI 明确披露，绝不静默丢字。
+         */
+        val clipboardUiLoadChars = int(
+            R.string.clipboard_ui_load_chars,
+            "clipboard_ui_load_chars",
+            0,
+            0,
+            Int.MAX_VALUE,
+            "chars"
+        ) { clipboardListening.getValue() }
         val clipboardSuggestion = switch(
             R.string.clipboard_suggestion, "clipboard_suggestion", true
         ) { clipboardListening.getValue() }

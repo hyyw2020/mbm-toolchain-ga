@@ -5,7 +5,6 @@
 package org.fcitx.fcitx5.android.ui.main
 
 import android.app.Activity
-import android.content.ClipData
 import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
@@ -17,12 +16,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardCapacityPolicy
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.SystemClipboardCopy
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
+import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.databinding.ActivityClipboardEditBinding
-import org.fcitx.fcitx5.android.utils.clipboardManager
 import org.fcitx.fcitx5.android.utils.inputMethodManager
 import org.fcitx.fcitx5.android.utils.str
+import timber.log.Timber
 
 class ClipboardEditActivity : Activity() {
 
@@ -50,11 +53,24 @@ class ClipboardEditActivity : Activity() {
 
     private fun finishEditing(copy: Boolean = false) {
         val str = editText.str
-        scope.launch {
-            ClipboardManager.updateText(entryId, str)
-            if (copy) {
-                clipboardManager.setPrimaryClip(ClipData.newPlainText("", str))
+        val app = applicationContext
+        // v1.0.77：系统剪贴板写入同步完成（必须在 finish() 前），并按真实结果反馈。
+        // 旧实现直接 newPlainText，超过 Binder 事务上限抛异常却无任何提示；
+        // 大文本现在以 FileProvider URI 形式放入剪贴板并明确告知用户。
+        if (copy) {
+            val msg = when (SystemClipboardCopy.copy(app, str)) {
+                is SystemClipboardCopy.Result.Copied -> R.string.word_select_copied
+                is SystemClipboardCopy.Result.AsFile -> R.string.clipboard_copy_as_file
+                is SystemClipboardCopy.Result.Failed -> R.string.clipboard_copy_failed
             }
+            Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
+        }
+        // v1.0.77：DB 更新交给应用级作用域。旧实现用 Activity 的 MainScope，
+        // 紧接着 finish() → onDestroy() → scope.cancel()，协程常在真正写入前
+        // 就被取消，导致「确定 / 保存并复制」偶发不生效。
+        ClipboardManager.launch {
+            runCatching { ClipboardManager.updateText(entryId, str) }
+                .onFailure { Timber.w(it, "ClipboardEditActivity: updateText failed") }
         }
         finish()
     }
@@ -62,8 +78,15 @@ class ClipboardEditActivity : Activity() {
     /**
      * 编辑框可承载的正文上限（字符数）。超过则无法在 EditText 内联编辑，
      * 仅放预览并禁用破坏性保存（见 U2 修复说明）。
+     * v1.0.77：由统一策略解析，用户可在剪贴板设置中调整（0 = 内置默认）。
      */
-    private val EDIT_LIMIT_CHARS = 1_000_000
+    private val EDIT_LIMIT_CHARS: Int
+        get() = ClipboardCapacityPolicy.resolveUiLoadChars(
+            runCatching {
+                AppPrefs.getInstance().clipboard.clipboardUiLoadChars.getValue()
+            }.getOrDefault(0),
+            ClipboardCapacityPolicy.DEFAULT_EDIT_CHARS
+        )
 
     private suspend fun setEntry(entry: ClipboardEntry) {
         entryId = entry.id

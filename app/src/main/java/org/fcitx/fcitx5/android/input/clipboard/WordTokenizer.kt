@@ -5,6 +5,7 @@
 package org.fcitx.fcitx5.android.input.clipboard
 
 import android.icu.text.BreakIterator
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardCapacityPolicy
 import java.util.Locale
 
 /**
@@ -34,22 +35,33 @@ object WordTokenizer {
     )
 
     /**
-     * 面板单次加载的最大字符数。超出直接截断——原条目内容不做任何写操作，
-     * 只是面板不展示后半部分（与「查看全文」的限长思路一致）。
+     * UI 单次装载软边界（字符）。v1.0.77 起由 [ClipboardCapacityPolicy] 统一定义，
+     * 且可在剪贴板设置里调整；**不是容量上限**——单条存储与分块粘贴上屏仍无上限。
+     * 触发时面板必须明确披露（见 WordSelectUi.truncationHint），绝不静默丢字。
      */
-    const val MAX_CHARS = 100_000
+    const val MAX_CHARS = ClipboardCapacityPolicy.DEFAULT_UI_LOAD_CHARS
 
-    /** 词块数量上限，防止极端文本把面板 measure/layout 拖垮 */
-    const val MAX_TOKENS = 1500
+    /** 单批渲染词块数上限，防止极端文本把面板 measure/layout 拖垮。 */
+    const val MAX_TOKENS = ClipboardCapacityPolicy.DEFAULT_CHIPS_PER_PAGE
 
     private val urlRegex = Regex("(?i)(?:https?://|www\\.)\\S+")
 
     /** URL 尾部若粘着中英文标点（如「https://a.com，」），从链接块里去掉 */
     private const val URL_TRAILING_PUNCT = "。，、；：！？）】》〉…·\"'”’»›,.;:!?)]}>"
 
-    fun tokenize(raw: String): Result {
-        val truncatedByChars = raw.length > MAX_CHARS
-        val text = if (truncatedByChars) raw.substring(0, MAX_CHARS) else raw
+    /**
+     * v1.0.77：字符级截断改由读入侧（ClipboardWindow.readCapped，可配置）控制，
+     * 本函数默认不再按字符砍断全文，只按 [maxTokens] 控制单批渲染的词块数。
+     * 这样「在设置里调大单次加载字数」才真正生效，不会被这里的旧常量二次截断。
+     * 调用方须把读入侧的截断标志一并传给面板披露（见 WordSelectWindow）。
+     */
+    fun tokenize(
+        raw: String,
+        maxChars: Int = Int.MAX_VALUE,
+        maxTokens: Int = MAX_TOKENS
+    ): Result {
+        val truncatedByChars = raw.length > maxChars
+        val text = if (truncatedByChars) raw.substring(0, maxChars) else raw
         if (text.isEmpty()) return Result(raw, emptyList(), truncatedByChars)
 
         // 预扫所有链接区间（排序去重），分词主循环里把它们当原子块
@@ -69,7 +81,7 @@ object WordTokenizer {
 
         val tokens = ArrayList<Token>(minOf(256, text.length / 2 + 1))
         var pos = 0
-        while (pos < text.length && tokens.size < MAX_TOKENS) {
+        while (pos < text.length && tokens.size < maxTokens) {
             val url = urls.firstOrNull { it.first == pos }
             if (url != null) {
                 tokens.add(Token(url.first, url.last + 1))
@@ -88,7 +100,7 @@ object WordTokenizer {
             }
             pos = end
         }
-        val truncated = truncatedByChars || tokens.size >= MAX_TOKENS || pos < text.length
+        val truncated = truncatedByChars || tokens.size >= maxTokens || pos < text.length
         return Result(raw, tokens, truncated)
     }
 

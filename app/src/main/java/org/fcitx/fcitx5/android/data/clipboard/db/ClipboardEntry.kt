@@ -12,6 +12,7 @@ import android.os.Build
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.fcitx.fcitx5.android.data.clipboard.ClipItemTextMerge
 import org.fcitx.fcitx5.android.utils.timestamp
 
 @Entity(tableName = ClipboardEntry.TABLE_NAME)
@@ -68,16 +69,28 @@ data class ClipboardEntry(
             transformer: ((String) -> String)? = null
         ): ClipboardEntry? {
             val desc = clipData.description
-            // TODO: handle multiple items (when does this happen?)
-            val item = clipData.getItemAt(0) ?: return null
-            val raw = item.text?.toString()
-            // MBM v1.0.59：多数文件管理器（MT 管理器等）复制文件/路径时，把内容放进 URI 或
-            // Intent 型 ClipData 而非 text 项，旧实现 item.text 为 null 直接返回 null，
-            // 表现为「应用显示复制成功，但输入法剪贴板毫无痕迹」。兜底：从 URI / Intent 抽取可读文本。
-            val (str, type) = if (raw != null && raw.isNotBlank()) {
-                raw to desc.getMimeType(0)
+            // MBM v1.0.77：ClipData 允许多个 Item（一次复制多段文字/多行/标题+正文）。
+            // 旧实现只读 getItemAt(0)，其余 Item 被静默丢弃 —— 用户复制了整段内容，
+            // 历史里却只剩第一截。现在枚举全部 Item 的 text 交给纯 JVM 策略合并：
+            // 单 Item 原样返回（行为零变化），多 Item 以 \n 顺序连接，一段不丢。
+            val count = runCatching { clipData.itemCount }.getOrDefault(0)
+            if (count <= 0) return null
+            val texts = (0 until count).map { i ->
+                runCatching { clipData.getItemAt(i)?.text?.toString() }.getOrNull()
+            }
+            val merged = ClipItemTextMerge.merge(texts)
+            // MBM v1.0.59：文件管理器复制文件/路径时把内容放进 URI 或 Intent 型
+            // ClipData 而非 text 项，旧实现 item.text 为 null 直接返回 null，表现为
+            // 「应用显示复制成功，但输入法剪贴板毫无痕迹」。兜底：遍历全部 Item，
+            // 从 URI / Intent 抽取可读文本（同样支持多 Item 合并）。
+            val (str, type) = if (merged != null && merged.isNotBlank()) {
+                merged to desc.getMimeType(0)
             } else {
-                val derived = deriveTextFromClipItem(item) ?: return null
+                val derived = (0 until count).mapNotNull { i ->
+                    val item = runCatching { clipData.getItemAt(i) }.getOrNull()
+                        ?: return@mapNotNull null
+                    deriveTextFromClipItem(item)
+                }.let { ClipItemTextMerge.merge(it) } ?: return null
                 derived to ClipDescription.MIMETYPE_TEXT_PLAIN
             }
             val sensitive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
