@@ -1,15 +1,15 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.77（versionCode = baseVersionCode(31) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.78（versionCode = baseVersionCode(32) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.77）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.78）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
-v1.0.77 重跑 docs/license_audit.py 的实测分布为
+v1.0.78 重跑 docs/license_audit.py 的实测分布为
 第一方 492 个文件带 SPDX 头、0 缺失：
   LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
   AGPL-3.0-or-later × 127（MBM 新写/新改，含 v1.0.73 新增的表情模块、
@@ -280,3 +280,11 @@ trim 静默裁剪首尾空白、写回系统剪贴板超 Binder 事务上限被�
 （4 个数据层类 + 3 个 JVM 单测），仅使用 Java/Kotlin 标准库与 AOSP 标准
 剪贴板 / FileProvider 能力；未引入任何新的第三方组件、依赖、数据处理、
 系统权限或网络访问。代码、注释与随版本分发的文档仍不含任何第三方应用名称。）
+（v1.0.78：修复 150MB 佐证发现的分块契约偏差。ClipboardPasteChunker 分块
+内层固定按 chunkSize 读取，上一块 UTF-8 多字节字符的 carry 前移后单块可达
+chunkSize + carry（混合 UTF-8 实测 262146 = 256KB + 2，超出标称 256KB），
+虽不影响拼接完整性与 Binder 事务余量，但标称值与实现不一致。改为内层读
+chunkSize - carry，单块严格 ≤ chunkSize；拼接仍逐字节一致、无替换符、无丢字。
+仅修改 1 个既有分块类并补 1 个 JVM 回归单测，未引入任何新的第三方组件、
+依赖、数据处理、系统权限或网络访问。代码、注释与随版本分发的文档仍不含
+任何第三方应用名称。）

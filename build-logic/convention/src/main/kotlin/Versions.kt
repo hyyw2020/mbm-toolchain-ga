@@ -271,7 +271,16 @@ object Versions {
     //     ignoreCase 提取出的 "CONTENT://" 候选互相抵消；导入全程串行化并
     //     过滤清单中指向已删除文件的幽灵条目，修并发覆盖与面板空白格。
     //  新增 16 个 JVM 单测，全量 159/159 通过；第一方 485 文件带 SPDX、0 缺失。
-    const val baseVersionCode = 31
+    // v1.0.77：无上限复制 / 粘贴的完整性审计与补齐（存储/上屏/导出/分享本就无上限，
+    //          本版修 4 处让「完整」成立：多 Item 只记第一项、trim 静默丢字、写回
+    //          系统剪贴板超限静默失败却谎报成功、大文本后半段静默隐藏），并把 6 处
+    //          散落硬上限收口到 ClipboardCapacityPolicy（UI 单次装载可配置、截断明确披露）。
+    // v1.0.78：修复 150MB 佐证发现的分块契约偏差——ClipboardPasteChunker 内层固定按
+    //          chunkSize 读，上一块 UTF-8 carry 前移后单块可达 chunkSize+carry
+    //          （混合 UTF-8 实测 262146 = 256KB+2，超出标称 256KB）。改为内层读
+    //          chunkSize-carry，单块严格 ≤ chunkSize，标称契约与实现一致；
+    //          不影响拼接完整性（仍逐字节一致、无替换符、无丢字）。
+    const val baseVersionCode = 32
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

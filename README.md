@@ -1,26 +1,41 @@
-# MBM 输入法（fcitx5-android 分支）v1.0.77
+# MBM 输入法（fcitx5-android 分支）v1.0.78
 
 fcitx5-android 的 MBM 定制分支。发布仓库为私有仓库，仅仓库所有者可访问；
 每个发布版本均附源码快照，以满足自研部分 AGPL-3.0-or-later 的对应源码要求。
 
-> 本 README 以 v1.0.77 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
+> 本 README 以 v1.0.78 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
 > 与 `docs/pitfalls.md`；隐私政策见 `PRIVACY.txt`，许可与第三方组件清单见
 > `LICENSE` / `NOTICE` / `docs/upstream.md`。
 
 ## 下载
 
-进入 Releases 页面下载 `v1.0.77-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
+进入 Releases 页面下载 `v1.0.78-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
 
 | 文件 | 说明 |
 | --- | --- |
-| `org.fcitx.fcitx5.android-1.0.77-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
-| `org.fcitx.fcitx5.android-1.0.77-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
-| `mbm-src-v1.0.77.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
+| `org.fcitx.fcitx5.android-1.0.78-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
+| `org.fcitx.fcitx5.android-1.0.78-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
+| `mbm-src-v1.0.78.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
 | `SHA256SUMS.txt` | SHA-256 校验和 |
 
 另可通过 WorkBuddy 分发 Portal 获取相同文件（下载链接需带 sharecode）。
 
-## 本期变更（v1.0.77）：无上限复制 / 粘贴的完整性审计与补齐
+## 本期变更（v1.0.78）：修复大文本分块上屏的块大小契约偏差
+
+150MB 端到端佐证（对 v1.0.77 的独立压力测试，见 `docs/` 与 `evidence/`）发现一个
+**非致命但确凿的契约偏差**：`ClipboardPasteChunker` 分块时内层固定按 `chunkSize`
+读取，上一块 UTF-8 多字节字符的 carry 前移后，单块实际可达 `chunkSize + carry`
+（混合 UTF-8 实测 **262146 = 256KB + 2**，超出标称 256KB）。拼接结果仍逐字节
+一致、无替换符、无丢字，且 262146 B 仍只占 Binder 1MB 事务的 25%，但「单块
+≤ 标称值」这一文档化契约与实现不符。
+
+**修复**：内层读取长度改为 `chunkSize - carry`，使每块 `total = carry + (chunkSize -
+carry) = chunkSize`，单块**严格 ≤ 256KB**；对 `chunkSize < 4` 的测试/病态用法保留
+「至少读 1 字节」的推进保证，避免死循环。仅改一个既有分块类，未触碰任何其他
+链路。新增 1 个回归单测：混合 UTF-8（3 字节中文 + 4 字节 emoji 跨块边界）下
+逐块断言 `byteLen ≤ chunkSize` 且拼接 == 原文。
+
+## 上期变更（v1.0.77）：无上限复制 / 粘贴的完整性审计与补齐
 
 用户问「先前要求的无上限字数复制或粘贴是否已完美实施」。逐层审计后结论：
 **核心链路早已真正无上限，但周边有 4 处真实缺口让「完整」二字不成立**。
@@ -96,9 +111,11 @@ Android 系统剪贴板本身受 Binder ~1MB 事务限制，**其他应用无法
   权限清单与全部既有开关默认值；不新增系统权限、不联网。
   代码 / 注释 / 随版本分发的文档仍不含任何第三方应用名称。
 
-> 上期（v1.0.76）：修复表情配额耗尽、分块流嗅探、魔数过松、服务销毁钩子
-> 泄漏等 5 类真 bug；v1.0.75：修复「复制表情完全失效 / 输出乱码」；
-> v1.0.74：修复「拆分选词」整屏小点点。详见各版本 Release Notes。
+> 上期（v1.0.77）：无上限复制 / 粘贴完整性审计与补齐（修多 Item 只记第一项、
+> trim 静默丢字、写回系统剪贴板超限谎报成功、大文本后半段静默隐藏 4 类真 bug）；
+> v1.0.76：修复表情配额耗尽、分块流嗅探、魔数过松、服务销毁钩子泄漏等 5 类真 bug；
+> v1.0.75：修复「复制表情完全失效 / 输出乱码」；v1.0.74：修复「拆分选词」整屏小点点。
+> 详见各版本 Release Notes。
 
 ## 校验
 
@@ -119,7 +136,7 @@ sha256sum -c SHA256SUMS.txt
 
 ## 安装
 
-Release 附件已签名。证书与 v1.0.70~76 一致，覆盖安装无需卸载旧版、
+Release 附件已签名。证书与 v1.0.70~78 一致，覆盖安装无需卸载旧版、
 不丢本机学习数据；换装不同签名版本需先卸载。
 
 ## 构建方式
@@ -127,10 +144,10 @@ Release 附件已签名。证书与 v1.0.70~76 一致，覆盖安装无需卸载
 ```bash
 cd mbm-gh
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
-export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.77 \
+export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.78 \
   SIGN_KEY_FILE=/path/to/key.jks SIGN_KEY_PWD=... SIGN_KEY_ALIAS=...
 ANDROID_HOME=/opt/android-sdk sh gradlew :app:compileReleaseKotlin :app:assembleRelease \
-  --no-daemon -PbuildVersionName=1.0.77
+  --no-daemon -PbuildVersionName=1.0.78
 ```
 
 不带签名环境变量时产物为未签名 APK，需自行 `zipalign + apksigner` 签名。

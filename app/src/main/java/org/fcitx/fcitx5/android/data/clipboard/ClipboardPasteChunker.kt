@@ -63,10 +63,17 @@ object ClipboardPasteChunker {
         val buf = ByteArray(chunkSize + 4) // +4：UTF-8 序列最大 4 字节的跨块余量
         var carry = 0
         while (true) {
-            // 填满 buf[carry until carry+chunkSize]
+            // 本块在已有 carry 字节之上，最多再读 capacity = chunkSize - carry 字节，
+            // 使 total = carry + read ≤ chunkSize（单块严格不超标称值）。
+            // v1.0.78：旧实现固定按 chunkSize 读，导致「上一块 carry 前移」后单块可达
+            // chunkSize + carry（150MB 混合 UTF-8 实测 262146 = 256KB + 2）。改为内层
+            // 读 chunkSize - carry 后单块 ≤ chunkSize，标称契约与实现一致。
+            // maxOf(...,1)：chunkSize<4 的病态/测试用法下 carry 可能 ≥ chunkSize，
+            // 此时仍必须至少读 1 字节保证推进（不会死循环：每轮至少读 1 字节）。
+            val capacity = maxOf(chunkSize - carry, 1)
             var read = 0
-            while (read < chunkSize) {
-                val n = runCatching { input.read(buf, carry + read, chunkSize - read) }
+            while (read < capacity) {
+                val n = runCatching { input.read(buf, carry + read, capacity - read) }
                     .getOrElse { -1 }
                 if (n < 0) break
                 if (n == 0) continue
@@ -74,11 +81,11 @@ object ClipboardPasteChunker {
             }
             val total = carry + read
             if (total == 0) break
-            val atEof = read < chunkSize
+            val atEof = read < capacity
             // 非 EOF 时把尾部不完整的 UTF-8 序列留给下一轮，避免字符被切断。
-            // 注意：atEof=false 时 read==chunkSize（读满），total > chunkSize ≥ 4 > 3 ≥ tail，
-            // 不会出现「整块都是不完整序列」；那种情况只可能是 chunkSize<4 的病态用法，
-            // 此时整体 carry 前移、下轮补读，依然正确（不会死循环：每轮至少读到 1 字节）。
+            // 注意：atEof=false 时 read==capacity（读满），生产 chunkSize≥4 下
+            // total == chunkSize 且 carry ≤ 3 < chunkSize，不会出现「整块都是不完整
+            // 序列」；chunkSize<4 的病态用法下整体 carry 前移、下轮补读，依然正确。
             val tail = if (atEof) 0 else incompleteUtf8Tail(buf, total)
             val text = String(buf, 0, total - tail, Charsets.UTF_8)
             if (text.isNotEmpty()) {

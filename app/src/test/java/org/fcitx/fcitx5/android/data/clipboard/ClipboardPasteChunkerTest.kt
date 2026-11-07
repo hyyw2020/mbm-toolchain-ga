@@ -115,6 +115,33 @@ class ClipboardPasteChunkerTest {
     }
 
     @Test
+    fun `chunks never exceeds nominal chunk size with mixed UTF-8`() {
+        // v1.0.78 回归：修复前「上一块 UTF-8 carry 前移」后单块可达 chunkSize+carry
+        // （150MB 混合 UTF-8 实测 262146 = 256KB + 2，超出标称 256KB）。此处用
+        // 3 字节中文 + 4 字节 emoji 混排（11 字节单元，与 256KB 互质，必然把块边界
+        // 切进多字节字符），断言每个块的字节数都 ≤ chunkSize，且拼接 == 原文、无替换符。
+        val unit = "中😀文a"
+        val repeat = 200_000
+        val bytes = unit.repeat(repeat).toByteArray() // ~2.1MB，约 9 块
+        val chunkSize = ClipboardBlobStore.PASTE_CHUNK_BYTES // 256KB
+        val chunks = mutableListOf<String>()
+        val committed = runBlocking {
+            ClipboardPasteChunker.chunks(ByteArrayInputStream(bytes), chunkSize) { text, byteLen ->
+                Assert.assertTrue(
+                    "单块 $byteLen 字节不得超过 chunkSize=$chunkSize",
+                    byteLen <= chunkSize
+                )
+                Assert.assertFalse("块内不得出现替换符", text.contains('\uFFFD'))
+                chunks += text
+                true
+            }
+        }
+        Assert.assertEquals(bytes.size.toLong(), committed)
+        Assert.assertEquals(unit.repeat(repeat), chunks.joinToString(""))
+        Assert.assertTrue("应拆成多块", chunks.size > 1)
+    }
+
+    @Test
     fun `chunks stops on failure and reports committed bytes`() {
         val original = "失败即停测试".repeat(40000) // ~640KB → 3 块
         val bytes = original.toByteArray()
