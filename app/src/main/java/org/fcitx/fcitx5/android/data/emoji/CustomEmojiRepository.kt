@@ -369,14 +369,17 @@ object CustomEmojiRepository {
      *     最近 N 条。否则反复复制几张图就会把配额吃光、功能彻底失效。
      *  4. 全程串行化 + 过滤清单中指向已删除文件的幽灵条目，修并发覆盖与
      *     面板空白格。
+     *
+     * v1.0.79：返回导入后的 sticker token（失败返回 null），供剪贴板历史把
+     * 本次复制直接记成可上屏的图像条目，而不是宿主应用给的那串私有编码文本。
      */
-    fun importClipboardImage(context: Context, uri: Uri): Boolean =
+    fun importClipboardImage(context: Context, uri: Uri): String? =
         synchronized(clipboardImportLock) { importClipboardImageLocked(context, uri) }
 
-    private fun importClipboardImageLocked(context: Context, uri: Uri): Boolean {
-        if (PrivacyController.inPrivacyMode) return false
-        val dir = packDir(CLIPBOARD_PACK_ID) ?: return false
-        if (!dir.mkdirs() && !dir.isDirectory) return false
+    private fun importClipboardImageLocked(context: Context, uri: Uri): String? {
+        if (PrivacyController.inPrivacyMode) return null
+        val dir = packDir(CLIPBOARD_PACK_ID) ?: return null
+        if (!dir.mkdirs() && !dir.isDirectory) return null
 
         val tmp = File(dir, "clip_${System.nanoTime()}.tmp")
         var written = 0L
@@ -401,20 +404,20 @@ object CustomEmojiRepository {
         }.onFailure { Timber.w(it, "CustomEmoji: clipboard sniff failed") }.getOrDefault(false)
         if (!ok) {
             tmp.delete()
-            return false
+            return null
         }
 
-        val mime = sniffer.result() ?: return false.also { tmp.delete() }
+        val mime = sniffer.result() ?: return null.also { tmp.delete() }
         val ext = ClipboardStickerExtractor.extensionForMime(mime)
         val digest = runCatching { sha256Hex(tmp) }.getOrNull()
-            ?: return false.also { tmp.delete() }
+            ?: return null.also { tmp.delete() }
         val name = "clip_$digest$ext"
         val target = File(dir, name)
         // 同内容重复复制：renameTo 覆盖同名文件（Linux 语义）；若目标已存在且
         // rename 失败，内容摘要相同，直接复用已有文件即可，不必报错。
         if (!tmp.renameTo(target) && !target.isFile) {
             tmp.delete()
-            return false
+            return null
         }
         tmp.delete()
 
@@ -441,7 +444,7 @@ object CustomEmojiRepository {
             File(dir, CustomEmojiProtocol.MANIFEST_NAME).writeText(CustomEmojiProtocol.encodeManifest(pack))
         }
         bumpRevision()
-        return true
+        return CustomEmojiProtocol.token(CLIPBOARD_PACK_ID, name)
     }
 
     /** 文件内容的 SHA-256 十六进制（用于剪贴板表情按内容去重）。 */

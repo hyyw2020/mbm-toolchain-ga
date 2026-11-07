@@ -527,17 +527,53 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         launch {
             // N04：隐私模式（密码框等）下，系统剪贴板内容不进历史，避免密码/令牌被记录
             if (PrivacyController.inPrivacyMode) return@launch
+            // v1.0.79：本应用把图像写回系统剪贴板（富媒体不支持时的通用输出）
+            // 会触发本回调。旧实现会从该 content URI 派生出一条私有路径文本
+            // 塞进历史，形成用户看不懂的垃圾条目；这里整条跳过自我回环。
+            if (isSelfFileProviderClip(clip)) return@launch
             // v1.0.73：复制侧富媒体通道。系统剪贴板携带 image 资产（ClipData.Item.uri）
             // 时，按用户偏好复制进自定义表情容器，使其在表情面板内可见、可再次提交。
-            // 纯本地、遵守隐私模式与体积上限；不改动文本剪贴板历史的既有行为。
-            runCatching { captureImageSticker(clip) }
+            // v1.0.79：返回本次成功导入的全部 sticker token（不再只导入第一张）。
+            val tokens = runCatching { captureImageSticker(clip) }
                 .onFailure { Timber.w(it, "Failed to capture clipboard image sticker") }
-            val entry = ClipboardEntry.fromClipData(clip, transformer) ?: return@launch
+                .getOrDefault(emptyList())
+            val encodedTokens = ClipboardMediaEntryPolicy.encodeTokens(tokens)
+            val entry = ClipboardEntry.fromClipData(clip, transformer)
+            if (entry == null) {
+                // 只有图像 URI、连派生文本都取不到时，仍要记录这次复制的图像
+                if (encodedTokens != null) {
+                    runCatching {
+                        insertEntry(encodedTokens, pinned = false, sensitive = false, refreshLast = true)
+                    }.onFailure {
+                        Timber.w(it, "Failed to insert image clipboard entry from primary clip")
+                    }
+                }
+                return@launch
+            }
             if (entry.text.isBlank()) return@launch
+            // v1.0.79：本应用自己写回系统剪贴板的图像 token 不再重复录入（防回环）。
+            if (ClipboardMediaEntryPolicy.parseTokens(entry.text) != null) return@launch
+            // v1.0.79 真 bug 修复：宿主应用复制自定义表情时，ClipData.Item.text 常是
+            // 应用私有编码串（控制字符 + emoji + Latin 扩展乱码），旧实现把它当作
+            // 可粘贴正文原样落库，底部建议条 text.take(42) 显示乱码、点击 commitText
+            // 又输出同一串乱码。仅当本次确实捕获到图像、且该文本被判为私有编码 /
+            // URI 派生文本时，改为记录可解析、可富媒体上屏的图像 token 条目。
+            // 普通可读文本复制完全不经过此分支，行为零变化。
+            val imageEntry = if (encodedTokens != null &&
+                ClipboardMediaEntryPolicy.shouldUseImageEntry(entry.text, true)
+            ) {
+                encodedTokens
+            } else null
+            val textToStore = imageEntry ?: entry.text
             // N51：统一走 insertEntry 分流（大文本外置 blob），避免全文塞 text 列触发
             // Row too big to fit into CursorWindow 崩溃。分流只有这一处。
             runCatching {
-                insertEntry(entry.text, pinned = false, sensitive = entry.sensitive, refreshLast = true)
+                insertEntry(
+                    textToStore,
+                    pinned = false,
+                    sensitive = if (imageEntry != null) false else entry.sensitive,
+                    refreshLast = true
+                )
             }.onFailure {
                 Timber.w(it, "Failed to insert clipboard entry from primary clip")
             }
@@ -561,11 +597,11 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
      * 自身产生的 URI，避免提交→复制→再导入的回环；任何失败只跳过，绝不
      * 影响文本剪贴板历史。纯本地、不联网、不解析任何网络链接。
      */
-    private fun captureImageSticker(clip: android.content.ClipData) {
+    private fun captureImageSticker(clip: android.content.ClipData): List<String> {
         val enabled = runCatching {
             AppPrefs.getInstance().symbols.customEmojiClipboardCapture.getValue()
         }.getOrDefault(true)
-        if (!enabled) return
+        if (!enabled) return emptyList()
 
         val selfAuthority = appContext.packageName + ".fileprovider"
         val candidates = LinkedHashSet<Uri>()
@@ -580,17 +616,48 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
                 runCatching { candidates.add(Uri.parse(u)) }
             }
         }
-        if (candidates.isEmpty()) return
+        if (candidates.isEmpty()) return emptyList()
+        // v1.0.79 真 bug 修复：旧实现「第一个成功就 return」，用户一次复制一串
+        // 表情时只入库第一张（用户实测只剩一个青蛙），其余被静默丢弃。现在遍历
+        // 全部候选（仍受 MAX_CANDIDATES 与内容摘要去重约束），返回全部 token，
+        // 让表情面板与剪贴板历史都能看到这一次复制的完整内容。
+        val tokens = LinkedHashSet<String>()
         for (uri in candidates.take(ClipboardStickerExtractor.MAX_CANDIDATES)) {
             // v1.0.76：extractContentUris 用 ignoreCase 接受 "CONTENT://"，
             // 这里必须同样忽略大小写，否则大写 scheme 的候选会被「提取出来又过滤掉」。
             if (!"content".equals(uri.scheme, ignoreCase = true)) continue
             if (selfAuthority.equals(uri.authority, ignoreCase = true)) continue // 防自我复制回环
-            if (CustomEmojiRepository.importClipboardImage(appContext, uri)) {
-                onClipboardStickerCaptured?.invoke()
-                return
-            }
+            val token = runCatching {
+                CustomEmojiRepository.importClipboardImage(appContext, uri)
+            }.onFailure { Timber.w(it, "importClipboardImage failed") }.getOrNull()
+            if (token != null) tokens.add(token)
         }
+        if (tokens.isNotEmpty()) onClipboardStickerCaptured?.invoke()
+        return tokens.toList()
+    }
+
+    /**
+     * v1.0.79：判断本次 ClipData 是否只是本应用 FileProvider 写回的图像。
+     * EmojiRichContentCommitter 在目标编辑器不支持富媒体时会把图像 content URI
+     * 写入系统剪贴板，这会再次触发 onPrimaryClipChanged；旧实现从该 URI 派生
+     * 出一条应用私有路径文本塞进历史，形成看不懂的垃圾条目。
+     *
+     * 只在「含本应用 URI 且所有 Item 都没有用户文本」时认定为回环，避免误伤
+     * 用户同时复制了图片与文字的场景。
+     */
+    private fun isSelfFileProviderClip(clip: android.content.ClipData): Boolean {
+        val selfAuthority = appContext.packageName + ".fileprovider"
+        var sawSelfUri = false
+        for (i in 0 until clip.itemCount) {
+            val item = runCatching { clip.getItemAt(i) }.getOrNull() ?: continue
+            val uri = runCatching { item.uri }.getOrNull()
+            if (uri != null && selfAuthority.equals(uri.authority, ignoreCase = true)) {
+                sawSelfUri = true
+            }
+            val text = runCatching { item.text?.toString() }.getOrNull()
+            if (!text.isNullOrBlank()) return false
+        }
+        return sawSelfUri
     }
 
     /**

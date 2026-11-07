@@ -9,6 +9,7 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardMediaEntryPolicy
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.menu.ImeMenuPopup
@@ -99,7 +100,19 @@ abstract class ClipboardAdapter(
             return
         }
         with(holder.entryUi) {
-            setEntry(excerptText(entry.text, entry.sensitive && maskSensitive()), entry.pinned, entry.isBlob)
+            // v1.0.79：图像表情条目显示可读标签（含张数），不渲染 token 文本
+            val stickerCount = ClipboardMediaEntryPolicy.parseTokens(entry.text)?.size ?: 0
+            // v1.0.79：图像条目与旧版乱码条目都不提供文本类操作
+            val textOpsEnabled = stickerCount == 0 &&
+                !ClipboardMediaEntryPolicy.isDisplayCorrupted(entry.text)
+            val display = when {
+                stickerCount > 0 ->
+                    ctx.getString(R.string.clipboard_image_entry_label, stickerCount)
+                !textOpsEnabled ->
+                    ctx.getString(R.string.clipboard_legacy_entry_label)
+                else -> excerptText(entry.text, entry.sensitive && maskSensitive())
+            }
+            setEntry(display, entry.pinned, entry.isBlob)
             root.setOnClickListener {
                 onPaste(entry)
             }
@@ -125,32 +138,37 @@ abstract class ClipboardAdapter(
                             ) { onPin(entry.id) }
                         )
                     }
-                    add(
-                        ImeMenuPopup.Item(
-                            ctx.getString(R.string.edit),
-                            R.drawable.ic_baseline_edit_24
-                        ) { onEdit(entry.id) }
-                    )
-                    // U1 修复：大文本条目的 text 列只有 256 字符预览，全文在 blob；
-                    // 提供可达的「查看全文」入口，避免「查看更多点不开」
-                    add(
-                        ImeMenuPopup.Item(
-                            ctx.getString(R.string.view_full_text),
-                            null
-                        ) { onViewFullText(entry) }
-                    )
-                    add(
-                        ImeMenuPopup.Item(
-                            ctx.getString(R.string.split_select_words),
-                            R.drawable.ic_baseline_text_format_24
-                        ) { onSplitSelect(entry) }
-                    )
-                    add(
-                        ImeMenuPopup.Item(
-                            ctx.getString(R.string.share),
-                            R.drawable.ic_baseline_share_24
-                        ) { onShare(entry) }
-                    )
+                    // v1.0.79：图像条目只保留置顶 / 删除。编辑、查看全文、
+                    // 拆分选词、分享都会把 sticker token 当成普通文本处理，
+                    // 既会显示乱码也可能把 token 外发出去，故一律不提供。
+                    if (textOpsEnabled) {
+                        add(
+                            ImeMenuPopup.Item(
+                                ctx.getString(R.string.edit),
+                                R.drawable.ic_baseline_edit_24
+                            ) { onEdit(entry.id) }
+                        )
+                        // U1 修复：大文本条目的 text 列只有 256 字符预览，全文在 blob；
+                        // 提供可达的「查看全文」入口，避免「查看更多点不开」
+                        add(
+                            ImeMenuPopup.Item(
+                                ctx.getString(R.string.view_full_text),
+                                null
+                            ) { onViewFullText(entry) }
+                        )
+                        add(
+                            ImeMenuPopup.Item(
+                                ctx.getString(R.string.split_select_words),
+                                R.drawable.ic_baseline_text_format_24
+                            ) { onSplitSelect(entry) }
+                        )
+                        add(
+                            ImeMenuPopup.Item(
+                                ctx.getString(R.string.share),
+                                R.drawable.ic_baseline_share_24
+                            ) { onShare(entry) }
+                        )
+                    }
                     add(
                         ImeMenuPopup.Item(
                             ctx.getString(R.string.delete),

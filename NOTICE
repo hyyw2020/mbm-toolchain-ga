@@ -1,23 +1,24 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.78（versionCode = baseVersionCode(32) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.79（versionCode = baseVersionCode(33) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.78）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.79）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。
-v1.0.78 重跑 docs/license_audit.py 的实测分布为
-第一方 492 个文件带 SPDX 头、0 缺失：
+v1.0.79 重跑 docs/license_audit.py 的实测分布为
+第一方 494 个文件带 SPDX 头、0 缺失：
   LGPL-2.1-or-later × 365（继承上游 fcitx5-android 的文件头）+
-  AGPL-3.0-or-later × 127（MBM 新写/新改，含 v1.0.73 新增的表情模块、
+  AGPL-3.0-or-later × 129（MBM 新写/新改，含 v1.0.73 新增的表情模块、
   v1.0.74 新增的 WordSelectMaskPolicy、v1.0.75 新增的
   ClipboardStickerExtractor 与其 JVM 单测，及 v1.0.76 新增的
   ImageHeaderSniffer.kt / ClipboardStickerPackPolicy.kt 与对应 JVM 单测，
   及 v1.0.77 新增的 ClipItemTextMerge.kt / ClipboardCapacityPolicy.kt /
-  ClipboardTextFidelity.kt / SystemClipboardCopy.kt 与对应 JVM 单测）。
+  ClipboardTextFidelity.kt / SystemClipboardCopy.kt 与对应 JVM 单测，
+  及 v1.0.79 新增的 ClipboardMediaEntryPolicy.kt 与对应 JVM 单测）。
 组合分发依据见第五节。逐文件许可台账为 docs/sbom/license_ledger.txt
 （CycloneDX 格式机器可读版为 docs/sbom/sbom.cdx.json）。
 
@@ -288,3 +289,17 @@ chunkSize - carry，单块严格 ≤ chunkSize；拼接仍逐字节一致、无�
 仅修改 1 个既有分块类并补 1 个 JVM 回归单测，未引入任何新的第三方组件、
 依赖、数据处理、系统权限或网络访问。代码、注释与随版本分发的文档仍不含
 任何第三方应用名称。）
+（v1.0.79：修复剪贴板复制自定义表情时「显示乱码 / 输出错误表情」。根因是
+ClipboardEntry.fromClipData 把宿主应用私有的表情编码串（控制字符 + emoji +
+Latin Extended-A 乱码）当作可粘贴正文落库，建议条 text.take(42) 显示乱码、
+点击 commitText 又输出同一串；v1.0.75~78 只修「图片导入表情面板」一侧，
+从未触碰该文本链路。同时修复 captureImageSticker 一次复制多张表情时首个
+成功即 return、其余被静默丢弃。新增纯 JVM 策略 ClipboardMediaEntryPolicy
+与 13 个 JVM 单测：捕获到图像且文本被判为私有编码 / URI 派生文本时，历史
+条目改记为可富媒体上屏的 sticker token，显示层给出可读标签，上屏走
+commitStickers 逐张富媒体提交；普通可读文本复制行为零变化。升级前已落库的
+旧乱码条目不删改、仅显示为可读标签且不再上屏，本应用写回系统剪贴板的
+自我回环也不再生成路径垃圾条目。新增 2 个第一方文件（1 个策略类 +
+1 个 JVM 单测），仅使用 Java/Kotlin 标准库；
+未引入任何新的第三方组件、依赖、数据处理、系统权限或网络访问。代码、
+注释与随版本分发的文档仍不含任何第三方应用名称。）

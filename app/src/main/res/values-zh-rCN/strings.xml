@@ -370,4 +370,9 @@
     <string name="clipboard_copy_as_file">内容较大，已以文件形式放入剪贴板；完整文本已存入剪贴板历史，可从面板粘贴</string>
     <string name="clipboard_copy_failed">写入系统剪贴板失败，完整文本已存入剪贴板历史</string>
     <string name="clipboard_ui_load_chars">单次加载字数（0 = 默认）</string>
+    <!-- MBM v1.0.79：剪贴板历史中的图像表情条目 -->
+    <string name="clipboard_image_entry_label">[图片表情 ×%1$d]</string>
+    <string name="clipboard_image_batch_hint">已送出 %1$d 个图片表情</string>
+    <string name="clipboard_legacy_entry_label">[旧版无效条目]</string>
+    <string name="clipboard_legacy_entry_hint">该条目是旧版残留的无效内容，请长按删除后重新复制</string>
 </resources>

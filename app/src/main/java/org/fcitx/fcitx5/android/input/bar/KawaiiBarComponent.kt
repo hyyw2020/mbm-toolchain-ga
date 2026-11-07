@@ -32,6 +32,7 @@ import org.fcitx.fcitx5.android.core.CapabilityFlag
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxEvent.CandidateListEvent
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardMediaEntryPolicy
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
@@ -138,10 +139,18 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
                     isClipboardFresh = false
                     clipboardSuggestionEntry = null
                 } else {
-                    idleUi.clipboardUi.text.text = if (it.sensitive && clipboardMaskSensitive) {
-                        ClipboardEntry.BULLET.repeat(min(42, it.text.length))
-                    } else {
-                        it.text.take(42)
+                    // v1.0.79：图像表情条目显示可读标签，绝不把 sticker token 或
+                    // 宿主应用私有编码串原样 take(42) 显示在建议条上。
+                    val stickerCount = ClipboardMediaEntryPolicy.parseTokens(it.text)?.size ?: 0
+                    idleUi.clipboardUi.text.text = when {
+                        it.sensitive && clipboardMaskSensitive ->
+                            ClipboardEntry.BULLET.repeat(min(42, it.text.length))
+                        stickerCount > 0 ->
+                            context.getString(R.string.clipboard_image_entry_label, stickerCount)
+                        // v1.0.79：升级前已落库的乱码条目不再显示成乱码
+                        ClipboardMediaEntryPolicy.isDisplayCorrupted(it.text) ->
+                            context.getString(R.string.clipboard_legacy_entry_label)
+                        else -> it.text.take(42)
                     }
                     clipboardSuggestionEntry = it
                     isClipboardFresh = true

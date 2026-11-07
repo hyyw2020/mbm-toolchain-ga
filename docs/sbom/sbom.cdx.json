@@ -678,6 +678,18 @@
     },
     {
       "type": "file",
+      "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardMediaEntryPolicy.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
       "name": "app/src/main/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardPasteChunker.kt",
       "licenses": [
         {
@@ -5047,6 +5059,18 @@
     {
       "type": "file",
       "name": "app/src/test/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardCapacityPolicyTest.kt",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later",
+            "name": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "name": "app/src/test/java/org/fcitx/fcitx5/android/data/clipboard/ClipboardMediaEntryPolicyTest.kt",
       "licenses": [
         {
           "license": {

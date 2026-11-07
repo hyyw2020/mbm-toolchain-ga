@@ -280,7 +280,13 @@ object Versions {
     //          （混合 UTF-8 实测 262146 = 256KB+2，超出标称 256KB）。改为内层读
     //          chunkSize-carry，单块严格 ≤ chunkSize，标称契约与实现一致；
     //          不影响拼接完整性（仍逐字节一致、无替换符、无丢字）。
-    const val baseVersionCode = 32
+    // v1.0.79：修复剪贴板复制自定义表情时「显示乱码、输出错误表情」。
+    //          根因是 ClipboardEntry.fromClipData 把宿主应用私有表情编码串
+    //          （控制字符 + emoji + Latin 扩展乱码）当作可粘贴正文落库；
+    //          v1.0.75~78 都只修「图片导入表情面板」这一侧，从未碰文本链路。
+    //          现在捕获到图像时把历史条目改为可富媒体上屏的 sticker token，
+    //          并修复「一次复制多张只导入第一张」；普通文本复制行为零变化。
+    const val baseVersionCode = 33
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

@@ -1,26 +1,73 @@
-# MBM 输入法（fcitx5-android 分支）v1.0.78
+# MBM 输入法（fcitx5-android 分支）v1.0.79
 
 fcitx5-android 的 MBM 定制分支。发布仓库为私有仓库，仅仓库所有者可访问；
 每个发布版本均附源码快照，以满足自研部分 AGPL-3.0-or-later 的对应源码要求。
 
-> 本 README 以 v1.0.78 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
+> 本 README 以 v1.0.79 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
 > 与 `docs/pitfalls.md`；隐私政策见 `PRIVACY.txt`，许可与第三方组件清单见
 > `LICENSE` / `NOTICE` / `docs/upstream.md`。
 
 ## 下载
 
-进入 Releases 页面下载 `v1.0.78-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
+进入 Releases 页面下载 `v1.0.79-toolchain-ga` 的附件（已签名，可直接覆盖安装）：
 
 | 文件 | 说明 |
 | --- | --- |
-| `org.fcitx.fcitx5.android-1.0.78-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
-| `org.fcitx.fcitx5.android-1.0.78-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
-| `mbm-src-v1.0.78.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
+| `org.fcitx.fcitx5.android-1.0.79-arm64-v8a-release.apk` | 主程序，arm64-v8a 单 ABI，已签名 |
+| `org.fcitx.fcitx5.android-1.0.79-arm64-v8a-release.tar.gz` | APK + 校验和打包 |
+| `mbm-src-v1.0.79.tar.gz` | 对应源码快照（AGPL §6 / LGPL §4） |
 | `SHA256SUMS.txt` | SHA-256 校验和 |
 
 另可通过 WorkBuddy 分发 Portal 获取相同文件（下载链接需带 sharecode）。
 
-## 本期变更（v1.0.78）：修复大文本分块上屏的块大小契约偏差
+## 本期变更（v1.0.79）：修复剪贴板复制表情「显示乱码 / 输出错误表情」
+
+用户连续多轮反馈「未修复，剪贴板仍然显示和输出错误 emoji」，并给出实际输出串
+`\u0014¨\u0014Ľ🐸\u0014Ľ` 与截图（建议条显示 `🐸 -7NN7tŝ`）。逐层回溯后确认：
+**v1.0.75~78 修的都是「把图片导入表情面板」这一侧，从未触碰真正出问题的文本
+链路**，所以用户侧现象一直没变。
+
+### 根因
+
+宿主应用复制自定义表情时，`ClipData.Item` 常同时给出 `uri`（真实位图）与 `text`
+（应用私有的表情编码串：控制字符 + 标准 emoji + Latin Extended-A 乱码）。旧实现
+`ClipboardEntry.fromClipData` 无条件把 `text` 当作可粘贴正文落库：
+
+- 底部剪贴板建议条 `KawaiiBarComponent` 直接 `text.take(42)` → **显示乱码**；
+- 点击条目 `pasteClipboardEntry` 直接 `commitText(text)` → **输出乱码 / 错误表情**。
+
+同时 `captureImageSticker` 在**第一个**图像 URI 导入成功后就 `return`，用户一次
+复制一串表情时只入库第一张（实测只剩一个青蛙），其余被静默丢弃。图片虽进了表情
+面板，却与剪贴板历史条目毫无关联，从剪贴板粘贴永远拿不到图。
+
+### 修复
+
+- 新增纯 JVM 策略 `ClipboardMediaEntryPolicy`：识别宿主私有编码文本（C0/C1 控制
+  字符、私用区、U+FFFC/U+FFFD、未配对代理、emoji 与 Latin Extended-A 混排）及
+  URI 派生文本；把一次复制的若干图像编码成一条可解析的 sticker token 条目。
+  新增 13 个 JVM 单测，覆盖用户实测两种乱码形态，并验证中文 / 英文 / 纯 emoji /
+  捷克语 `Ľ` 等真实文字**不被误判**。
+- `onPrimaryClipChanged`：仅当本次确实捕获到图像、且文本被判为私有编码 / URI
+  派生文本时，历史条目改记为图像 token 条目；普通可读文本复制**行为零变化**。
+- `captureImageSticker` 遍历全部候选 URI（仍受 8 个上限与内容摘要去重约束），
+  返回全部 token，不再只导入第一张。
+- 显示层：建议条与历史列表对图像条目显示 `[图片表情 ×N]`，不再渲染乱码或 token；
+  对图像条目禁用编辑 / 查看全文 / 拆分选词 / 分享，避免 token 被当文本外发。
+- 上屏层：`pasteClipboardEntry` 识别图像条目后走 `commitStickers`，逐张富媒体
+  提交（目标不支持时写回系统剪贴板），不再 `commitText` 乱码；多张只给一次汇总
+  提示。
+- 旧数据：v1.0.79 之前已落库的乱码条目不会随升级消失，但不再显示成乱码、
+  也不再被原样上屏，改为 `[旧版无效条目]` 并提示删除后重新复制；不删改任何
+  用户数据，含控制字符的普通日志文本不受影响。
+- 回环：本应用把图像写回系统剪贴板时会再次触发剪贴板监听，旧实现会从该 URI
+  派生出一条私有路径文本塞进历史；现在整条跳过自我回环，不再产生垃圾条目。
+
+### 未改动
+
+候选排序、词库、预测、拆分选词、剪贴板加密与备份、大文本分块上屏、权限清单与
+既有开关默认值均未改；不联网、不含第三方应用名。
+
+## 上期变更（v1.0.78）：修复大文本分块上屏的块大小契约偏差
 
 150MB 端到端佐证（对 v1.0.77 的独立压力测试，见 `docs/` 与 `evidence/`）发现一个
 **非致命但确凿的契约偏差**：`ClipboardPasteChunker` 分块时内层固定按 `chunkSize`
@@ -111,7 +158,8 @@ Android 系统剪贴板本身受 Binder ~1MB 事务限制，**其他应用无法
   权限清单与全部既有开关默认值；不新增系统权限、不联网。
   代码 / 注释 / 随版本分发的文档仍不含任何第三方应用名称。
 
-> 上期（v1.0.77）：无上限复制 / 粘贴完整性审计与补齐（修多 Item 只记第一项、
+> 上期（v1.0.78）：修复大文本分块上屏块大小契约偏差（150MB 佐证发现）；
+> v1.0.77：无上限复制 / 粘贴完整性审计与补齐（修多 Item 只记第一项、
 > trim 静默丢字、写回系统剪贴板超限谎报成功、大文本后半段静默隐藏 4 类真 bug）；
 > v1.0.76：修复表情配额耗尽、分块流嗅探、魔数过松、服务销毁钩子泄漏等 5 类真 bug；
 > v1.0.75：修复「复制表情完全失效 / 输出乱码」；v1.0.74：修复「拆分选词」整屏小点点。
@@ -136,7 +184,7 @@ sha256sum -c SHA256SUMS.txt
 
 ## 安装
 
-Release 附件已签名。证书与 v1.0.70~78 一致，覆盖安装无需卸载旧版、
+Release 附件已签名。证书与 v1.0.70~79 一致，覆盖安装无需卸载旧版、
 不丢本机学习数据；换装不同签名版本需先卸载。
 
 ## 构建方式
@@ -144,10 +192,10 @@ Release 附件已签名。证书与 v1.0.70~78 一致，覆盖安装无需卸载
 ```bash
 cd mbm-gh
 printf 'sdk.dir=/opt/android-sdk\n' > local.properties
-export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.78 \
+export BUILD_ABI=arm64-v8a BUILD_VERSION_NAME=1.0.79 \
   SIGN_KEY_FILE=/path/to/key.jks SIGN_KEY_PWD=... SIGN_KEY_ALIAS=...
 ANDROID_HOME=/opt/android-sdk sh gradlew :app:compileReleaseKotlin :app:assembleRelease \
-  --no-daemon -PbuildVersionName=1.0.78
+  --no-daemon -PbuildVersionName=1.0.79
 ```
 
 不带签名环境变量时产物为未签名 APK，需自行 `zipalign + apksigner` 签名。

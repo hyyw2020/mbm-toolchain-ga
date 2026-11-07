@@ -68,6 +68,7 @@ import org.fcitx.fcitx5.android.core.FcitxEvent
 import org.fcitx.fcitx5.android.core.FcitxKeyMapping
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardBlobStore
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardMediaEntryPolicy
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardPasteChunker
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.core.FormattedText
@@ -670,15 +671,15 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
      *  3. 剪贴板也失败且用户显式开启文本降级 → 文本短码（默认关，避免乱码）。
      * 全程异常安全，不触碰学习/Recall 词库（表情不是文本输入，不参与候选排序）。
      */
-    fun commitSticker(token: String) {
+    fun commitSticker(token: String, notify: Boolean = true) {
         val resolved = runCatching { CustomEmojiRepository.resolve(token) }.getOrNull()
         if (resolved == null) {
-            lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_import_failed)) }
+            if (notify) lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_import_failed)) }
             return
         }
         val uri = CustomEmojiRepository.contentUri(this, resolved)
         if (uri == null) {
-            lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
+            if (notify) lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
             return
         }
         val symbolsPrefs = runCatching { AppPrefs.getInstance().symbols }.getOrNull()
@@ -700,6 +701,7 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             clipboardFallback = clipboardOutput,
             targetPackage = currentInputEditorInfo?.packageName
         )
+        if (!notify) return
         when (result) {
             EmojiRichContentCommitter.Result.COPIED_TO_CLIPBOARD ->
                 lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_copied_hint)) }
@@ -708,6 +710,22 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
             EmojiRichContentCommitter.Result.UNAVAILABLE ->
                 lifecycleScope.launch { pasteToast(getString(R.string.custom_emoji_unavailable)) }
             EmojiRichContentCommitter.Result.COMMITTED -> Unit
+        }
+    }
+
+    /**
+     * v1.0.79：一次复制多张图像表情时，逐张走富媒体提交，只在末尾给一次汇总
+     * 提示（避免每张都弹一条 toast 刷屏）。单张时行为与表情面板点击完全一致。
+     */
+    fun commitStickers(tokens: List<String>) {
+        if (tokens.isEmpty()) return
+        if (tokens.size == 1) {
+            commitSticker(tokens[0])
+            return
+        }
+        tokens.forEach { commitSticker(it, notify = false) }
+        lifecycleScope.launch {
+            pasteToast(getString(R.string.clipboard_image_batch_hint, tokens.size))
         }
     }
 
@@ -726,6 +744,21 @@ class FcitxInputMethodService : LifecycleInputMethodService(), MbmDebug.Bridge {
      *  5. 全程不喂 SmartDict 统计（100MB 进词库统计会是灾难），不走候选属性路径。
      */
     fun pasteClipboardEntry(entry: ClipboardEntry) {
+        // v1.0.79：图像表情条目走富媒体提交，绝不把 sticker token（更不会把宿主
+        // 应用的私有编码乱码）当作普通文本 commitText 上屏。放在无输入连接检查
+        // 之前，使「写回系统剪贴板」这条通用输出通道在没有 InputConnection 时
+        // 依然可用。
+        val stickerTokens = ClipboardMediaEntryPolicy.parseTokens(entry.text)
+        if (stickerTokens != null) {
+            commitStickers(stickerTokens)
+            return
+        }
+        // v1.0.79：升级前已落库的乱码条目没有可还原的图像，至少不能把它
+        // 原样 commitText 输出到输入框；给出可操作的提示而不是静默失败。
+        if (ClipboardMediaEntryPolicy.isDisplayCorrupted(entry.text)) {
+            lifecycleScope.launch { pasteToast(getString(R.string.clipboard_legacy_entry_hint)) }
+            return
+        }
         val ic = currentInputConnection
         if (ic == null) {
             // 诊断：屏幕记忆词库（剪贴板候选）「点了没反应」时输出当前输入目标，

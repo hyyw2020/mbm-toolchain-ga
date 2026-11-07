@@ -417,4 +417,9 @@
     <string name="clipboard_copy_as_file">Text is large: added to clipboard as a file. The full text is saved in clipboard history — paste it from the panel.</string>
     <string name="clipboard_copy_failed">Could not write to the system clipboard. The full text is saved in clipboard history.</string>
     <string name="clipboard_ui_load_chars">Characters loaded at once (0 = default)</string>
+    <!-- MBM v1.0.79: image sticker entries in clipboard history -->
+    <string name="clipboard_image_entry_label">[Image sticker x%1$d]</string>
+    <string name="clipboard_image_batch_hint">%1$d image stickers sent</string>
+    <string name="clipboard_legacy_entry_label">[Legacy invalid entry]</string>
+    <string name="clipboard_legacy_entry_hint">Invalid entry left by an older version. Long-press to delete it, then copy again.</string>
 </resources>
