@@ -280,16 +280,26 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
         // → 不降级为内联、不删除 blob，保住 100MB 原文
         if (entry.isBlob && stored == entry.text) return
         val bytes = stored.toByteArray()
+        val oldRef = entry.blobRef
+        val newRef: String?
         if (bytes.size <= ClipboardBlobStore.INLINE_THRESHOLD) {
-            // 回落到内联：删旧 blob（若有）
-            entry.blobRef?.let { ClipboardBlobStore.delete(it) }
+            newRef = null
             clbDao.updateTextAndMeta(id, stored, bytes.size.toLong(), ClipboardTextFidelity.sha256(stored), null, ClipboardEntry.CODEC_INLINE)
         } else {
             val handle = ClipboardBlobStore.write(stored.byteInputStream())
-            if (entry.blobRef != null && entry.blobRef != handle.sha256) {
-                ClipboardBlobStore.delete(entry.blobRef)
-            }
+            newRef = handle.sha256
             clbDao.updateTextAndMeta(id, handle.preview, handle.byteLen, handle.sha256, handle.sha256, ClipboardEntry.CODEC_BLOB)
+        }
+        // v1.0.81 真 bug 修复：blob 是内容寻址共享的，旧实现在更新元数据前就
+        // 直接 ClipboardBlobStore.delete(旧 blobRef)，会永久删除其它仍引用同一
+        // sha 的条目全文（不同 sensitive 的重复行、软删可 undo 的行等）。
+        // 现在先完成元数据更新（上面），再按引用计数条件回收，与
+        // delete()/realDelete() 的 N01/N02 机制一致；不改任何用户可见功能。
+        if (ClipboardBlobRefPolicy.shouldRecycle(
+                oldRef, newRef, clbDao.allBlobShas().toSet()
+            )
+        ) {
+            oldRef?.let { ClipboardBlobStore.delete(it) }
         }
         lastEntry?.let {
             if (id == it.id) updateLastEntry(clbDao.get(id) ?: it)

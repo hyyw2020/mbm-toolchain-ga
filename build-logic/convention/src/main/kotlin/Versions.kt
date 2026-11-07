@@ -292,7 +292,21 @@ object Versions {
     //          Top-K 更贴合真实选择；选中词自身清零拒绝；硬层冠军(order=1) 语义完全
     //          不受影响。纯本地 SP/JSON、零 Android 依赖、7 个新增 JVM 单测、0 回归。
     //          无新开源库、无 SPDX 变化、无训练数据、全离线。
-    const val baseVersionCode = 34
+    // v1.0.81：一轮真 bug 修复（不改变既有功能，只收敛错误行为）。
+    //          Bug1：ClipboardMediaEntryPolicy.looksLikeUriDerived 把「含 :// /
+    //          以 / 开头」两条快捷判定放在纯 ASCII 守卫之前，导致含 URL 的普通
+    //          可读文本（中文说明+链接、多词英文句子）被误判为 URI 派生文本；
+    //          图文同次复制时调用方据此把用户文字替换成图像 token 条目 -> 文字丢失。
+    //          修复为快捷判定先过同一套紧凑 ASCII 守卫，纯 URI 串行为不变。
+    //          Bug2：ClipboardManager.updateText 在更新 DB 元数据前就物理删除旧
+    //          blob，绕过 N01/N02 引用计数 GC；blob 内容寻址共享（不同 sensitive
+    //          行、软删可 undo 行、两条写入路径），会永久删除其它条目全文。
+    //          改为先更新元数据、再按 allBlobShas() 引用计数条件回收；
+    //          allBlobShas() 去掉 deleted=0 使软删可恢复行也计入引用。
+    //          新增纯 JVM 策略 ClipboardBlobRefPolicy + 8 个 JVM 单测，全量 210/210。
+    //          无新开源库、无 SPDX 变化、无训练数据、全离线。签名沿用 v1.0.80
+    //          同一证书（db238888…b8d0），可直接覆盖安装 v1.0.80。
+    const val baseVersionCode = 35
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

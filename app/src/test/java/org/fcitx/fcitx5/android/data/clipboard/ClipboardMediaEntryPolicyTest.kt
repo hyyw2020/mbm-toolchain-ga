@@ -149,4 +149,31 @@ class ClipboardMediaEntryPolicyTest {
         assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("a@b.com", true))
         assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("🐸表情", true))
     }
+
+    // ------------------------------------------------------------ v1.0.81 回归
+    // 真 bug：looksLikeUriDerived 的两条快捷判定（含 "://" / 以 "/" 开头）原先
+    // 位于「纯 ASCII、无空白」守卫之前。用户复制「图文混排」内容时，这次事件
+    // 会同时捕获到图像，而 entry.text 是一段**普通可读文本**（中文说明 + 链接、
+    // 多词英文句子）。此时 shouldUseImageEntry 误判为 URI 派生文本而返回 true，
+    // 调用方把用户想粘贴的文字丢弃、替换成图像 token 条目 —— 文字丢失。
+
+    @Test
+    fun routingKeepsReadableTextThatMerelyContainsAUrl() {
+        // 中文 + 空格 + 链接：可读文本，绝不能因含 "://" 就被当成派生路径
+        assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("访问 https://example.com 查看详情", true))
+        // 纯 ASCII 但含空格的多词句子，同样不是紧凑 URI 串
+        assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("See https://example.com for details", true))
+        // 中英混排 + 链接 + 斜杠路径
+        assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("详见 https://a.com/docs，或 /usr/bin 目录", true))
+        // 以 "/" 开头但含中文与空格的说明文字
+        assertFalse(ClipboardMediaEntryPolicy.shouldUseImageEntry("/ 代表根目录，是 Unix 约定", true))
+    }
+
+    @Test
+    fun routingStillReplacesGenuineUriDerivedText() {
+        // 对照组：修复不得改变既有正确行为 —— 紧凑的纯 ASCII 派生路径仍要替换
+        assertTrue(ClipboardMediaEntryPolicy.shouldUseImageEntry("content://media/12345", true))
+        assertTrue(ClipboardMediaEntryPolicy.shouldUseImageEntry("/storage/emulated/0/DCIM/a.jpg", true))
+        assertTrue(ClipboardMediaEntryPolicy.shouldUseImageEntry("clip_9f3a2b.png", true))
+    }
 }

@@ -163,10 +163,17 @@ object ClipboardMediaEntryPolicy {
      * 无空白、含路径/扩展名/数字特征」时命中，避免误伤普通英文单词。
      */
     private fun looksLikeUriDerived(text: String): Boolean {
-        if (text.contains("://")) return true
-        if (text.startsWith("/")) return true
+        // v1.0.81 真 bug 修复：下面两条快捷判定原先位于「紧凑纯 ASCII」守卫之前，
+        // 于是任何含 "://" 或以 "/" 开头的**普通可读文本**（中文说明 + 链接、
+        // 多词英文句子）都被误判为 URI 派生文本。在「图文同次复制」场景下调用方
+        // 会据此把用户想粘贴的文字丢弃、替换成图像 token 条目，造成文字丢失。
+        // 先施加同一套守卫再短路：紧凑的纯 URI 串行为完全不变，含空白/非 ASCII
+        // 的可读文本一律交还普通文本路径。
+        val readable = text.any { it.isWhitespace() || it.code > 0x7F }
+        if (!readable && text.contains("://")) return true
+        if (!readable && text.startsWith("/")) return true
         if (text.length < 8) return false
-        if (text.any { it.isWhitespace() || it.code > 0x7F }) return false
+        if (readable) return false
         if (!(text.contains('/') || text.contains('.') || text.any { it.isDigit() })) return false
         return text.all {
             it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' || it == '/'

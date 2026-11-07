@@ -99,8 +99,16 @@ interface ClipboardDao {
     )
     suspend fun markUnpinnedOverLimit(limit: Int): Int
 
-    /** 全部 blob 条目的 sha256（孤儿 blob 巡检用）。 */
-    @Query("SELECT sha256 FROM ${ClipboardEntry.TABLE_NAME} WHERE blobRef IS NOT NULL AND deleted=0")
+    /**
+     * 全部 blob 引用的 sha256（孤儿 blob 巡检 / 编辑后引用计数回收用）。
+     *
+     * v1.0.81 真 bug 修复：不再过滤 deleted=0。软删除的条目仍可被 undo 恢复，
+     * 它引用的 blob 必须计入「仍被引用」，否则启动时的孤儿 GC 或编辑另一条
+     * 共享该 blob 的条目时会把软删条目的全文提前物理删除，undo 后即永久丢失。
+     * realDelete() 先物理删除 deleted=1 的行再调用 gcOrphanBlobs()，因此该处
+     * 语义与过滤前完全一致，无回归。
+     */
+    @Query("SELECT sha256 FROM ${ClipboardEntry.TABLE_NAME} WHERE blobRef IS NOT NULL")
     suspend fun allBlobShas(): List<String>
 
     /** 这些条目引用的 blob sha（删除前 GC 文件用）。 */
