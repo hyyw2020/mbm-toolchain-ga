@@ -481,4 +481,135 @@ class ChoiceRankerTest {
         assertEquals(a.buildOrder("blbl"), b.buildOrder("blbl"))
         assertEquals(a.buildOrder("aq"), b.buildOrder("aq"))
     }
+
+    // ---------------------------------------------------------------- v1.0.80 隐式负反馈（拒绝信号）
+
+    /**
+     * 设计文档第 9 节「后续可优化」点名的真缺口：系统原本只从「用户选了什么」学正反馈，
+     * 从不学「用户反复跳过了哪些候选」。本组用例验证 v1.0.80 新增的隐式负反馈：
+     * 用户选中某词时，同键下被展示却未被选中的兄弟候选累加拒绝信号，软层分被温和压制、
+     * 更快沉底/退役；选中词自身清零拒绝；硬层冠军(order=1) 语义完全不受影响。
+     */
+
+    @Test
+    fun `拒绝信号只作用于软层次位 冠军分不受拒绝影响`() {
+        val r = ranker(ChoiceConfig(halfLifeMs = 1000L, minScore = 0.15))
+        // 同频同时间，仅 rejected 不同：被拒绝越多次，软层分越低（单调递减、下限有界）。
+        val fresh = r.score(ChoiceRecord(n = 1, lastAt = 0L, rejected = 0), 0L)
+        val mid = r.score(ChoiceRecord(n = 1, lastAt = 0L, rejected = 4), 0L)
+        val heavy = r.score(ChoiceRecord(n = 1, lastAt = 0L, rejected = 20), 0L)
+        assertTrue("被拒绝越多分越低", fresh > mid && mid > heavy)
+        assertTrue("阻尼下限有界，不为负", heavy > 0.0)
+        // 冠军由硬层无条件锁定，score 高低不改变其 order=1
+        r.importState(
+            ChoiceState(
+                stacks = mapOf("aq" to listOf("安全")),
+                records = mapOf("aq=>安全" to ChoiceRecord(n = 1, lastAt = 0L, rejected = 99)),
+                samples = mapOf("aq" to 3),
+                lastWord = "",
+            )
+        )
+        assertEquals("冠军即使 rejection 爆表仍为第 1", "安全", r.buildOrder("aq").first().word)
+        assertEquals(1, r.buildOrder("aq").first().order)
+    }
+
+    @Test
+    fun `被跳过的次位词沉底 拒绝信号让 Top-K 更贴合真实选择`() {
+        val r = ranker(ChoiceConfig(halfLifeMs = 1000L, minScore = 0.15))
+        // 安全=冠军；爱情 与 安庆 同频，但 安庆 被反复跳过(rejected=4) 应排在 爱情 之后。
+        r.importState(
+            ChoiceState(
+                stacks = mapOf("aq" to listOf("安全", "爱情", "安庆")),
+                records = mapOf(
+                    "aq=>安全" to ChoiceRecord(n = 10, lastAt = 0L),
+                    "aq=>爱情" to ChoiceRecord(n = 3, lastAt = 0L, rejected = 0),
+                    "aq=>安庆" to ChoiceRecord(n = 3, lastAt = 0L, rejected = 4),
+                ),
+                samples = mapOf("aq" to 3),
+                lastWord = "",
+            )
+        )
+        val tail = r.buildOrder("aq", now = 0L).drop(1).map { it.word }
+        assertEquals("被拒绝的 安庆 沉到次位末尾", listOf("爱情", "安庆"), tail)
+    }
+
+    @Test
+    fun `长期被跳过的次位词因拒绝信号退役 而冠军不受影响`() {
+        val r = ranker(ChoiceConfig(halfLifeMs = 1000L, minScore = 0.15))
+        // 安庆 被跳过 12 次：score = freq(n=1)·damp(12) = 0.228·0.25 ≈ 0.057 < 0.15 => 退役。
+        r.importState(
+            ChoiceState(
+                stacks = mapOf("aq" to listOf("安全", "爱情", "安庆")),
+                records = mapOf(
+                    "aq=>安全" to ChoiceRecord(n = 5, lastAt = 0L),
+                    "aq=>爱情" to ChoiceRecord(n = 2, lastAt = 0L),
+                    "aq=>安庆" to ChoiceRecord(n = 1, lastAt = 0L, rejected = 12),
+                ),
+                samples = mapOf("aq" to 3),
+                lastWord = "",
+            )
+        )
+        val order = r.buildOrder("aq", now = 0L)
+        assertEquals("被反复跳过的词退役，仅剩冠军 + 一个次位", 2, order.size)
+        assertEquals("安全", order[0].word)
+        assertEquals("爱情", order[1].word)
+    }
+
+    @Test
+    fun `选中词清零自身拒绝 被跳过词累加但封顶`() {
+        // 关闭退役下限(minScore=0)以隔离验证拒绝信号的封顶边界；真实场景下被跳过词
+        // 会在 score 跌破 minScore 时先行退役（见「长期被跳过的次位词因拒绝信号退役」）。
+        val r = ranker(ChoiceConfig(minScore = 0.0, rejectCap = 32))
+        // 安全 先成为冠军；随后连续 40 次选 爱情 => 安全 作为被跳过兄弟每次 +1，封顶 32。
+        r.onCommit("安全", keys); now += 1000
+        repeat(40) { r.onCommit("爱情", allAq); now += 1000 }
+        assertEquals("被跳过累加但封顶 rejectCap=32", 32, r.exportState().records["aq=>安全"]!!.rejected)
+        // 再选一次 安全 => 安全 自身拒绝清零，并重新成为冠军。
+        r.onCommit("安全", allAq); now += 1000
+        assertEquals(0, r.exportState().records["aq=>安全"]!!.rejected)
+        assertEquals("安全", r.buildOrder("aq").first().word)
+    }
+
+    @Test
+    fun `去抖重复上屏不累加拒绝 避免连点误伤兄弟候选`() {
+        val r = ranker(ChoiceConfig(dedupMs = 800L))
+        r.onCommit("安全", keys); now += 200      // 非去抖
+        r.onCommit("爱情", allAq); now += 200     // 安全 被跳过 +1
+        assertEquals(1, r.exportState().records["aq=>安全"]!!.rejected)
+        // 短时间内再选 爱情（落在去抖窗口）：不应再累加 安全 的拒绝。
+        r.onCommit("爱情", allAq)
+        assertEquals("去抖内重复选同一词不重复记拒绝", 1, r.exportState().records["aq=>安全"]!!.rejected)
+    }
+
+    @Test
+    fun `拒绝信号不破坏 aq 安全 爱情 核心示例 并补拒绝维度`() {
+        val r = ranker()
+        r.onCommit("安全", keys); now += 1000                // 安全 冠军
+        r.onCommit("爱情", keys); now += 1000                // 爱情 冠军；安全 被跳过 +1
+        assertEquals(listOf("爱情", "安全"), orderWords("aq", r))
+        assertEquals(1, r.exportState().records["aq=>安全"]!!.rejected)
+        assertEquals(0, r.exportState().records["aq=>爱情"]!!.rejected)
+        r.onCommit("安全", keys); now += 1000                // 安全 反超；爱情 被跳过 +1
+        assertEquals(listOf("安全", "爱情"), orderWords("aq", r))
+        assertEquals(0, r.exportState().records["aq=>安全"]!!.rejected)
+        assertEquals(1, r.exportState().records["aq=>爱情"]!!.rejected)
+    }
+
+    @Test
+    fun `拒绝信号随状态往返保留`() {
+        val a = ranker()
+        val blbl: (String) -> Collection<String> = { listOf("blbl") }
+        a.onCommit("哔哩哔哩", blbl); now += 1000
+        a.onCommit("哔哩啪啦", blbl); now += 1000            // 哔哩哔哩 被跳过 +1
+        a.onCommit("安全", keys); now += 1000
+        a.onCommit("爱情", keys); now += 1000                // 安全 被跳过 +1
+        val before = a.exportState()
+        val b = ranker()
+        b.importState(before)
+        assertEquals("往返后 rejected 字段一致", before, b.exportState())
+        assertEquals(
+            a.exportState().records["blbl=>哔哩哔哩"]!!.rejected,
+            b.exportState().records["blbl=>哔哩哔哩"]!!.rejected
+        )
+    }
 }

@@ -88,6 +88,8 @@ object UserChoiceStore {
             ctxW = RecallConfig.CHOICE_CTX_W,
             misclickPenalty = RecallConfig.CHOICE_MISCLICK_PENALTY,
             minScore = RecallConfig.CHOICE_MIN_SCORE_V2,
+            rejectW = RecallConfig.CHOICE_REJECT_W,
+            rejectCap = RecallConfig.CHOICE_REJECT_CAP,
             dedupMs = RecallConfig.CHOICE_DEDUP_MS,
             recordCap = RecallConfig.CHOICE_RECORD_CAP,
             maxCommitLen = RecallConfig.CHOICE_MAX_COMMIT_LEN,
@@ -354,6 +356,7 @@ object UserChoiceStore {
                         prevWord = v.optString("p", ""),
                         streak = v.optInt("s", 0).coerceAtLeast(0),
                         penalty = v.optDouble("k", 0.0).coerceAtLeast(0.0),
+                        rejected = v.optInt("r", 0).coerceAtLeast(0),
                     )
                 }
             }
@@ -384,7 +387,7 @@ object UserChoiceStore {
             for ((id, r) in st.records) {
                 records.put(id, JSONObject().apply {
                     put("n", r.n); put("t", r.lastAt); put("p", r.prevWord)
-                    put("s", r.streak); put("k", r.penalty)
+                    put("s", r.streak); put("k", r.penalty); put("r", r.rejected)
                 })
             }
             obj.put("records", records)

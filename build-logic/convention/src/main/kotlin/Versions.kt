@@ -286,7 +286,13 @@ object Versions {
     //          v1.0.75~78 都只修「图片导入表情面板」这一侧，从未碰文本链路。
     //          现在捕获到图像时把历史条目改为可富媒体上屏的 sticker token，
     //          并修复「一次复制多张只导入第一张」；普通文本复制行为零变化。
-    const val baseVersionCode = 33
+    // v1.0.80：预测增强（不改变既有功能，只新增软层信号）。
+    //          隐式负反馈（拒绝信号）：用户选中某词时，同键下被展示却未被选中的
+    //          兄弟候选累加一次拒绝信号，软层分被温和压制、更快沉底/退役，使个性化
+    //          Top-K 更贴合真实选择；选中词自身清零拒绝；硬层冠军(order=1) 语义完全
+    //          不受影响。纯本地 SP/JSON、零 Android 依赖、7 个新增 JVM 单测、0 回归。
+    //          无新开源库、无 SPDX 变化、无训练数据、全离线。
+    const val baseVersionCode = 34
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

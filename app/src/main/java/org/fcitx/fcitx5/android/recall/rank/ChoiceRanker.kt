@@ -77,6 +77,15 @@ data class ChoiceConfig(
     val keyLenMax: Int = 12,
     /** 选词后在此窗口内改选别的词，视为疑似误选。 */
     val misclickMs: Long = 1500L,
+    /**
+     * v1.0.80 隐式负反馈：用户选中某词时，同键下「被展示却未被选中」的兄弟候选
+     * 累加的拒绝信号阻尼系数。damp(rejected) = 1/(1 + rejectW·rejected)，
+     * 使被反复跳过的词软层分温和下降、更快沉底/退役，让 Top-K 更贴合真实选择。
+     * 仅作用于软层次位排序与衰减退役，永不推翻硬层冠军(order=1)。
+     */
+    val rejectW: Double = 0.25,
+    /** 拒绝信号计数上限，防止长期被跳过的词被过度压制（damp 下限 = 1/(1+rejectW·cap)）。 */
+    val rejectCap: Int = 32,
     val enabled: Boolean = true,
 )
 
@@ -87,6 +96,11 @@ data class ChoiceRecord(
     val prevWord: String = "",
     val streak: Int = 0,
     val penalty: Double = 0.0,
+    /**
+     * v1.0.80 隐式负反馈：被用户「展示却跳过」的累计次数（封顶 rejectCap）。
+     * 仅用于软层阻尼，不影响硬层冠军(order=1)。
+     */
+    val rejected: Int = 0,
 )
 
 /** 输出到 fcitx5 自定义词组的硬插入条目：order=1 即第一候选。 */
@@ -244,7 +258,9 @@ class ChoiceRanker(
         val streakB = 1.0 + config.streakW * min(rec.streak, config.streakCap)
         val ctxB = 1.0 + config.ctxW *
             (if (rec.prevWord.isNotEmpty() && rec.prevWord == ctxWord) 1.0 else 0.0)
-        return max(0.0, freq * decay * streakB * ctxB - rec.penalty)
+        // v1.0.80 隐式负反馈：被反复跳过的词软层分被温和压制（damp <= 1，单调下降、下限有界）。
+        val rejectDamp = 1.0 / (1.0 + config.rejectW * rec.rejected)
+        return max(0.0, freq * decay * streakB * ctxB * rejectDamp - rec.penalty)
     }
 
     fun exportState(): ChoiceState = ChoiceState(
@@ -286,8 +302,9 @@ class ChoiceRanker(
         val prev = records[id]
         // 短时间重复上屏：只刷新时间，不累加次数（防连点刷爆 count）。
         // 用显式判空分支让 prev 智能转换为非空，避免多余 !!
+        val isDedup = prev != null && (now - prev.lastAt) in 0 until config.dedupMs
         val rec: ChoiceRecord
-        if (prev != null && (now - prev.lastAt) in 0 until config.dedupMs) {
+        if (isDedup) {
             rec = prev.copy(lastAt = now)
         } else {
             rec = ChoiceRecord(
@@ -310,7 +327,19 @@ class ChoiceRanker(
         // 把这种正常连续选词当作误选会踢掉「安全」，直接违反硬规则。
         // 误选的可靠信号是「上屏后立即按退格删除」，需由 IME 侧通过
         // onMisclick / onQuickSwitch 显式喂入（见设计文档「风险与优化建议」）。
-        stack.remove(word)          // 若已在栈内，先移除
+        stack.remove(word)          // 若已在栈内，先移除；剩下的就是「被展示却未选中」的兄弟候选
+        // v1.0.80 隐式负反馈：仅在「有效选择」（非去抖重复上屏）时，对同键下被展示却跳过的
+        // 兄弟候选各累加一次拒绝信号（封顶 rejectCap）。被反复跳过的词在软层次位排序中下沉、
+        // 更快退役，使 Top-K 更贴合真实选择；硬层冠军(order=1) 由 last-commit-wins 无条件锁定，
+        // 拒绝信号永不影响它。选中词自身拒绝信号清零（刚被主动选择，旧的跳过不再算数）。
+        if (!isDedup) {
+            for (sib in stack) {
+                val sid = entryId(key, sib)
+                val sr = records[sid] ?: continue
+                records[sid] = sr.copy(rejected = (sr.rejected + 1).coerceAtMost(config.rejectCap))
+            }
+        }
+        records[id] = records[id]!!.copy(rejected = 0)
         stack.add(0, word)          // 无条件成为冠军（硬层，无分数比较）
 
         if (stack.size > 1) {

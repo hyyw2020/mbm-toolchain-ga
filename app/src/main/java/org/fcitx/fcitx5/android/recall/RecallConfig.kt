@@ -250,6 +250,16 @@ object RecallConfig {
     /** 软层退役下限：非冠军且 score 低于此值即从栈移除（时间衰减）。 */
     const val CHOICE_MIN_SCORE_V2 = 0.15
 
+    /**
+     * v1.0.80 隐式负反馈（拒绝信号）阻尼系数：damp(rejected)=1/(1+rejectW·rejected)。
+     * 被反复跳过的次位候选软层分被温和压制、更快沉底/退役，使个性化 Top-K 更贴合真实选择。
+     * 仅作用于软层次位排序与衰减退役，永不推翻硬层冠军(order=1)。
+     */
+    const val CHOICE_REJECT_W = 0.25
+
+    /** 拒绝信号计数上限：防止长期被跳过的词被过度压制（damp 下限 = 1/(1+rejectW·cap)）。 */
+    const val CHOICE_REJECT_CAP = 32
+
     /** 单次上屏最大长度 / 最多连续汉字段数：超长按粘贴处理，不学习。 */
     const val CHOICE_MAX_COMMIT_LEN = 16
     const val CHOICE_MAX_RUNS = 8
