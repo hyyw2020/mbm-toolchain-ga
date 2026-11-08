@@ -306,7 +306,18 @@ object Versions {
     //          新增纯 JVM 策略 ClipboardBlobRefPolicy + 8 个 JVM 单测，全量 210/210。
     //          无新开源库、无 SPDX 变化、无训练数据、全离线。签名沿用 v1.0.80
     //          同一证书（db238888…b8d0），可直接覆盖安装 v1.0.80。
-    const val baseVersionCode = 35
+    // v1.0.82：一轮真 bug 修复（不改变既有功能，只让声明的判据真正生效）。
+    //          Bug：RecallTextUtils.properNounTokens 的 KDoc 判据 2 要求「至少一个
+    //          ASCII 字母或命名分隔符」，实现却用 Char.isLetter()，而汉字是 Unicode
+    //          字母（Character.isLetter('苹')==true），对任何含汉字的 token 恒为 true，
+    //          判据 2 形同虚设。于是「苹果12个」等汉字+数字短句、以及整句纯汉字短语
+    //          被通道 D 当成「混合中英文专名」越过 isAllHan 门控写进词库，污染候选。
+    //          收紧为真正的 ASCII 字母 + PROPERNOUN_GLUE 分隔符；含英文版本号的应用名
+    //          （雨见cBeta）、含 · 的游戏名（云·战双帕弥什）仍正常命中。同类疏漏
+    //          AppPhraseImporter 已用 code<128 修过，此处是漏网。新增 6 个 JVM 单测，
+    //          全量 216/216 零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
+    //          签名沿用 v1.0.80/81 同一证书（db238888…b8d0），可覆盖安装。
+    const val baseVersionCode = 36
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

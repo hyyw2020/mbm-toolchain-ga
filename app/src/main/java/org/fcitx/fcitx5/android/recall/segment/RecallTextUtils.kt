@@ -54,7 +54,15 @@ object RecallTextUtils {
             if (t.length < 2 || t.length > RecallConfig.MAX_PROPERNOUN_LEN) return@filter false
             val hasHan = t.any { isHan(it) }
             if (!hasHan) return@filter false
-            val hasNameSignal = t.any { it.isLetter() || it in PROPERNOUN_GLUE }
+            // v1.0.82 真 bug 修复：判据 2 要求「ASCII 字母，或命名分隔符」，但旧实现
+            // 用 Char.isLetter() —— 汉字是 Unicode 字母（Character.isLetter('苹')==true），
+            // 于是对任何含汉字的 token 恒为 true，判据 2 形同虚设：纯汉字短语 / 汉字+数字
+            // 短句（KDoc 明确举例要排除的「苹果12个」）被通道 D 当成混合专名写进词库。
+            // 收紧为「真正的 ASCII 字母 + 命名分隔符」后，判据 2 才生效；含英文版本号的
+            // 应用名（雨见cBeta）、含 · 的游戏名（云·战双帕弥什）仍正常命中，零合法回归。
+            val hasNameSignal = t.any {
+                it in 'a'..'z' || it in 'A'..'Z' || it in PROPERNOUN_GLUE
+            }
             hasNameSignal
         }
     }
