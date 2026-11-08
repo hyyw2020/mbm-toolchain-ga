@@ -317,7 +317,16 @@ object Versions {
     //          AppPhraseImporter 已用 code<128 修过，此处是漏网。新增 6 个 JVM 单测，
     //          全量 216/216 零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
     //          签名沿用 v1.0.80/81 同一证书（db238888…b8d0），可覆盖安装。
-    const val baseVersionCode = 36
+    // v1.0.83：一轮真 bug 修复（不改变既有功能，只让声明的运算符真正生效）。
+    //          Bug：CalcEngine.hasOperator 只检查 + - * / × ÷，漏掉了文档文法
+    //          `postfix := primary '%'？（n% = n/100）` 中的后缀 % 运算符。于是
+    //          「10%」「50%」「200-50%」这类算式被「无运算符」闸门整体拒掉、返回 null，
+    //          而解析器本身（parsePostfix 做 n/100）早已正确支持 %。
+    //          修复为把 % 纳入 hasOperator 的运算符集合；仅有后缀 % 的合法算式现在正常求值。
+    //          新增 CalcEngineTest 回归单测（10%→0.1 / 50%→0.5 / 100*5%→5 / 200-50%→199.5，
+    //          5%% 仍拒），全量单测零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
+    //          签名沿用 v1.0.80~82 同一证书（db238888…b8d0），可覆盖安装。
+    const val baseVersionCode = 37
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

@@ -37,9 +37,14 @@ import java.math.RoundingMode
 
 object CalcEngine {
 
-    /** 输入是否包含运算符（忽略开头的一元正负号）。 */
+    /**
+     * 输入是否包含运算符（忽略开头的一元正负号）。
+     * 必须包含后缀 %（n% = n/100，见 KDoc 文法 `postfix := primary '%'?`）——
+     * v1.0.83 真 bug：旧实现漏掉 %，导致「10%」「50%」这类仅含后缀 % 的合法算式
+     * 被当作「无运算符」整体拒掉、返回 null；解析器本身已正确支持 %。
+     */
     fun hasOperator(s: String): Boolean =
-        s.dropWhile { it == '-' || it == '+' }.any { it in "+-*/×÷" }
+        s.dropWhile { it == '-' || it == '+' }.any { it in "+-*/×÷%" }
 
     /**
      * 求值整段输入。仅当输入整体是一个含运算符的合法算式时返回结果字符串，否则 null。
