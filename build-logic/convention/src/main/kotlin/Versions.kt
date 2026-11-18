@@ -326,7 +326,22 @@ object Versions {
     //          新增 CalcEngineTest 回归单测（10%→0.1 / 50%→0.5 / 100*5%→5 / 200-50%→199.5，
     //          5%% 仍拒），全量单测零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
     //          签名沿用 v1.0.80~82 同一证书（db238888…b8d0），可覆盖安装。
-    const val baseVersionCode = 37
+    // v1.0.84： audits 核实后修复 2 个真 bug（外部 agent 审的是 Gitee v1.0.35 旧 fork，
+    //          本版为 GitHub 主线 v1.0.83；逐条对当前代码核实后只认领仍成立的）：
+    //          (1) P1 安全：TableManager 码表导入的 confName/dictName 来自 SAF DISPLAY_NAME
+    //              （文档提供者可控），裸 File(tempDir,name) 可被绝对路径或 ../../ 穿越，
+    //              写到沙箱任意位置覆盖 databases/。抽纯 JVM 的 TableImportPaths.resolve 走
+    //              既有 PathSafety.safeResolve（单段名 + canonical 校验）；3 处调用点全替换。
+    //          (2) P1 健壮：ZipStream.extract 写文件前未建父目录，zip 只含 sub/dir/a.txt
+    //              而无显式目录条目时抛 FileNotFoundException，备份/主题/码表导入失败；
+    //              加 file.parentFile?.mkdirs()，canonical 穿越防护保持不变。
+    //          驳回项：HardwareBuffer 泄漏（RecallService 已有 P0-1 finally 修复，agent 看的是旧版）、
+    //          ZipStream 无 cap（加 cap 会误伤合法大备份，违反不改变原有功能）、
+    //          blob dedup 明文抖动（key==null 降级路径、无数据损坏、测试已覆盖结果正确）。
+    //          新增 ZipStreamTest + TableImportPathSafetyTest 共 6 个 JVM 单测（先失败后转绿），
+    //          全量单测零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
+    //          签名沿用 v1.0.80~83 同一证书（db238888…b8d0），可覆盖安装。
+    const val baseVersionCode = 38
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

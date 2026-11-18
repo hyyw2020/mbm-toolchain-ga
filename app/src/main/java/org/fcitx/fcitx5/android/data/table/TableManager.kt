@@ -59,10 +59,10 @@ object TableManager {
         dictStream: InputStream
     ): Result<TableBasedInputMethod> = runCatching {
         withTempDir { tempDir ->
-            val confFile = File(tempDir, confName).also {
+            val confFile = TableImportPaths.resolve(tempDir, confName).also {
                 it.outputStream().use { o -> confStream.use { i -> i.copyTo(o) } }
             }
-            val dictFile = File(tempDir, dictName).also {
+            val dictFile = TableImportPaths.resolve(tempDir, dictName).also {
                 it.outputStream().use { o -> dictStream.use { i -> i.copyTo(o) } }
             }
             importFiles(confFile, dictFile)
@@ -99,7 +99,7 @@ object TableManager {
         dictStream: InputStream
     ): Result<LibIMEDictionary> = runCatching {
         withTempDir { tempDir ->
-            val dictFile = File(tempDir, dictName).also {
+            val dictFile = TableImportPaths.resolve(tempDir, dictName).also {
                 it.outputStream().use { o -> dictStream.use { i -> i.copyTo(o) } }
             }
             val dict = Dictionary.new(dictFile)!!

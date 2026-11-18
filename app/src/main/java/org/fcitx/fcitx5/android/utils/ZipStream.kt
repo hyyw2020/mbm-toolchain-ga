@@ -20,6 +20,9 @@ fun ZipInputStream.extract(destDir: File): List<File> {
         val file = File(destDir, entry.name)
         if (!file.canonicalPath.startsWith(canonicalDest + File.separator)) throw SecurityException()
         if (!entry.isDirectory) {
+            // 编程式 zip 常只含 "sub/dir/a.txt" 而无显式目录条目；写文件前先建父目录，
+            // 否则 file.outputStream() 因父目录不存在抛 FileNotFoundException，导入整体失败。
+            file.parentFile?.mkdirs()
             copyTo(file.outputStream())
         } else {
             file.mkdirs()
