@@ -341,7 +341,18 @@ object Versions {
     //          新增 ZipStreamTest + TableImportPathSafetyTest 共 6 个 JVM 单测（先失败后转绿），
     //          全量单测零回归。无新开源库、无 SPDX 变化、无训练数据、全离线。
     //          签名沿用 v1.0.80~83 同一证书（db238888…b8d0），可覆盖安装。
-    const val baseVersionCode = 38
+    // v1.0.85：一轮真 bug 修复（不改变既有功能，只让声明的 trigram 优先级真正生效）。
+    //          Bug：ContextPredictor 的设计文档/源码注释/单测名都承诺「trigram 命中保证排在
+    //          单步 bigram 之前」，但实现 scored[w]=maxOf(...,c)+1 只在「同一个词」的分数上
+    //          +1。当 trigram 词与 bigram 词不同、且 trigram 三词共现计数天然低于 bigram
+    //          双词计数（三词组合本就更稀少）时，+1 无法让 trigram 词排到前面 —— 即设计
+    //          声称的「trigram 优先级」在实践中几乎从不生效（bigram=9 vs trigram=2 实测
+    //          输出 [天气,晚上] 而非 [晚上,天气]）。修复为分层排序：trigram 命中词整体优先
+    //          于纯 bigram 词，层内仍置信降序→字典序；让位/过滤/容量/单键唯一等全部规则不变，
+    //          现有 17 个单测零回归。新增 2 个 JVM 单测（跨计数优先级 + 用户历史让位仍生效），
+    //          先失败后转绿。全离线、无新开源库、无 SPDX 变化。
+    //          签名沿用 v1.0.80~84 同一证书（db238888…b8d0），可覆盖安装。
+    const val baseVersionCode = 39
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

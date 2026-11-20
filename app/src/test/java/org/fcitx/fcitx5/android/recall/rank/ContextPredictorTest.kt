@@ -135,6 +135,34 @@ class ContextPredictorTest {
     }
 
     @Test
+    fun trigramOutranksBigram_evenWhenTrigramCountIsLower() {
+        // v1.0.85 真 bug 回归：trigram 三词共现天然比 bigram 双词稀少、计数更低。
+        // 设计文档与注释承诺「trigram 命中保证排在单步之前」，旧实现只在同词上 +1，
+        // 当两词不同且 trigram 计数明显低于 bigram 时失效（bigram=9 vs trigram=2）。
+        val r = predictor().predict(
+            context = listOf("今天", "下午"),
+            bigram = { prev, _ -> if (prev == "今天") listOf("天气" to 9) else emptyList() },
+            trigram = { _, _, _ -> listOf("晚上" to 2) },
+            keysFor = keys("天气" to setOf("tq"), "晚上" to setOf("ws")),
+            hasUserHistory = noHistory,
+        )
+        assertEquals(listOf("晚上", "天气"), r.map { it.word }.distinct())
+    }
+
+    @Test
+    fun trigramStillLosesToUserHistory() {
+        // 分层只影响 trigram vs bigram 的相对优先，绝不能越过「用户硬层让位」铁律
+        val r = predictor().predict(
+            context = listOf("今天", "下午"),
+            bigram = { _, _ -> emptyList() },
+            trigram = { _, _, _ -> listOf("晚上" to 9) },
+            keysFor = keys("晚上" to setOf("ws")),
+            hasUserHistory = { it == "ws" },
+        )
+        assertTrue(r.isEmpty())
+    }
+
+    @Test
     fun onePredictionPerKey_higherConfidenceWins() {
         // 两个后继词共享同一个键，只允许置信更高者占该键
         val r = predictor().predict(

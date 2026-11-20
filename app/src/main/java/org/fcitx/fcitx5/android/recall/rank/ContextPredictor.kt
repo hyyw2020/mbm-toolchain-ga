@@ -77,6 +77,13 @@ class ContextPredictor(
         // 1) 收集候选：(词, 置信度)。trigram 命中给额外加成，因为它有更长上下文，
         //    比单步 bigram 更能代表「刚打完前两个词」的真实意图。
         val scored = LinkedHashMap<String, Int>()
+        // v1.0.85 真 bug：trigram 命中词单独记一层。原实现只在「同一个词」的
+        // 分数上 +1（maxOf(...)+1），当 trigram 词与 bigram 词不同、且 trigram
+        // 三词共现计数天然低于 bigram 双词计数时，+1 无法让 trigram 词排在
+        // bigram 词之前 —— 设计文档「trigram 优先级 / 保证排在单步之前」失效。
+        // 修正为分层：任何 trigram 命中词的优先级都高于纯 bigram 词，
+        // 层内仍按置信度降序 → 词字典序稳定排序（不改变原有让位/过滤/容量规则）。
+        val trigramHits = HashSet<String>()
         val seeds = context.takeLast(2)
         for (seed in seeds) {
             for ((w, c) in bigram(seed, config.perSeedLimit)) {
@@ -87,15 +94,20 @@ class ContextPredictor(
         if (seeds.size == 2 && trigram != null) {
             for ((w, c) in trigram(seeds[0], seeds[1], config.perSeedLimit)) {
                 if (c < config.minConfidence) continue
-                // 三词窗口命中即视为高置信：与 bigram 取较大值后再 +1，保证排在单步之前。
+                // 三词窗口命中即视为高置信：标记为 trigram 层，保证排在纯单步 bigram 之前。
+                trigramHits.add(w)
                 scored[w] = maxOf(scored[w] ?: 0, c) + 1
             }
         }
         if (scored.isEmpty()) return emptyList()
 
-        // 2) 稳定排序：置信降序 -> 词字典序，保证输出可重复。
+        // 2) 稳定排序：trigram 层优先 → 置信降序 → 词字典序，保证输出可重复。
         val ordered = scored.entries
-            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .sortedWith(
+                compareByDescending<Map.Entry<String, Int>> { it.key in trigramHits }
+                    .thenByDescending { it.value }
+                    .thenBy { it.key }
+            )
 
         // 3) 过滤 + 生成。每键只允许一个预测词；任一键已有用户硬层则整个词让位。
         val claimedKeys = HashSet<String>()
