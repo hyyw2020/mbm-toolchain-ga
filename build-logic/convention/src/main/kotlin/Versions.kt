@@ -352,7 +352,17 @@ object Versions {
     //          现有 17 个单测零回归。新增 2 个 JVM 单测（跨计数优先级 + 用户历史让位仍生效），
     //          先失败后转绿。全离线、无新开源库、无 SPDX 变化。
     //          签名沿用 v1.0.80~84 同一证书（db238888…b8d0），可覆盖安装。
-    const val baseVersionCode = 39
+    // v1.0.86：一轮真 bug 修复（提高数据完整性/稳定性，不改变既有合法行为）。
+    //          Bug：StreamingFileCipher v2 设计明确承诺「整块截断（哪怕刚好砍掉 N 个完整块）
+    //          也能被检出」，实现却在 readLengthPrefix() 读到 EOF（返回 null）时静默
+    //          eof=true;return false，从不执行 checkTotals —— 当尾部 marker(4)+trailer(32)
+    //          连同末块一起被砍掉，剪贴板加密 blob 会静默吐出被截断的明文，数据丢失且不报错。
+    //          修复：null 分支改为抛 EOFException（正确写入的 v2 文件正文读完后下一个 4B
+    //          必是 TAIL_MARKER，读到任何前缀前就 EOF 只可能是截断；legacy 版本走另一分支
+    //          不受影响）。新增 1 个 JVM 单测（dropping whole tail and last block fails loudly），
+    //          先 RED 后 GREEN，全量 228/228 零回归。全离线、无新开源库、无 SPDX 变化。
+    //          签名沿用 v1.0.80~85 同一证书（db238888…b8d0），可覆盖安装。
+    const val baseVersionCode = 40
     const val baseVersionName = "0.1.5"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")

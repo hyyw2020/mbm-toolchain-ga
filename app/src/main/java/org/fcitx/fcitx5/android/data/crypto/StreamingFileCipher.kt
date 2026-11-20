@@ -485,9 +485,12 @@ object StreamingFileCipher {
             if (version == LEGACY_VERSION) return decryptLegacyChunk(target)
             // v2：每块自带 4B 明文长度 → 块边界确定，无需靠贪心读 + 猜尾部。
             val declared = readLengthPrefix() ?: run {
-                // 正常情况下尾部标记一定在；到这里说明文件被截断。
-                eof = true
-                return false
+                // v1.0.86 真 bug：正确写入的 v2 文件在正文块读完后，下一个 4B 必定是
+                // TAIL_MARKER（写入端 close 无条件写尾；空明文首块即 marker）。在读到
+                // 任何前缀字节之前就 EOF，说明尾部连同末块被整块砍掉 —— 必须失败，
+                // 否则 checkTotals 永不执行，静默吐出被截断明文（数据丢失且不报错）。
+                // legacy 版本不经过此分支（上面 decryptLegacyChunk 已 return），不受影响。
+                throw EOFException("truncated cipher file: missing tail marker (whole tail/last block dropped)")
             }
             if (declared == TAIL_MARKER) {
                 readAndVerifyTail()

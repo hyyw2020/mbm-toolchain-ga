@@ -232,6 +232,26 @@ class StreamingFileCipherTest {
         }
     }
 
+    @Test
+    fun `dropping whole tail and last block fails loudly`() {
+        // v1.0.86 真 bug 回归：设计承诺「整块截断（哪怕刚好砍掉 N 个完整块）也能被检出」。
+        // 若把末块连尾部 marker(4)+trailer(32) 一起砍掉，readLengthPrefix 会在读到任何
+        // 前缀字节前遇到 EOF 返回 null。旧实现把它当成正常结束（eof=true; return false），
+        // 从不校验尾部 → 静默返回只剩前面的截断明文，数据丢失且不报错。
+        val cs = StreamingFileCipher.CHUNK_SIZE
+        val partial = 100
+        val plain = patternBytes(cs + partial.toLong())
+        val f = encryptToFile("trunctail.bin", plain)
+        val raw = f.readBytes()
+        // 砍掉「末块(4 前缀 + partial + 16 tag)」+「整个尾部(4 marker + 28 trailer)」
+        val lastBlock = StreamingFileCipher.LEN_PREFIX_SIZE + partial + 16
+        val drop = lastBlock + StreamingFileCipher.TRAILER_SIZE
+        f.writeBytes(raw.copyOfRange(0, raw.size - drop))
+        Assert.assertThrows(EOFException::class.java) {
+            readAll(StreamingFileCipher.openDecrypted(f, key))
+        }
+    }
+
     // ---- 遗留明文兼容 ----
 
     @Test
