@@ -110,9 +110,10 @@ case "$cmd" in
       "$OUTDIR/mbm-src-$VERSION.tar.gz" \
       "$OUTDIR/SHA256SUMS.txt"
 
-    # 4) Gitee（需要 GITEE_TOKEN）
+    # 4) Gitee（需要 GITEE_TOKEN）；推送输出脱敏，绝不把 token 回显到日志
     [ -n "${GITEE_TOKEN:-}" ] || { echo "跳过 Gitee：未提供 GITEE_TOKEN" >&2; exit 0; }
-    git push "https://${GITEE_OWNER}:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git" main:main
+    git push "https://${GITEE_OWNER}:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git" main:main 2>&1 \
+      | sed -E "s/${GITEE_TOKEN}/<REDACTED>/g"
 
     # Gitee Release 创建 + 上传（源码包/文档/校验和；APK 超 100MB 限制，正文指向 GitHub）
     python3 - "$GITEE_TOKEN" "$VERSION" "$TAG" "$OUTDIR" "$GITEE_OWNER" "$GITEE_REPO" "$(git rev-parse HEAD)" <<'PY'
