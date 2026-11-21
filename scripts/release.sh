@@ -115,27 +115,29 @@ case "$cmd" in
     git push "https://${GITEE_OWNER}:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git" main:main
 
     # Gitee Release 创建 + 上传（源码包/文档/校验和；APK 超 100MB 限制，正文指向 GitHub）
-    python3 - "$GITEE_TOKEN" "$VERSION" "$TAG" "$OUTDIR" <<'PY'
-import sys, json, urllib.request, urllib.parse, os
-tok, version, tag, outdir = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+    python3 - "$GITEE_TOKEN" "$VERSION" "$TAG" "$OUTDIR" "$GITEE_OWNER" "$GITEE_REPO" "$(git rev-parse HEAD)" <<'PY'
+import sys, json, urllib.request, urllib.parse, os, subprocess
+tok, version, tag, outdir, owner, repo, commit = sys.argv[1:8]
 body = open(os.path.join(outdir, f'RELEASE_NOTES-gitee-body.md'), encoding='utf-8').read()
 data = {'access_token': tok, 'tag_name': tag,
         'name': f'v{version} — 双平台同步（工程化加固）', 'body': body,
-        'target_commitish': 'main', 'prerelease': False}
-req = urllib.request.Request(
-    f'https://gitee.com/api/v5/repos/nlxxai/mixed-bug-method/releases',
+        'target_commitish': commit, 'prerelease': False}
+base = f'https://gitee.com/api/v5/repos/{owner}/{repo}'
+req = urllib.request.Request(f'{base}/releases',
     data=urllib.parse.urlencode(data).encode('utf-8'), method='POST')
 try:
     with urllib.request.urlopen(req, timeout=40) as r:
         rid = json.load(r)['id']; print('Gitee Release id=', rid)
 except urllib.error.HTTPError as e:
     print('Gitee 创建失败:', e.code, e.read().decode('utf-8','ignore')[:400]); sys.exit(1)
-for f in [f'mbm-src-{version}.tar.gz', 'SHA256SUMS.txt', f'RELEASE_NOTES-{version}.md']:
+for f in [f'mbm-src-{version}.tar.gz', 'SHA256SUMS.txt',
+          f'RELEASE_NOTES-{version}.md', f'升级必读-{version}.md']:
     p = os.path.join(outdir, f)
     if not os.path.exists(p):
         print('跳过缺失资产', f); continue
-    curl = f'curl -s --max-time 300 -X POST "https://gitee.com/api/v5/repos/nlxxai/mixed-bug-method/releases/{rid}/attach_files" -F "access_token={tok}" -F "file=@{p}"'
-    os.system(curl)
+    subprocess.run(['curl', '-s', '--max-time', '300', '-X', 'POST',
+        f'{base}/releases/{rid}/attach_files',
+        '-F', f'access_token={tok}', '-F', f'file=@{p}'], check=False)
 print('Gitee 上传完成')
 PY
     echo "==> 发布完成: $TAG"
