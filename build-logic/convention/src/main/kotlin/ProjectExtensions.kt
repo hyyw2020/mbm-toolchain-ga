@@ -48,7 +48,11 @@ val Project.buildToolsVersion
 
 val Project.buildVersionName
     get() = ep("BUILD_VERSION_NAME", "buildVersionName") {
-        runCmd("git describe --tags --long --always", Versions.baseVersionName)
+        // v1.0.87 工程化：版本名改用确定性语义版本，不再用 git describe。
+        // git describe 依赖 tag 在构建时是否已存在/是否落在当前提交，会产生
+        // v1.0.79-toolchain-ga-7-g… 这类陈旧且不可复现的名称；改由 releaseVersionName
+        // 唯一确定。BUILD_VERSION_NAME 环境变量仍可覆盖（供 CI 校验用）。
+        Versions.releaseVersionName
     }
 
 val Project.buildCommitHash

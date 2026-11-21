@@ -1,0 +1,43 @@
+name: Release Gate
+
+# MBM v1.0.87 工程化：质量门禁 —— 每次推送到 main / 每个 PR 都必须通过：
+#   1) 全量 JVM 单测（补上既有 PR workflow 缺的 testDebugUnitTest）
+#   2) 单架构 release 构建
+#   3) 版本元数据一致性校验（APK versionName/versionCode 与 Versions.kt 声明一致）
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fetch source code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android environment
+        uses: android-actions/setup-android@v4
+        with:
+          packages: cmake;3.31.6
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Full JVM unit tests (gate)
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - name: Build arm64 release (gate)
+        run: ./gradlew :app:assembleRelease -PBUILD_ABI=arm64-v8a --no-daemon
+
+      - name: Verify version metadata consistency
+        run: bash scripts/verify-version-metadata.sh

@@ -252,6 +252,55 @@ class StreamingFileCipherTest {
         }
     }
 
+    @Test
+    fun `every truncation of a v2 file fails loudly (fail-closed invariant)`() {
+        // v1.0.87 工程化契约补强：把「损坏输入绝不静默成功」固化为可执行不变量。
+        // v2 文件 = 完整头(32) + 每块[4B 长度前缀][密文+tag] + 尾部(4 标记 + 28)。
+        // 只要 magic 头完整（≥4 字节，可被识别为密文），任何严格前缀都缺少尾部（或
+        // 缺少完整头/完整块），必须抛 EOFException，绝不静默返回残缺明文。
+        // 注意：0~3 字节截断是刻意不判的边界——openDecrypted 对「不足 4 字节 / 无 magic」
+        // 一律按遗留明文透读（老版本明文 blob 必须继续能读），1~3 字节截断与真实遗留
+        // 明文在信息上不可区分；该兼容语义已由 empty and tiny streams 测试单独锁定。
+        val small = "剪贴板小文本 ABC123".toByteArray(Charsets.UTF_8)
+        val sf = encryptToFile("trunc-all-small.bin", small)
+        val smallRaw = sf.readBytes()
+        val dir = tmp.newFolder("trunc-small")
+        for (k in 4 until smallRaw.size) {
+            val t = File(dir, "k$k.bin")
+            t.writeBytes(smallRaw.copyOfRange(0, k))
+            Assert.assertThrows(
+                "截断到 $k/${smallRaw.size} 必须失败（fail-closed）",
+                EOFException::class.java
+            ) { readAll(StreamingFileCipher.openDecrypted(t, key)) }
+        }
+
+        // 大文件（多块）：逐块边界与边界 +1，外加「完整头无正文」「恰砍掉尾部」两个关键点。
+        val cs = StreamingFileCipher.CHUNK_SIZE
+        val big = patternBytes(2L * cs + 123L)
+        val bf = encryptToFile("trunc-all-big.bin", big)
+        val bigRaw = bf.readBytes()
+        val chunkBytes = cs + StreamingFileCipher.LEN_PREFIX_SIZE + 16
+        val points = sortedSetOf<Int>()
+        points.add(StreamingFileCipher.HEADER_FULL_SIZE)            // 只有完整头，无任何正文/尾部
+        points.add(bigRaw.size - StreamingFileCipher.TRAILER_SIZE)  // 恰砍掉整个尾部
+        var off = StreamingFileCipher.HEADER_FULL_SIZE
+        while (off + chunkBytes <= bigRaw.size) {
+            points.add(off)          // 某块起点（长度前缀第 0 字节）
+            points.add(off + 1)      // 长度前缀缺 1 字节
+            off += chunkBytes
+        }
+        val dir2 = tmp.newFolder("trunc-big")
+        for (k in points) {
+            if (k !in 0 until bigRaw.size) continue
+            val t = File(dir2, "k$k.bin")
+            t.writeBytes(bigRaw.copyOfRange(0, k))
+            Assert.assertThrows(
+                "截断到 $k/${bigRaw.size} 必须失败（fail-closed）",
+                EOFException::class.java
+            ) { readAll(StreamingFileCipher.openDecrypted(t, key)) }
+        }
+    }
+
     // ---- 遗留明文兼容 ----
 
     @Test

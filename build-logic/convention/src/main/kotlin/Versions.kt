@@ -362,8 +362,29 @@ object Versions {
     //          不受影响）。新增 1 个 JVM 单测（dropping whole tail and last block fails loudly），
     //          先 RED 后 GREEN，全量 228/228 零回归。全离线、无新开源库、无 SPDX 变化。
     //          签名沿用 v1.0.80~85 同一证书（db238888…b8d0），可覆盖安装。
-    const val baseVersionCode = 40
+    // v1.0.87：工程化加固（不改变产品行为；APK 仅 versionName 由 git describe 修正为确定性值）。
+    //          ① 版本元数据统一：新增 releaseVersionName 作为唯一确定性版本名，供 APK
+    //            versionName / 归档文件名 / BuildMetadata 使用；不再用 git describe（它依赖
+    //            tag 在构建时是否已存在/是否落在当前提交，会产生 v1.0.79-toolchain-ga-7-g…
+    //            这类陈旧且不可复现的名称）。与 baseVersionName 解耦（后者喂给 CMake，改动
+    //            会触发 4 ABI 全量原生重编）。
+    //          ② 可复现源码包：scripts/package-source.sh 以 git ls-files 为权威集，排除
+    //            .gitmodules 声明的第三方子模块树与 OCR 模型二进制，产出确定性源码包。
+    //          ③ 发布自动化：scripts/release.sh 幂等编排 test→build→sign→package→hash→publish。
+    //          ④ 契约测试补强：StreamingFileCipherTest 新增 fail-closed 全截断不变量测试。
+    //          ⑤ CI 门禁：.github/workflows/release-gate.yml 校验版本元数据一致 + 全量测试 + 构建。
+    //          无产品代码行为变化、无新开源库、无 SPDX 变化。签名沿用同证书，可覆盖安装。
+    const val baseVersionCode = 41
     const val baseVersionName = "0.1.5"
+
+    /**
+     * 发布版本名（确定性语义版本，只影响 Gradle 层：APK versionName / 归档文件名 / BuildMetadata）。
+     * 与 [baseVersionName] 解耦：baseVersionName 喂给 CMake `project(fcitx5-android VERSION …)`，
+     * 改动它会触发 4 ABI 全量原生重编；releaseVersionName 只影响 Gradle，不触发 native 重编。
+     * 发新版时 baseVersionCode（versionCode）与 releaseVersionName（versionName）必须同步 bump，
+     * 并由 scripts/verify-version-metadata.sh 在构建后强校验二者一致。
+     */
+    const val releaseVersionName = "1.0.87"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     const val fallbackABI = "arm64-v8a"
