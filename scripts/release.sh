@@ -87,7 +87,7 @@ case "$cmd" in
     echo "==> 提交/tag + 双平台发布（tag $TAG）"
     [ -f "$OUTDIR/$APK_NAME" ] || { echo "FAIL: 先执行 sign" >&2; exit 1; }
     [ -f "$OUTDIR/mbm-src-$VERSION.tar.gz" ] || { echo "FAIL: 先执行 package" >&2; exit 1; }
-    [ -f "$OUTDIR/RELEASE_NOTES-$VERSION.md" ] || { echo "FAIL: 缺发布说明 $OUTDIR/RELEASE_NOTES-$VERSION.md" >&2; exit 1; }
+    [ -f "$OUTDIR/RELEASE_NOTES-v$VERSION.md" ] || { echo "FAIL: 缺发布说明 $OUTDIR/RELEASE_NOTES-v$VERSION.md" >&2; exit 1; }
 
     # 1) 本地 tag（幂等：已存在则跳过）
     git tag -a "$TAG" -m "$TAG — 工程化加固" HEAD 2>/dev/null || echo "tag 已存在，跳过"
@@ -102,7 +102,7 @@ case "$cmd" in
     else
       gh release create "$TAG" --repo "$GH_REPO" \
         --title "v$VERSION — 工程化加固（确定性版本元数据 + 可复现源码包 + 发布自动化 + CI 门禁）" \
-        --notes-file "$OUTDIR/RELEASE_NOTES-$VERSION.md"
+        --notes-file "$OUTDIR/RELEASE_NOTES-v$VERSION.md"
     fi
     gh release upload "$TAG" --repo "$GH_REPO" --clobber \
       "$OUTDIR/$APK_NAME" \
@@ -132,7 +132,7 @@ try:
 except urllib.error.HTTPError as e:
     print('Gitee 创建失败:', e.code, e.read().decode('utf-8','ignore')[:400]); sys.exit(1)
 for f in [f'mbm-src-{version}.tar.gz', 'SHA256SUMS.txt',
-          f'RELEASE_NOTES-{version}.md', f'升级必读-{version}.md']:
+          f'RELEASE_NOTES-v{version}.md', f'升级必读-v{version}.md']:
     p = os.path.join(outdir, f)
     if not os.path.exists(p):
         print('跳过缺失资产', f); continue
