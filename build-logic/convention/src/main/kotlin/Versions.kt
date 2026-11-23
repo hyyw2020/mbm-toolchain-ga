@@ -374,7 +374,7 @@ object Versions {
     //          ④ 契约测试补强：StreamingFileCipherTest 新增 fail-closed 全截断不变量测试。
     //          ⑤ CI 门禁：.github/workflows/release-gate.yml 校验版本元数据一致 + 全量测试 + 构建。
     //          无产品代码行为变化、无新开源库、无 SPDX 变化。签名沿用同证书，可覆盖安装。
-    const val baseVersionCode = 42
+    const val baseVersionCode = 43
     const val baseVersionName = "0.1.5"
 
     /**
@@ -394,7 +394,7 @@ object Versions {
     //          recall 版此前零单测（补丁不平衡的根因），本次新增 4 个 JVM 单测（含 fail-closed
     //          全前缀不变量 + 整块截断），先 RED 后 GREEN。全量 233/233 零回归。
     //          全离线、无新开源库、无 SPDX 变化。签名沿用同证书，可覆盖安装。
-    const val releaseVersionName = "1.0.88"
+    const val releaseVersionName = "1.0.89"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     const val fallbackABI = "arm64-v8a"

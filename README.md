@@ -3,9 +3,9 @@
 fcitx5-android 的 MBM 定制分支。发布仓库为私有仓库，仅仓库所有者可访问；
 每个发布版本均附源码快照，以满足自研部分 AGPL-3.0-or-later 的对应源码要求。
 
-> 本 README 以 v1.0.79 实际实现为准。历史变更归档见 `docs/PATCHES_*.md`
-> 与 `docs/pitfalls.md`；隐私政策见 `PRIVACY.txt`，许可与第三方组件清单见
-> `LICENSE` / `NOTICE` / `docs/upstream.md`。
+> 许可与第三方组件清单见 `LICENSE`（含借鉴来源附录）/ `NOTICE` /
+> `THIRD_PARTY_NOTICES.md`（借鉴自 CyIME 的算法来源）/ `docs/upstream.md`。
+> 隐私政策见 `PRIVACY.txt`；历史变更归档见 `docs/PATCHES_*.md` 与 `docs/pitfalls.md`。
 
 ## 下载
 
@@ -206,5 +206,6 @@ ANDROID_HOME=/opt/android-sdk sh gradlew :app:compileReleaseKotlin :app:assemble
 - 单 ABI（arm64-v8a），不包含 32 位库
 - 全离线：最终 APK 不含 `INTERNET` / `ACCESS_NETWORK_STATE` 权限；
   无任何预置训练语料，学习数据全部运行时写入本机应用私有目录
-- 许可：逐文件 SPDX 头（LGPL-2.1-or-later 继承上游 + AGPL-3.0-or-later MBM 新写），
+- 许可：逐文件 SPDX 头（LGPL-2.1-or-later 继承上游 + AGPL-3.0-or-later MBM 新写 +
+  GPL-3.0-or-later 借鉴自 CyIME 的算法，来源见 `THIRD_PARTY_NOTICES.md`），
   台账见 `docs/sbom/`；第三方组件清单见 `app/src/main/assets/licenses/NOTICE.txt`

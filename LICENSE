@@ -714,3 +714,34 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+================================================================================
+APPENDIX: PROVENANCE OF BORROWED SOURCE / 借鉴来源附录
+================================================================================
+
+This appendix records source borrowed from external projects. The AGPL-3.0 text
+above is unmodified; this appendix does not relicense any borrowed code. The
+authoritative itemized record is THIRD_PARTY_NOTICES.md at the repository root;
+the root NOTICE and that file cross-reference this appendix.
+
+Borrowed from CyIME (https://github.com/Cyletix/CyIME), version 1.15.105,
+commit 6d596516d, authored and maintained by Cyletix, licensed GPL-3.0-or-later
+(GPLv3 text at the upstream LICENSE):
+
+  - English abbreviation completion: EnglishContractions, EnglishContractionCompletion,
+    their JVM test, and the english_contractions.txt data asset.
+  - Whole-word continuation association: WordContinuationTable, mergeWordContinuations,
+    AssociationCandidate, and the pure-algorithm portion of their JVM test.
+
+These files retain their original SPDX headers
+(SPDX-License-Identifier: GPL-3.0-or-later;
+SPDX-FileCopyrightText: Copyright 2026 Cyletix) and original copyright notices.
+GPL-3.0 code may be combined into an AGPL-3.0 work; AGPL is GPL with an added
+network-use condition, so the borrowed files remain under their original GPLv3
+terms and are not relicensed under AGPL.
+
+CyIME components not incorporated into the MBM program (Rime engine, speech/OCR/
+handwriting models and native libraries, Compose UI, offline translation, glide
+decoding, candidate gloss) are preserved as reference source in the cyime/
+subdirectory of the release repository and do not participate in the MBM build.
+
