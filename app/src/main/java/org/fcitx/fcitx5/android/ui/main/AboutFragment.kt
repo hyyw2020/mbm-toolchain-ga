@@ -4,6 +4,7 @@
  */
 package org.fcitx.fcitx5.android.ui.main
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -42,8 +43,27 @@ class AboutFragment : PaddingPreferenceFragment() {
             addPreference(R.string.source_code, R.string.github_repo) {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Const.githubRepo)))
             }
+            // MBM v1.0.90：本项目许可全文 / NOTICE / 上游组件的离线查看入口收敛到
+            // 本条目（弹窗选择），使「许可」页得以保持 aboutLibraries 原生的干净列表。
+            // 三个文本仍随 APK 分发在 assets/licenses/ 下，全程离线，不跳浏览器。
             addPreference(R.string.license, Const.licenseSpdxId) {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(Const.licenseUrl)))
+                val titles = arrayOf(
+                    getString(R.string.mbm_license),
+                    getString(R.string.third_party_notice),
+                    getString(R.string.upstream_components)
+                )
+                val assets = arrayOf(
+                    LicenseTextActivity.ASSET_AGPL,
+                    LicenseTextActivity.ASSET_NOTICE,
+                    LicenseTextActivity.ASSET_UPSTREAM
+                )
+                AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.license)
+                    .setItems(titles) { _, index ->
+                        LicenseTextActivity.launch(requireContext(), assets[index], titles[index])
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
             }
             addCategory(R.string.version) {
                 isIconSpaceReserved = false

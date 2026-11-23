@@ -19,44 +19,11 @@ class LicensesFragment : PaddingPreferenceFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         lifecycleScope.launch {
             preferenceScreen = preferenceManager.createPreferenceScreen(requireContext()).apply {
-                // MBM v1.0.28 / v1.0.72：本项目的许可与第三方声明**离线内置**在
-                // assets/licenses/ 下（AGPL-3.0 全文 / NOTICE / 上游清单），点开即用
-                // LicenseTextActivity 渲染，不跳浏览器、不联网。
-                // v1.0.72 修复：下方 aboutLibraries 生成的第三方库条目原先点击会
-                // startActivity(ACTION_VIEW, license.url) 跳到 spdx.org / zetetic.net，
-                // 与「应用内离线查看」承诺冲突，且本应用无 INTERNET 权限、无浏览器的
-                // 设备会抛未捕获 ActivityNotFoundException。改为应用内弹窗展示许可
-                // 名称/SPDX 标识/出处文本，全程离线。
-                addPreference(
-                    title = getString(R.string.mbm_license),
-                    summary = getString(R.string.mbm_license_summary)
-                ) {
-                    LicenseTextActivity.launch(
-                        requireContext(),
-                        LicenseTextActivity.ASSET_AGPL,
-                        getString(R.string.mbm_license)
-                    )
-                }
-                addPreference(
-                    title = getString(R.string.third_party_notice),
-                    summary = getString(R.string.third_party_notice_summary)
-                ) {
-                    LicenseTextActivity.launch(
-                        requireContext(),
-                        LicenseTextActivity.ASSET_NOTICE,
-                        getString(R.string.third_party_notice)
-                    )
-                }
-                addPreference(
-                    title = getString(R.string.upstream_components),
-                    summary = getString(R.string.upstream_components_summary)
-                ) {
-                    LicenseTextActivity.launch(
-                        requireContext(),
-                        LicenseTextActivity.ASSET_UPSTREAM,
-                        getString(R.string.upstream_components)
-                    )
-                }
+                // MBM v1.0.90：许可页保持 aboutLibraries 原生组件列表 + 点击弹窗样式。
+                // 本项目的 AGPL-3.0 全文 / NOTICE / 上游清单仍随 APK 分发在
+                // assets/licenses/ 下，并由「关于」页的许可入口离线查看，无需在本页顶部重复罗列。
+                // aboutLibraries 生成的第三方库条目点击弹窗展示许可名称 / SPDX 标识 /
+                // 出处文本，全程离线（本应用无 INTERNET 权限，不跳浏览器）。
                 val jsonString = resources.openRawResource(R.raw.aboutlibraries)
                     .bufferedReader()
                     .use { it.readText() }
@@ -99,9 +66,9 @@ class LicensesFragment : PaddingPreferenceFragment() {
     }
 
     /**
-     * v1.0.72：纯离线展示。许可全文（AGPL-3.0）与组件清单已随 APK 附在前三项入口，
-     * 这里只展示第三方库的许可名称 / SPDX 标识 / 官方出处文本，不再触发
-     * ACTION_VIEW 跳转浏览器（应用无 INTERNET 权限，离线是硬约束）。
+     * v1.0.90：纯离线展示。本项目许可全文 / NOTICE / 上游清单随 APK 分发在
+     * assets/licenses/ 下并由「关于」页离线查看；这里只展示第三方库的许可名称 /
+     * SPDX 标识 / 官方出处文本，不触发 ACTION_VIEW 跳转浏览器（应用无 INTERNET 权限）。
      */
     private fun showLicenseContent(uniqueId: String, license: License) {
         val label = (license.spdxId ?: license.name).ifBlank { license.name }
