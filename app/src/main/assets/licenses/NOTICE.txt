@@ -1,11 +1,11 @@
 Mixed Bug Method (MBM) — 多引擎融合输入法
 Copyright (C) 2026 Mixed Bug Method Contributors
 
-当前版本：v1.0.79（versionCode = baseVersionCode(33) * 10 + ABI；发布 APK 已签名，
+当前版本：v1.0.91（versionCode = baseVersionCode(45) * 10 + ABI；发布 APK 已签名，
 无混淆、无加固）。历史加固记录见 docs/PATCHES_v1.0.26.md ~ PATCHES_v1.0.36.md，
 变更与崩溃修复方法论长期记忆见 docs/pitfalls.md。
 
-隐私政策（PRIVACY.txt v1.0.79）随本产品各 APK 分发，可在主输入法
+隐私政策（PRIVACY.txt v1.0.91）随本产品各 APK 分发，可在主输入法
 「关于 → 隐私政策」与「屏幕记忆」Recall 界面内离线查看。
 
 重要：MBM 是 fcitx5-android 的衍生作品，**不是单一许可工程**。

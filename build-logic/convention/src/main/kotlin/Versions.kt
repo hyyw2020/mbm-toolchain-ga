@@ -374,7 +374,7 @@ object Versions {
     //          ④ 契约测试补强：StreamingFileCipherTest 新增 fail-closed 全截断不变量测试。
     //          ⑤ CI 门禁：.github/workflows/release-gate.yml 校验版本元数据一致 + 全量测试 + 构建。
     //          无产品代码行为变化、无新开源库、无 SPDX 变化。签名沿用同证书，可覆盖安装。
-    const val baseVersionCode = 44
+    const val baseVersionCode = 45
     const val baseVersionName = "0.1.5"
 
     /**
@@ -401,7 +401,13 @@ object Versions {
     //          assets/licenses/ 下，离线查看入口收敛到「关于」页的许可条目（弹窗选择，不新增
     //          页面条目）。新增 3 个 JVM 源码契约测试，先 RED 后 GREEN。全离线、无新开源库、
     //          无 SPDX 变化。签名沿用同证书，可覆盖安装。
-    const val releaseVersionName = "1.0.90"
+    // v1.0.91：合规文档事实校正（不改变产品功能）。PRIVACY.txt 更新版本头与 v1.0.80~91
+    //          修订说明；修正「发布仓库（私有）」为公开（GitHub 仓库本轮已改 public）；
+    //          修正「关于 → 开源许可」入口描述为 v1.0.90 后的实际布局（AGPL/NOTICE/UPSTREAM
+    //          在「关于 → 许可」，第三方库在「关于 → 开源软件许可」）。NOTICE 同步当前版本
+    //          与 versionCode。新增 3 个 JVM 契约测试锁定上述事实，先 RED 后 GREEN。
+    //          全离线、无新开源库、无 SPDX 变化。签名沿用同证书，可覆盖安装。
+    const val releaseVersionName = "1.0.91"
 
     val supportedABIs = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     const val fallbackABI = "arm64-v8a"
